@@ -5,6 +5,7 @@ import {
   Routes,
 } from 'react-router'
 
+import { DashboardLayout } from '../components/layout/DashboardLayout'
 import { LoginPage } from '../pages/auth/LoginPage'
 import { DashboardPage } from '../pages/dashboard/DashboardPage'
 import { ClaimsListPage } from '../pages/claims/ClaimsListPage'
@@ -21,20 +22,22 @@ export function AppRouter() {
 
         <Route path="/login" element={<LoginPage />} />
 
-        <Route
-          path="/dashboard"
-          element={<DashboardPage />}
-        />
+        <Route element={<DashboardLayout />}>
+          <Route
+            path="/dashboard"
+            element={<DashboardPage />}
+          />
 
-        <Route
-          path="/claims"
-          element={<ClaimsListPage />}
-        />
+          <Route
+            path="/claims"
+            element={<ClaimsListPage />}
+          />
 
-        <Route
-          path="/claims/:claimId"
-          element={<ClaimDetailsPage />}
-        />
+          <Route
+            path="/claims/:claimId"
+            element={<ClaimDetailsPage />}
+          />
+        </Route>
 
         <Route
           path="*"
