@@ -6,6 +6,7 @@ import {
   Users,
   Settings,
   LogOut,
+  ShieldCheck,
 } from "lucide-react";
 import type { Role } from "../types";
 
@@ -47,21 +48,21 @@ export default function Sidebar() {
   const currentRole: Role = "ADMIN"; // مؤقت
 
   return (
-    <aside className="w-64 bg-slate-900 text-white flex flex-col h-screen shrink-0">
+    <aside className="w-64 bg-primary-dark text-white flex flex-col h-screen shrink-0">
       {/* Logo */}
-      <div className="px-6 py-5 border-b border-slate-700">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-            <FileText size={16} className="text-white" />
+      <div className="px-6 py-5 border-b border-white/10">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 bg-accent rounded-lg flex items-center justify-center shrink-0">
+            <ShieldCheck size={18} className="text-white" />
           </div>
-          <span className="text-lg font-bold tracking-wide text-white">
+          <span className="text-base font-bold tracking-wider text-white">
             INSURFLOW
           </span>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-5 space-y-1">
         {navigationItems
           .filter((item) => item.roles.includes(currentRole))
           .map((item) => (
@@ -71,8 +72,8 @@ export default function Sidebar() {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
                   isActive
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                    ? "bg-white/15 text-white"
+                    : "text-white/60 hover:bg-white/10 hover:text-white"
                 }`
               }
             >
@@ -83,8 +84,8 @@ export default function Sidebar() {
       </nav>
 
       {/* Logout */}
-      <div className="px-3 py-4 border-t border-slate-700">
-        <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:bg-red-600 hover:text-white transition-all duration-150 w-full">
+      <div className="px-3 py-4 border-t border-white/10">
+        <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/60 hover:bg-danger/80 hover:text-white transition-all duration-150 w-full">
           <LogOut size={18} />
           <span>Logout</span>
         </button>
