@@ -1,5 +1,5 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   FileText,
@@ -7,6 +7,7 @@ import {
   Settings,
   LogOut,
   ShieldCheck,
+  X,
 } from "lucide-react";
 import type { Role } from "../types";
 
@@ -15,6 +16,11 @@ interface NavigationItem {
   path: string;
   icon: React.ReactNode;
   roles: Role[];
+}
+
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 const navigationItems: NavigationItem[] = [
@@ -44,20 +50,48 @@ const navigationItems: NavigationItem[] = [
   },
 ];
 
-export default function Sidebar() {
-  const currentRole: Role = "ADMIN"; // مؤقت
+export default function Sidebar({
+  isOpen = false,
+  onClose = () => {},
+}: SidebarProps) {
+  const navigate = useNavigate();
+  const currentRole: Role = "ADMIN"; // Temporary until authentication
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    onClose();
+    navigate("/login", { replace: true });
+  };
 
   return (
-    <aside className="w-64 bg-primary-dark text-white flex flex-col h-screen shrink-0">
+    <aside
+      className={`fixed inset-y-0 left-0 z-40 w-64 bg-primary-dark text-white flex flex-col h-screen shrink-0 transform transition-transform duration-200 lg:static lg:translate-x-0 ${
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      }`}
+    >
       {/* Logo */}
       <div className="px-6 py-5 border-b border-white/10">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 bg-accent rounded-lg flex items-center justify-center shrink-0">
-            <ShieldCheck size={18} className="text-white" />
+        <div className="flex items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 bg-accent rounded-lg flex items-center justify-center shrink-0">
+              <ShieldCheck size={18} className="text-white" />
+            </div>
+
+            <span className="text-base font-bold tracking-wider text-white">
+              INSURFLOW
+            </span>
           </div>
-          <span className="text-base font-bold tracking-wider text-white">
-            INSURFLOW
-          </span>
+
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close sidebar"
+            className="p-1.5 rounded-lg text-white/60 hover:bg-white/10 hover:text-white lg:hidden"
+          >
+            <X size={20} />
+          </button>
         </div>
       </div>
 
@@ -69,6 +103,7 @@ export default function Sidebar() {
             <NavLink
               key={item.path}
               to={item.path}
+              onClick={onClose}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
                   isActive
@@ -85,7 +120,11 @@ export default function Sidebar() {
 
       {/* Logout */}
       <div className="px-3 py-4 border-t border-white/10">
-        <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/60 hover:bg-danger/80 hover:text-white transition-all duration-150 w-full">
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/60 hover:bg-danger/80 hover:text-white transition-all duration-150 w-full"
+        >
           <LogOut size={18} />
           <span>Logout</span>
         </button>
