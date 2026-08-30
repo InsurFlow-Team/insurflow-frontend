@@ -2,7 +2,7 @@ export type Role = "ADMIN" | "CLAIMS_OFFICER" | "FIELD_ADJUSTER";
 
 export type UserStatus = "ACTIVE" | "INACTIVE";
 
-export type ClaimStatus = "SUBMITTED" | "UNDER_REVIEW" | "CLOSED";
+export type ClaimStatus = "DRAFT" | "SUBMITTED" | "UNDER_REVIEW" | "CLOSED";
 
 export type InspectionTaskStatus = "ASSIGNED" | "IN_PROGRESS" | "SUBMITTED";
 

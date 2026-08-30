@@ -34,7 +34,6 @@ const claimStatistics = [
 export default function Dashboard() {
   return (
     <div className="space-y-6">
-      {/* Page Heading */}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-text">Dashboard</h1>
@@ -47,7 +46,6 @@ export default function Dashboard() {
         </span>
       </div>
 
-      {/* Statistics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {claimStatistics.map((stat) => (
           <article
@@ -63,11 +61,8 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Recent Activity placeholder */}
       <div className="bg-surface rounded-xl border border-border p-6 shadow-sm">
-        <h2 className="text-base font-semibold text-text mb-4">
-          Recent Claims
-        </h2>
+        <h2 className="text-base font-semibold text-text mb-4">Recent Claims</h2>
         <div className="flex flex-col items-center justify-center py-10 text-text-muted">
           <FileText size={36} className="mb-3 opacity-30" />
           <p className="text-sm">No claims yet.</p>
