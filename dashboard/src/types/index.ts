@@ -1,4 +1,7 @@
-export type Role = "ADMIN" | "CLAIMS_OFFICER" | "FIELD_ADJUSTER";
+export type Role =
+  | "ADMIN"
+  | "CLAIMS_OFFICER"
+  | "FIELD_ADJUSTER";
 
 export type UserStatus = "ACTIVE" | "INACTIVE";
 
@@ -10,9 +13,14 @@ export type ClaimStatus =
   | "APPROVED"
   | "CLOSED";
 
-export type InspectionTaskStatus = "ASSIGNED" | "IN_PROGRESS" | "SUBMITTED";
+export type InspectionTaskStatus =
+  | "ASSIGNED"
+  | "IN_PROGRESS"
+  | "SUBMITTED";
 
-export type Availability = "AVAILABLE" | "UNAVAILABLE";
+export type Availability =
+  | "AVAILABLE"
+  | "UNAVAILABLE";
 
 export interface User {
   id: string;
@@ -38,36 +46,39 @@ export interface ClaimSummary {
   initialPlateNumber: string;
   createdAt: string;
   updatedAt?: string;
-
 }
 
 export interface ClaimDetails {
   id: string;
   claimNumber: string;
   status: ClaimStatus;
+
   customer: {
     name: string;
     phone: string;
   };
- vehicle: {
-  plateNumber?: string | null;
-  vehicleId?: string | null;
-  policyId?: string | null;
-  customerId?: string | null;
-  make?: string | null;
-  model?: string | null;
-  year?: number | null;
-  color?: string | null;
-};
 
-policy?: {
-  policyNumber?: string | null;
-  status?: string | null;
-  startDate?: string | null;
-  expiryDate?: string | null;
-};
+  vehicle: {
+    plateNumber?: string | null;
+    vehicleId?: string | null;
+    policyId?: string | null;
+    customerId?: string | null;
+    make?: string | null;
+    model?: string | null;
+    year?: number | null;
+    color?: string | null;
+  };
+
+  policy?: {
+    policyNumber?: string | null;
+    status?: string | null;
+    startDate?: string | null;
+    expiryDate?: string | null;
+  };
+
   incidentType: string;
   incidentLocation: string;
+
   assignment: {
     assignedTo: unknown | null;
     assignedBy: unknown | null;
@@ -75,9 +86,11 @@ policy?: {
     priority: "LOW" | "MEDIUM" | "HIGH";
     assignmentNotes: string | null;
   };
+
   accident: Record<string, unknown> | null;
   location: Record<string, unknown> | null;
   timeline: Array<Record<string, unknown>>;
+
   createdAt: string;
   updatedAt: string;
 }
