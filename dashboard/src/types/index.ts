@@ -49,12 +49,23 @@ export interface ClaimDetails {
     name: string;
     phone: string;
   };
-  vehicle: {
-    plateNumber?: string | null;
-    vehicleId?: string | null;
-    policyId?: string | null;
-    customerId?: string | null;
-  };
+ vehicle: {
+  plateNumber?: string | null;
+  vehicleId?: string | null;
+  policyId?: string | null;
+  customerId?: string | null;
+  make?: string | null;
+  model?: string | null;
+  year?: number | null;
+  color?: string | null;
+};
+
+policy?: {
+  policyNumber?: string | null;
+  status?: string | null;
+  startDate?: string | null;
+  expiryDate?: string | null;
+};
   incidentType: string;
   incidentLocation: string;
   assignment: {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, PlayCircle } from "lucide-react";
+import { ArrowLeft, ExternalLink, PlayCircle } from "lucide-react";
 
 import {
   getClaimById,
@@ -26,7 +26,7 @@ function InfoRow({
   value,
 }: {
   label: string;
-  value?: string | null;
+  value?: string | number | null;
 }) {
   return (
     <div>
@@ -95,6 +95,25 @@ export default function ClaimDetails() {
     );
   }
 
+  const vehicle = claim.vehicle;
+  const accident = claim.accident as {
+    accidentType?: string;
+    accidentDate?: string;
+    accidentTime?: string;
+    description?: string;
+    damageDescription?: string;
+  } | null;
+
+  const location = claim.location as {
+    latitude?: number;
+    longitude?: number;
+    address?: string;
+  } | null;
+
+  const assignedTo = claim.assignment.assignedTo as {
+    name?: string;
+  } | null;
+
   const canStartReview = claim.status === "SUBMITTED";
 
   return (
@@ -123,7 +142,7 @@ export default function ClaimDetails() {
             type="button"
             onClick={() => void handleStartReview()}
             disabled={reviewing}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-dark px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-dark px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary disabled:opacity-60"
           >
             <PlayCircle size={17} />
             {reviewing ? "Starting review..." : "Start review"}
@@ -138,13 +157,29 @@ export default function ClaimDetails() {
       )}
 
       <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-text">Claim information</h2>
+        <h2 className="text-lg font-semibold text-text">
+          Claim information
+        </h2>
 
         <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <InfoRow label="Claim number" value={claim.claimNumber} />
-          <InfoRow label="Incident type" value={claim.incidentType} />
-          <InfoRow label="Created" value={formatDate(claim.createdAt)} />
-          <InfoRow label="Updated" value={formatDate(claim.updatedAt)} />
+          <InfoRow label="Claim Number" value={claim.claimNumber} />
+          <InfoRow label="Submission Date" value={formatDate(claim.createdAt)} />
+          <InfoRow label="Last Updated" value={formatDate(claim.updatedAt)} />
+          <InfoRow label="Field Adjuster Name" value={assignedTo?.name} />
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-text">
+          Vehicle information
+        </h2>
+
+        <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+          <InfoRow label="Plate Number" value={vehicle.plateNumber} />
+          <InfoRow label="Vehicle Make" value={vehicle.make} />
+          <InfoRow label="Vehicle Model" value={vehicle.model} />
+          <InfoRow label="Vehicle Year" value={vehicle.year} />
+          <InfoRow label="Vehicle Color" value={vehicle.color} />
         </div>
       </section>
 
@@ -152,36 +187,75 @@ export default function ClaimDetails() {
         <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-text">Customer</h2>
 
-          <div className="mt-5 space-y-4">
-            <InfoRow label="Name" value={claim.customer.name} />
-            <InfoRow label="Phone" value={claim.customer.phone} />
+          <div className="mt-5 grid gap-5 sm:grid-cols-2">
+            <InfoRow label="Customer Name" value={claim.customer.name} />
+            <InfoRow label="Phone Number" value={claim.customer.phone} />
+            <InfoRow label="Customer Policy Number" value={vehicle.policyId} />
           </div>
         </section>
 
         <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-text">Vehicle & policy</h2>
+          <h2 className="text-lg font-semibold text-text">Policy</h2>
 
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <InfoRow label="Plate number" value={claim.vehicle.plateNumber} />
-            <InfoRow label="Vehicle ID" value={claim.vehicle.vehicleId} />
-            <InfoRow label="Policy ID" value={claim.vehicle.policyId} />
-            <InfoRow label="Customer ID" value={claim.vehicle.customerId} />
+          <div className="mt-5 grid gap-5 sm:grid-cols-2">
+            <InfoRow label="Policy Number" value={claim.policy?.policyNumber} />
+            <InfoRow label="Policy Status" value={claim.policy?.status} />
+            <InfoRow
+              label="Policy Start Date"
+              value={formatDate(claim.policy?.startDate)}
+            />
+            <InfoRow
+              label="Policy Expiry Date"
+              value={formatDate(claim.policy?.expiryDate)}
+            />
           </div>
         </section>
       </div>
 
       <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-text">Accident & location</h2>
+        <h2 className="text-lg font-semibold text-text">
+          Accident information
+        </h2>
 
         <div className="mt-5 grid gap-5 sm:grid-cols-2">
-          <InfoRow label="Incident location" value={claim.incidentLocation} />
-          <InfoRow label="Assignment priority" value={claim.assignment.priority} />
+          <InfoRow label="Accident Type" value={accident?.accidentType} />
+          <InfoRow label="Accident Date" value={accident?.accidentDate} />
+          <InfoRow label="Accident Time" value={accident?.accidentTime} />
+          <InfoRow label="Accident Description" value={accident?.description} />
           <InfoRow
-            label="Assignment notes"
-            value={claim.assignment.assignmentNotes}
+            label="Damage Description"
+            value={accident?.damageDescription}
           />
-          <InfoRow label="Assigned at" value={formatDate(claim.assignment.assignedAt)} />
         </div>
+      </section>
+
+      <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-text">Location</h2>
+
+        <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <InfoRow label="Street" value={location?.address} />
+          <InfoRow label="Area" value={claim.incidentLocation} />
+          <InfoRow
+            label="Coordinates"
+            value={
+              location?.latitude && location?.longitude
+                ? `${location.latitude}, ${location.longitude}`
+                : null
+            }
+          />
+        </div>
+
+        {location?.latitude && location?.longitude && (
+          <a
+            href={`https://www.google.com/maps?q=${location.latitude},${location.longitude}`}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary-dark"
+          >
+            <ExternalLink size={16} />
+            View on Map
+          </a>
+        )}
       </section>
     </div>
   );
