@@ -37,6 +37,8 @@ export interface ClaimSummary {
   customerName: string;
   initialPlateNumber: string;
   createdAt: string;
+  updatedAt?: string;
+
 }
 
 export interface ClaimDetails {

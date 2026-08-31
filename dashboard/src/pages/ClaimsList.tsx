@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Search, RefreshCw } from "lucide-react";
+import { RefreshCw, Search } from "lucide-react";
 
 import { getClaims } from "../api/claims.service";
 import { getApiErrorMessage } from "../api/client";
@@ -10,25 +10,29 @@ import LoadingState from "../components/ui/LoadingState";
 import ErrorState from "../components/ui/ErrorState";
 import EmptyState from "../components/ui/EmptyState";
 
-const statusOptions: Array<{ label: string; value: "" | ClaimStatus }> = [
+const statusOptions: Array<{
+  label: string;
+  value: "" | ClaimStatus;
+}> = [
   { label: "All statuses", value: "" },
-  { label: "New", value: "NEW" },
   { label: "Submitted", value: "SUBMITTED" },
   { label: "Under review", value: "UNDER_REVIEW" },
-  { label: "Approved", value: "APPROVED" },
-  { label: "Closed", value: "CLOSED" },
 ];
 
-function formatDate(date: string) {
+function formatDate(value?: string | null) {
+  if (!value) return "—";
+
   return new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
-  }).format(new Date(date));
+    timeStyle: "short",
+  }).format(new Date(value));
 }
 
 export default function ClaimsList() {
   const [claims, setClaims] = useState<ClaimSummary[]>([]);
   const [status, setStatus] = useState<"" | ClaimStatus>("");
   const [search, setSearch] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -53,22 +57,25 @@ export default function ClaimsList() {
   const filteredClaims = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
-    if (!normalizedSearch) {
-      return claims;
-    }
+    return claims.filter((claim) => {
+      const matchesSearch =
+        !normalizedSearch ||
+        [
+          claim.claimNumber,
+          claim.customerName,
+          claim.initialPlateNumber,
+          claim.status,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedSearch);
 
-    return claims.filter((claim) =>
-      [
-        claim.claimNumber,
-        claim.customerName,
-        claim.initialPlateNumber,
-        claim.status,
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(normalizedSearch),
-    );
-  }, [claims, search]);
+      const matchesDate =
+        !dateFilter || claim.createdAt.startsWith(dateFilter);
+
+      return matchesSearch && matchesDate;
+    });
+  }, [claims, search, dateFilter]);
 
   return (
     <div className="space-y-6">
@@ -83,7 +90,7 @@ export default function ClaimsList() {
         <button
           type="button"
           onClick={() => void loadClaims()}
-          className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text transition hover:bg-background"
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text hover:bg-background"
         >
           <RefreshCw size={16} />
           Refresh
@@ -91,17 +98,19 @@ export default function ClaimsList() {
       </div>
 
       <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-        <div className="grid gap-3 md:grid-cols-[1fr_220px]">
+        <div className="grid gap-3 md:grid-cols-[1fr_180px_180px]">
           <label className="relative block">
             <Search
               size={17}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
             />
+
             <input
+              type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search claim, customer, or plate..."
-              className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-4 text-sm text-text outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+              className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-4 text-sm text-text outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
           </label>
 
@@ -118,6 +127,13 @@ export default function ClaimsList() {
               </option>
             ))}
           </select>
+
+          <input
+            type="date"
+            value={dateFilter}
+            onChange={(event) => setDateFilter(event.target.value)}
+            className="rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-text outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+          />
         </div>
       </div>
 
@@ -133,37 +149,50 @@ export default function ClaimsList() {
             <table className="min-w-full divide-y divide-border">
               <thead className="bg-background">
                 <tr>
-                  {["Claim", "Customer", "Plate", "Status", "Created", ""].map(
-                    (heading) => (
-                      <th
-                        key={heading}
-                        className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-text-muted"
-                      >
-                        {heading}
-                      </th>
-                    ),
-                  )}
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-muted">
+                    Claim Number
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-muted">
+                    Customer
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-muted">
+                    Plate Number
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-muted">
+                    Status
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-muted">
+                    Updated Time
+                  </th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold uppercase text-text-muted">
+                    Action
+                  </th>
                 </tr>
               </thead>
 
               <tbody className="divide-y divide-border">
                 {filteredClaims.map((claim) => (
-                  <tr key={claim.id} className="transition hover:bg-background">
+                  <tr key={claim.id} className="hover:bg-background">
                     <td className="whitespace-nowrap px-5 py-4 text-sm font-semibold text-text">
                       {claim.claimNumber}
                     </td>
+
                     <td className="whitespace-nowrap px-5 py-4 text-sm text-text-muted">
                       {claim.customerName}
                     </td>
+
                     <td className="whitespace-nowrap px-5 py-4 text-sm text-text-muted">
                       {claim.initialPlateNumber}
                     </td>
+
                     <td className="whitespace-nowrap px-5 py-4">
                       <StatusBadge status={claim.status} />
                     </td>
+
                     <td className="whitespace-nowrap px-5 py-4 text-sm text-text-muted">
-                      {formatDate(claim.createdAt)}
+                      {formatDate(claim.updatedAt ?? claim.createdAt)}
                     </td>
+
                     <td className="whitespace-nowrap px-5 py-4 text-right">
                       <Link
                         to={`/claims/${claim.id}`}
