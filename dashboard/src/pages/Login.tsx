@@ -2,9 +2,13 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertCircle, Loader2, ShieldCheck } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import { login } from "../api/auth.service";
+import { getApiErrorMessage } from "../api/client";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { saveSession, logout } = useAuth();
 
   const [organizationCode, setOrganizationCode] = useState("");
   const [employeeCode, setEmployeeCode] = useState("");
@@ -28,9 +32,24 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      // Temporary behavior until Mohammed's Login API is connected.
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      navigate("/dashboard");
+      const { accessToken, user } = await login({
+        organizationCode: organizationCode.trim().toUpperCase(),
+        employeeCode: employeeCode.trim().toUpperCase(),
+        password,
+      });
+
+      if (user.role === "FIELD_ADJUSTER") {
+        logout();
+        setError("Field Adjusters must use the mobile application.");
+        return;
+      }
+
+      saveSession(accessToken, user);
+      navigate(user.role === "ADMIN" ? "/users" : "/dashboard", {
+        replace: true,
+      });
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError));
     } finally {
       setIsLoading(false);
     }
@@ -49,13 +68,16 @@ export default function Login() {
             <strong className="block text-base font-bold text-text leading-tight">
               InsurFlow
             </strong>
+
             <small className="text-text-muted text-xs">
               Claims Management
             </small>
           </div>
         </div>
 
-        <h1 className="text-2xl font-bold text-text mb-1">Welcome back</h1>
+        <h1 className="text-2xl font-bold text-text mb-1">
+          Welcome back
+        </h1>
 
         <p className="text-text-muted text-sm mb-8">
           Sign in to your dashboard.
@@ -75,8 +97,10 @@ export default function Login() {
               id="organizationCode"
               type="text"
               value={organizationCode}
-              onChange={(event) => setOrganizationCode(event.target.value)}
-              placeholder="INSURFLOW"
+              onChange={(event) =>
+                setOrganizationCode(event.target.value)
+              }
+              placeholder="DEMO-INS"
               autoComplete="organization"
               disabled={isLoading}
               className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-text text-sm placeholder:text-text-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition disabled:opacity-60"
@@ -96,7 +120,9 @@ export default function Login() {
               id="employeeCode"
               type="text"
               value={employeeCode}
-              onChange={(event) => setEmployeeCode(event.target.value)}
+              onChange={(event) =>
+                setEmployeeCode(event.target.value)
+              }
               placeholder="CO-001"
               autoComplete="username"
               disabled={isLoading}
@@ -117,7 +143,9 @@ export default function Login() {
               id="password"
               type="password"
               value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              onChange={(event) =>
+                setPassword(event.target.value)
+              }
               placeholder="••••••••"
               autoComplete="current-password"
               disabled={isLoading}
@@ -131,7 +159,10 @@ export default function Login() {
               role="alert"
               className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2.5 text-sm text-danger"
             >
-              <AlertCircle size={17} className="mt-0.5 shrink-0" />
+              <AlertCircle
+                size={17}
+                className="mt-0.5 shrink-0"
+              />
               <span>{error}</span>
             </div>
           )}
@@ -142,7 +173,10 @@ export default function Login() {
             disabled={isLoading}
             className="flex w-full items-center justify-center gap-2 bg-primary-dark hover:bg-primary text-white font-semibold py-2.5 rounded-lg transition-colors mt-2 text-sm disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {isLoading && <Loader2 size={17} className="animate-spin" />}
+            {isLoading && (
+              <Loader2 size={17} className="animate-spin" />
+            )}
+
             {isLoading ? "Signing in..." : "Sign In"}
           </button>
         </form>

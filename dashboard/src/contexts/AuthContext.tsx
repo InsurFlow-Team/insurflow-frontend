@@ -6,10 +6,11 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
-import { TOKEN_STORAGE_KEY } from "../api/client";
+import {
+  TOKEN_STORAGE_KEY,
+  USER_STORAGE_KEY,
+} from "../api/client";
 import type { User } from "../types";
-
-const USER_STORAGE_KEY = "insurflow_user";
 
 interface AuthContextValue {
   user: User | null;
@@ -25,27 +26,47 @@ interface AuthProviderProps {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-function getStoredUser(): User | null {
+interface StoredSession {
+  token: string | null;
+  user: User | null;
+}
+
+function clearStoredSession() {
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
+  localStorage.removeItem(USER_STORAGE_KEY);
+}
+
+function getStoredSession(): StoredSession {
+  const storedToken = localStorage.getItem(TOKEN_STORAGE_KEY);
   const storedUser = localStorage.getItem(USER_STORAGE_KEY);
 
-  if (!storedUser) {
-    return null;
+  if (!storedToken || !storedUser) {
+    clearStoredSession();
+    return { token: null, user: null };
   }
 
   try {
-    return JSON.parse(storedUser) as User;
+    const parsedUser = JSON.parse(storedUser) as User;
+
+    if (
+      storedToken === "temporary-access-token" ||
+      parsedUser.role === "FIELD_ADJUSTER"
+    ) {
+      clearStoredSession();
+      return { token: null, user: null };
+    }
+
+    return { token: storedToken, user: parsedUser };
   } catch {
-    localStorage.removeItem(USER_STORAGE_KEY);
-    return null;
+    clearStoredSession();
+    return { token: null, user: null };
   }
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [token, setToken] = useState<string | null>(() =>
-    localStorage.getItem(TOKEN_STORAGE_KEY),
+  const [session, setSession] = useState<StoredSession>(() =>
+    getStoredSession(),
   );
-
-  const [user, setUser] = useState<User | null>(() => getStoredUser());
 
   const saveSession = useCallback(
     (newToken: string, authenticatedUser: User) => {
@@ -55,29 +76,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
         JSON.stringify(authenticatedUser),
       );
 
-      setToken(newToken);
-      setUser(authenticatedUser);
+      setSession({ token: newToken, user: authenticatedUser });
     },
     [],
   );
 
   const logout = useCallback(() => {
-    localStorage.removeItem(TOKEN_STORAGE_KEY);
-    localStorage.removeItem(USER_STORAGE_KEY);
-
-    setToken(null);
-    setUser(null);
+    clearStoredSession();
+    setSession({ token: null, user: null });
   }, []);
 
   const value = useMemo(
     () => ({
-      user,
-      token,
-      isAuthenticated: Boolean(token && user),
+      user: session.user,
+      token: session.token,
+      isAuthenticated: Boolean(session.token && session.user),
       saveSession,
       logout,
     }),
-    [user, token, saveSession, logout],
+    [session, saveSession, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

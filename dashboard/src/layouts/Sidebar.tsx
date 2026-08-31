@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import type { Role } from "../types";
+import { useAuth } from "../contexts/AuthContext";
 
 interface NavigationItem {
   label: string;
@@ -55,12 +56,10 @@ export default function Sidebar({
   onClose = () => {},
 }: SidebarProps) {
   const navigate = useNavigate();
-  const currentRole: Role = "ADMIN"; // Temporary until authentication
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
+    logout();
     onClose();
     navigate("/login", { replace: true });
   };
@@ -98,7 +97,7 @@ export default function Sidebar({
       {/* Navigation */}
       <nav className="flex-1 px-3 py-5 space-y-1">
         {navigationItems
-          .filter((item) => item.roles.includes(currentRole))
+          .filter((item) => user && item.roles.includes(user.role))
           .map((item) => (
             <NavLink
               key={item.path}
