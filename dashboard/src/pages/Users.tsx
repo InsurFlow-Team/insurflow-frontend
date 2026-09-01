@@ -25,7 +25,8 @@ const columns: Column<User>[] = [
   {
     key: "status",
     header: "Status",
-    render: (user) => <StatusBadge status={user.status} />,
+    render: (user) =>
+      user.status ? <StatusBadge status={user.status} /> : <span className="text-sm text-text-muted">—</span>,
   },
 ];
 
@@ -33,6 +34,8 @@ export default function Users() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // TODO: wire up to API when endpoint is ready
+  void setUsers; void setLoading; void setError;
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const { values, errors, handleChange, isValid, reset } = useForm<{
