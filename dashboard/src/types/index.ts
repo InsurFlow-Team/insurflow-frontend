@@ -1,36 +1,96 @@
-export type Role = "ADMIN" | "CLAIMS_OFFICER" | "FIELD_ADJUSTER";
+export type Role =
+  | "ADMIN"
+  | "CLAIMS_OFFICER"
+  | "FIELD_ADJUSTER";
 
 export type UserStatus = "ACTIVE" | "INACTIVE";
 
-export type ClaimStatus = "SUBMITTED" | "UNDER_REVIEW" | "CLOSED";
+export type ClaimStatus =
+  | "NEW"
+  | "ASSIGNED"
+  | "SUBMITTED"
+  | "UNDER_REVIEW"
+  | "APPROVED"
+  | "CLOSED";
 
-export type InspectionTaskStatus = "ASSIGNED" | "IN_PROGRESS" | "SUBMITTED";
+export type InspectionTaskStatus =
+  | "ASSIGNED"
+  | "IN_PROGRESS"
+  | "SUBMITTED";
 
-export type Availability = "AVAILABLE" | "UNAVAILABLE";
-
-export interface Organization {
-  id: string;
-  name: string;
-}
+export type Availability =
+  | "AVAILABLE"
+  | "UNAVAILABLE";
 
 export interface User {
   id: string;
   name: string;
   employeeCode: string;
   role: Role;
-  status: UserStatus;
-  organization: Organization;
+  organizationId: string;
+  organizationName: string;
+  status?: UserStatus;
 }
 
 export interface FieldAdjuster extends User {
+  status: UserStatus;
   activeTasksCount: number;
   availability: Availability;
 }
 
-export interface Claim {
+export interface ClaimSummary {
   id: string;
   claimNumber: string;
   status: ClaimStatus;
+  customerName: string;
+  initialPlateNumber: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ClaimDetails {
+  id: string;
+  claimNumber: string;
+  status: ClaimStatus;
+
+  customer: {
+    name: string;
+    phone: string;
+  };
+
+  vehicle: {
+    plateNumber?: string | null;
+    vehicleId?: string | null;
+    policyId?: string | null;
+    customerId?: string | null;
+    make?: string | null;
+    model?: string | null;
+    year?: number | null;
+    color?: string | null;
+  };
+
+  policy?: {
+    policyNumber?: string | null;
+    status?: string | null;
+    startDate?: string | null;
+    expiryDate?: string | null;
+  };
+
+  incidentType: string;
+  incidentLocation: string;
+
+  assignment: {
+    assignedTo: unknown | null;
+    assignedBy: unknown | null;
+    assignedAt: string | null;
+    priority: "LOW" | "MEDIUM" | "HIGH";
+    assignmentNotes: string | null;
+  };
+
+  accident: Record<string, unknown> | null;
+  location: Record<string, unknown> | null;
+  timeline: Array<Record<string, unknown>>;
+
   createdAt: string;
   updatedAt: string;
 }
