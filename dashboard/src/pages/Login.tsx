@@ -1,7 +1,34 @@
-import { Link } from "react-router-dom";
 import { ShieldCheck } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useForm } from "../hooks/useForm";
+import { validateEmployeeCode, validatePassword } from "../utils/validation";
+import FormField from "../components/ui/FormField";
+import Input from "../components/ui/Input";
+import Button from "../components/ui/Button";
 
 export default function Login() {
+  const navigate = useNavigate();
+
+  const { values, errors, handleChange, isValid } = useForm<{
+    employeeCode: string;
+    password: string;
+  }>(
+    {
+      employeeCode: "",
+      password: "",
+    },
+    {
+      employeeCode: validateEmployeeCode,
+      password: validatePassword,
+    },
+  );
+
+  const handleSubmit = () => {
+    if (!isValid) return;
+
+    navigate("/dashboard");
+  };
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="bg-surface rounded-2xl border border-border shadow-sm p-10 w-full max-w-sm">
@@ -10,6 +37,7 @@ export default function Login() {
           <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center shrink-0">
             <ShieldCheck size={20} className="text-white" />
           </div>
+
           <div>
             <strong className="block text-base font-bold text-text leading-tight">
               InsurFlow
@@ -19,39 +47,41 @@ export default function Login() {
         </div>
 
         <h1 className="text-2xl font-bold text-text mb-1">Welcome back</h1>
+
         <p className="text-text-muted text-sm mb-8">
           Sign in to your dashboard.
         </p>
 
         {/* Form */}
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-text mb-1.5">
-              Employee Code
-            </label>
-            <input
+          <FormField label="Employee Code" required error={errors.employeeCode}>
+            <Input
+              name="employeeCode"
               type="text"
+              value={values.employeeCode}
+              onChange={handleChange}
               placeholder="CO-001"
-              className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-text text-sm placeholder:text-text-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-text mb-1.5">
-              Password
-            </label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-text text-sm placeholder:text-text-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition"
-            />
-          </div>
+          </FormField>
 
-          <Link
-            to="/dashboard"
-            className="block w-full text-center bg-primary-dark hover:bg-primary text-white font-semibold py-2.5 rounded-lg transition-colors mt-2 text-sm"
+          <FormField label="Password" required error={errors.password}>
+            <Input
+              name="password"
+              type="password"
+              value={values.password}
+              onChange={handleChange}
+              placeholder="••••••••"
+            />
+          </FormField>
+
+          <Button
+            type="button"
+            className="w-full mt-2"
+            onClick={handleSubmit}
+            disabled={!isValid}
           >
             Sign In
-          </Link>
+          </Button>
         </div>
       </div>
     </div>
