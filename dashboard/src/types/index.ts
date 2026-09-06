@@ -1,7 +1,4 @@
-export type Role =
-  | "ADMIN"
-  | "CLAIMS_OFFICER"
-  | "FIELD_ADJUSTER";
+export type Role = "ADMIN" | "CLAIMS_OFFICER" | "FIELD_ADJUSTER";
 
 export type UserStatus = "ACTIVE" | "INACTIVE";
 
@@ -13,14 +10,17 @@ export type ClaimStatus =
   | "APPROVED"
   | "CLOSED";
 
-export type InspectionTaskStatus =
-  | "ASSIGNED"
-  | "IN_PROGRESS"
-  | "SUBMITTED";
+export type InspectionTaskStatus = "ASSIGNED" | "IN_PROGRESS" | "SUBMITTED";
 
-export type Availability =
-  | "AVAILABLE"
-  | "UNAVAILABLE";
+export type Availability = "AVAILABLE" | "UNAVAILABLE";
+
+export type CreateUserRequest = {
+  name: string;
+  employeeCode: string;
+  password: string;
+  role: Role;
+  status: UserStatus;
+};
 
 export interface User {
   id: string;
@@ -50,11 +50,7 @@ export interface ClaimSummary {
 
 // ─── Lookup domain types ──────────────────────────────────────────────────────
 
-export type PolicyStatus =
-  | "ACTIVE"
-  | "EXPIRED"
-  | "CANCELLED"
-  | "SUSPENDED";
+export type PolicyStatus = "ACTIVE" | "EXPIRED" | "CANCELLED" | "SUSPENDED";
 
 export interface VehicleInfo {
   plateNumber?: string | null;
