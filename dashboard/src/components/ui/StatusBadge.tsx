@@ -16,8 +16,10 @@ const statusConfig: Record<Status, { label: string; classes: string }> = {
   ACTIVE:       { label: "Active",        classes: "bg-primary-light text-primary-dark border-primary/20" },
   INACTIVE:     { label: "Inactive",      classes: "bg-gray-100 text-text-muted border-border" },
   // Claim
+  NEW:          { label: "New",           classes: "bg-gray-100 text-text border-border" },
   SUBMITTED:    { label: "Submitted",     classes: "bg-blue-50 text-info border-info/20" },
   UNDER_REVIEW: { label: "Under Review",  classes: "bg-accent-light text-accent border-accent/20" },
+  APPROVED:     { label: "Approved",      classes: "bg-primary-light text-primary-dark border-primary/20" },
   CLOSED:       { label: "Closed",        classes: "bg-gray-100 text-text-muted border-border" },
   // Inspection Task
   ASSIGNED:     { label: "Assigned",      classes: "bg-purple-50 text-purple-700 border-purple-200" },

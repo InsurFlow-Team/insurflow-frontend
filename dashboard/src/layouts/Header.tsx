@@ -1,5 +1,6 @@
 import { useLocation } from "react-router-dom";
 import { Bell, Menu } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -12,19 +13,13 @@ const pageTitles: Record<string, string> = {
   "/settings": "Settings",
 };
 
-// Temporary user data until Authentication is connected
-const currentUser = {
-  name: "Ahmed Ali",
-  role: "ADMIN",
-  organization: "InsurFlow Insurance",
-};
-
 export default function Header({
   onMenuClick = () => {},
 }: HeaderProps) {
   const location = useLocation();
+  const { user } = useAuth();
   const title = pageTitles[location.pathname] ?? "Dashboard";
-  const userInitial = currentUser.name.charAt(0).toUpperCase();
+  const userInitial = user?.name.charAt(0).toUpperCase() ?? "U";
 
   return (
     <header className="h-16 bg-surface border-b border-border px-4 sm:px-6 flex items-center justify-between shrink-0">
@@ -66,18 +61,18 @@ export default function Header({
 
           <div className="hidden sm:flex flex-col">
             <span className="text-sm font-semibold text-text leading-tight">
-              {currentUser.name}
+              {user?.name ?? "User"}
             </span>
 
             <div className="flex items-center gap-1.5 text-xs leading-tight">
               <span className="text-accent font-medium">
-                {currentUser.role}
+                {user?.role.replace(/_/g, " ")}
               </span>
 
               <span className="text-text-muted">•</span>
 
               <span className="text-text-muted max-w-36 truncate">
-                {currentUser.organization}
+                {user?.organizationName}
               </span>
             </div>
           </div>

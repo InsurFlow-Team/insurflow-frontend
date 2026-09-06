@@ -31,3 +31,23 @@ export function validatePassword(value: string): string | null {
 
   return null;
 }
+
+export function validateStatus(value: string): string | null {
+  const required = validateRequired(value);
+  if (required) return required;
+  if (!["ACTIVE", "INACTIVE"].includes(value)) {
+    return "Invalid status";
+  }
+
+  return null;
+}
+
+export function validateRole(value: string): string | null {
+  const required = validateRequired(value);
+  if (required) return required;
+  if (!["ADMIN", "CLAIMS_OFFICER", "FIELD_ADJUSTER"].includes(value)) {
+    return "Invalid role";
+  }
+
+  return null;
+}

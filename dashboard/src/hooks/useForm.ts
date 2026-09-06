@@ -21,10 +21,17 @@ export function useForm<T>(
       [name]: value,
     }));
 
-    setErrors((prev) => ({
-      ...prev,
-      [name]: error ?? undefined,
-    }));
+    setErrors((prev) => {
+      const next = { ...prev };
+
+      if (error) {
+        next[name as keyof T] = error;
+      } else {
+        delete next[name as keyof T];
+      }
+
+      return next;
+    });
   };
 
   const isValid =
