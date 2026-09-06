@@ -13,7 +13,6 @@ import Button from "../components/ui/Button";
 import { UserPlus } from "lucide-react";
 import DataTable, { type Column } from "../components/ui/DataTable";
 import StatusBadge from "../components/ui/StatusBadge";
-
 import Modal from "../components/ui/Modal";
 import FormField from "../components/ui/FormField";
 import Input from "../components/ui/Input";
@@ -107,6 +106,7 @@ export default function Users() {
           Add User
         </Button>
       </div>
+
       <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
         <div className="grid gap-3 md:grid-cols-[1fr_180px_180px]">
           <label className="relative block">
@@ -161,6 +161,7 @@ export default function Users() {
         emptyMessage="No users found."
         keyExtractor={(user) => user.id}
       />
+
       <Modal isOpen={isModalOpen} onClose={handleClose} title="Create User">
         <div className="space-y-4">
           <FormField label="Name" required error={errors.name}>
@@ -217,12 +218,14 @@ export default function Users() {
               ]}
             />
           </FormField>
+
           {addUserError && (
             <div className="flex items-center gap-2 rounded-lg bg-danger/10 px-3 py-2.5 text-sm text-danger">
               <AlertCircle size={16} />
               <span>{addUserError}</span>
             </div>
           )}
+
           <div className="flex gap-3 pt-2">
             <Button
               variant="secondary"
