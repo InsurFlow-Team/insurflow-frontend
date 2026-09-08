@@ -1,7 +1,4 @@
-export type Role =
-  | "ADMIN"
-  | "CLAIMS_OFFICER"
-  | "FIELD_ADJUSTER";
+export type Role = "ADMIN" | "CLAIMS_OFFICER" | "FIELD_ADJUSTER";
 
 export type UserStatus = "ACTIVE" | "INACTIVE";
 
@@ -13,14 +10,17 @@ export type ClaimStatus =
   | "APPROVED"
   | "CLOSED";
 
-export type InspectionTaskStatus =
-  | "ASSIGNED"
-  | "IN_PROGRESS"
-  | "SUBMITTED";
+export type InspectionTaskStatus = "ASSIGNED" | "IN_PROGRESS" | "SUBMITTED";
 
-export type Availability =
-  | "AVAILABLE"
-  | "UNAVAILABLE";
+export type Availability = "AVAILABLE" | "UNAVAILABLE";
+
+export type CreateUserRequest = {
+  name: string;
+  employeeCode: string;
+  password: string;
+  role: Role;
+  status: UserStatus;
+};
 
 export interface User {
   id: string;
@@ -48,33 +48,45 @@ export interface ClaimSummary {
   updatedAt?: string;
 }
 
+// ─── Lookup domain types ──────────────────────────────────────────────────────
+
+export type PolicyStatus = "ACTIVE" | "EXPIRED" | "CANCELLED" | "SUSPENDED";
+
+export interface VehicleInfo {
+  plateNumber?: string | null;
+  vehicleId?: string | null;
+  policyId?: string | null;
+  customerId?: string | null;
+  make?: string | null;
+  model?: string | null;
+  year?: number | null;
+  color?: string | null;
+}
+
+export interface CustomerInfo {
+  name: string;
+  phone: string;
+}
+
+export interface PolicyInfo {
+  policyNumber?: string | null;
+  status?: PolicyStatus | null;
+  startDate?: string | null;
+  expiryDate?: string | null;
+}
+
+// ─── Claim details ────────────────────────────────────────────────────────────
+
 export interface ClaimDetails {
   id: string;
   claimNumber: string;
   status: ClaimStatus;
 
-  customer: {
-    name: string;
-    phone: string;
-  };
+  customer: CustomerInfo;
 
-  vehicle: {
-    plateNumber?: string | null;
-    vehicleId?: string | null;
-    policyId?: string | null;
-    customerId?: string | null;
-    make?: string | null;
-    model?: string | null;
-    year?: number | null;
-    color?: string | null;
-  };
+  vehicle: VehicleInfo;
 
-  policy?: {
-    policyNumber?: string | null;
-    status?: string | null;
-    startDate?: string | null;
-    expiryDate?: string | null;
-  };
+  policy?: PolicyInfo;
 
   incidentType: string;
   incidentLocation: string;

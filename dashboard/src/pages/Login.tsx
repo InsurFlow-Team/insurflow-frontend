@@ -20,11 +20,7 @@ export default function Login() {
     event.preventDefault();
     setError("");
 
-    if (
-      !organizationCode.trim() ||
-      !employeeCode.trim() ||
-      !password.trim()
-    ) {
+    if (!organizationCode.trim() || !employeeCode.trim() || !password.trim()) {
       setError("Please fill in all required fields.");
       return;
     }
@@ -75,9 +71,7 @@ export default function Login() {
           </div>
         </div>
 
-        <h1 className="text-2xl font-bold text-text mb-1">
-          Welcome back
-        </h1>
+        <h1 className="text-2xl font-bold text-text mb-1">Welcome back</h1>
 
         <p className="text-text-muted text-sm mb-8">
           Sign in to your dashboard.
@@ -97,9 +91,7 @@ export default function Login() {
               id="organizationCode"
               type="text"
               value={organizationCode}
-              onChange={(event) =>
-                setOrganizationCode(event.target.value)
-              }
+              onChange={(event) => setOrganizationCode(event.target.value)}
               placeholder="DEMO-INS"
               autoComplete="organization"
               disabled={isLoading}
@@ -120,9 +112,7 @@ export default function Login() {
               id="employeeCode"
               type="text"
               value={employeeCode}
-              onChange={(event) =>
-                setEmployeeCode(event.target.value)
-              }
+              onChange={(event) => setEmployeeCode(event.target.value)}
               placeholder="CO-001"
               autoComplete="username"
               disabled={isLoading}
@@ -143,9 +133,7 @@ export default function Login() {
               id="password"
               type="password"
               value={password}
-              onChange={(event) =>
-                setPassword(event.target.value)
-              }
+              onChange={(event) => setPassword(event.target.value)}
               placeholder="••••••••"
               autoComplete="current-password"
               disabled={isLoading}
@@ -159,10 +147,7 @@ export default function Login() {
               role="alert"
               className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2.5 text-sm text-danger"
             >
-              <AlertCircle
-                size={17}
-                className="mt-0.5 shrink-0"
-              />
+              <AlertCircle size={17} className="mt-0.5 shrink-0" />
               <span>{error}</span>
             </div>
           )}
@@ -173,10 +158,7 @@ export default function Login() {
             disabled={isLoading}
             className="flex w-full items-center justify-center gap-2 bg-primary-dark hover:bg-primary text-white font-semibold py-2.5 rounded-lg transition-colors mt-2 text-sm disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {isLoading && (
-              <Loader2 size={17} className="animate-spin" />
-            )}
-
+            {isLoading && <Loader2 size={17} className="animate-spin" />}
             {isLoading ? "Signing in..." : "Sign In"}
           </button>
         </form>

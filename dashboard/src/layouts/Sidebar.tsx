@@ -41,7 +41,7 @@ const navigationItems: NavigationItem[] = [
     label: "Users",
     path: "/users",
     icon: <Users size={18} />,
-    roles: ["ADMIN"],
+    roles: ["ADMIN", "CLAIMS_OFFICER"],
   },
   {
     label: "Settings",
