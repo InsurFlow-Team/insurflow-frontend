@@ -17,6 +17,7 @@ interface DataTableProps<T> {
   emptyMessage?: string;
   keyExtractor: (row: T) => string;
   onRetry?: () => void;
+  footer?: ReactNode;
 }
 
 export default function DataTable<T>({
@@ -27,6 +28,7 @@ export default function DataTable<T>({
   emptyMessage = "No data found.",
   keyExtractor,
   onRetry,
+  footer,
 }: DataTableProps<T>) {
   if (loading) return <LoadingState />;
   if (error) return <ErrorState message={error} onRetry={onRetry} />;
@@ -63,6 +65,15 @@ export default function DataTable<T>({
             </tr>
           ))}
         </tbody>
+        {footer && (
+          <tfoot className="bg-surface border-t border-border">
+            <tr>
+              <td colSpan={columns.length} className="px-4 py-3">
+                {footer}
+              </td>
+            </tr>
+          </tfoot>
+        )}
       </table>
     </div>
   );

@@ -55,7 +55,7 @@ export default function Login() {
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8">
       <div className="bg-surface rounded-2xl border border-border shadow-sm p-8 sm:p-10 w-full max-w-sm">
         <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shrink-0">
             <ShieldCheck size={20} className="text-white" />
           </div>
 

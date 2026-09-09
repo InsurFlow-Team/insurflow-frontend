@@ -1,31 +1,42 @@
 @import "tailwindcss";
 
 @theme {
-  /* Brand Colors */
-  --color-primary: #2d5d57;
-  --color-primary-dark: #214943;
-  --color-primary-light: #eaf4ef;
+  /* Brand (navy) */
+  --color-primary: #1e2a5e;
+  --color-primary-dark: #162048;
+  --color-primary-light: #eef1f8;
 
-  --color-accent: #d4902e;
-  --color-accent-light: #fff4df;
+  --color-accent: #d97706;
+  --color-accent-light: #fef3c7;
 
   /* Background */
-  --color-background: #f4f7f6;
+  --color-background: #f7f8fa;
   --color-surface: #ffffff;
-  --color-surface-soft: #f8faf9;
+  --color-surface-soft: #f9fafb;
 
   /* Text */
-  --color-text: #20302e;
-  --color-text-muted: #687774;
+  --color-text: #1f2937;
+  --color-text-muted: #6b7280;
 
   /* Status */
-  --color-success: #27845b;
-  --color-warning: #d4902e;
-  --color-danger: #c94a4a;
-  --color-info: #3678b8;
+  --color-success: #10b981;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+  --color-danger-bg: #fee2e2;
+  --color-info: #2563eb;
 
   /* Border */
-  --color-border: #dce7e3;
+  --color-border: #e5e7eb;
+}
+
+/* Design-system semantic extras (used by role/status badges) */
+@theme {
+  --color-admin: #7c3aed;
+  --color-admin-bg: #f3e8ff;
+  --color-claims: #2563eb;
+  --color-claims-bg: #dbeafe;
+  --color-field: #059669;
+  --color-field-bg: #d1fae5;
 }
 
 * {
