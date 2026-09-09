@@ -40,6 +40,18 @@ export function useUsers() {
         setAddUserLoading(false);
       });
   }
+
+  // TEMPORARY frontend-only mutation (no API call).
+  // Replaced by PATCH /users/:id when the backend supports editing/status changes.
+  function updateUserLocal(
+    id: string,
+    patch: Partial<Pick<User, "name" | "employeeCode" | "role" | "status">>,
+  ) {
+    setUsers((prev) =>
+      prev.map((user) => (user.id === id ? { ...user, ...patch } : user)),
+    );
+  }
+
   return {
     users,
     loading,
@@ -48,5 +60,6 @@ export function useUsers() {
     addUserError,
     addUser,
     addUserSuccess,
+    updateUserLocal,
   };
 }

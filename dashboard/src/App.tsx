@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import DashboardLayout from "./layouts/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
@@ -32,8 +32,12 @@ function App() {
 
           {/* TODO: Revert to ADMIN only before production */}
           <Route element={<RoleGuard allowedRoles={["ADMIN", "CLAIMS_OFFICER"]} />}>
-            <Route path="/users" element={<Users />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route path="/settings" element={<Outlet />}>
+              <Route index element={<Settings />} />
+              <Route path="users" element={<Users />} />
+            </Route>
+            {/* Backward-compatible redirect for the old /users route */}
+            <Route path="/users" element={<Navigate to="/settings/users" replace />} />
           </Route>
         </Route>
       </Route>

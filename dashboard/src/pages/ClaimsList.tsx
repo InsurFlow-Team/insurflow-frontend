@@ -1,213 +1,378 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { RefreshCw, Search } from "lucide-react";
-
+import {
+  AlertCircle,
+  ChevronRight,
+  FolderOpen,
+  Inbox,
+  PenLine,
+  RefreshCw,
+  Search,
+} from "lucide-react";
 import { getClaims } from "../api/claims.service";
 import { getApiErrorMessage } from "../api/client";
 import type { ClaimStatus, ClaimSummary } from "../types";
 import StatusBadge from "../components/ui/StatusBadge";
 import LoadingState from "../components/ui/LoadingState";
 import ErrorState from "../components/ui/ErrorState";
-import EmptyState from "../components/ui/EmptyState";
+import DataTable, { type Column } from "../components/ui/DataTable";
+import Pagination from "../components/ui/Pagination";
+import StatCard from "../components/ui/StatCard";
+import Button from "../components/ui/Button";
 
-const statusOptions: Array<{
+const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
+
+type DateRangeFilter = "all" | "7days" | "30days" | "90days";
+
+const STATUS_OPTIONS: Array<{
   label: string;
   value: "" | ClaimStatus;
 }> = [
-  { label: "All statuses", value: "" },
+  { label: "All Statuses", value: "" },
+  { label: "New", value: "NEW" },
+  { label: "Assigned", value: "ASSIGNED" },
   { label: "Submitted", value: "SUBMITTED" },
-  { label: "Under review", value: "UNDER_REVIEW" },
+  { label: "Under Review", value: "UNDER_REVIEW" },
+  { label: "Approved", value: "APPROVED" },
+  { label: "Closed", value: "CLOSED" },
 ];
 
-function formatDate(value?: string | null) {
+const DATE_RANGE_OPTIONS: Array<{
+  label: string;
+  value: DateRangeFilter;
+}> = [
+  { label: "All Time", value: "all" },
+  { label: "Last 7 Days", value: "7days" },
+  { label: "Last 30 Days", value: "30days" },
+  { label: "Last 90 Days", value: "90days" },
+];
+
+function formatDate(value?: string | null): string {
   if (!value) return "—";
 
   return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   }).format(new Date(value));
+}
+
+function getDateCutoff(range: DateRangeFilter): Date | null {
+  if (range === "all") return null;
+
+  const now = Date.now();
+  const millisecondsPerDay = 24 * 60 * 60 * 1000;
+
+  switch (range) {
+    case "7days":
+      return new Date(now - 7 * millisecondsPerDay);
+    case "30days":
+      return new Date(now - 30 * millisecondsPerDay);
+    case "90days":
+      return new Date(now - 90 * millisecondsPerDay);
+    default:
+      return null;
+  }
 }
 
 export default function ClaimsList() {
   const [claims, setClaims] = useState<ClaimSummary[]>([]);
-  const [status, setStatus] = useState<"" | ClaimStatus>("");
-  const [search, setSearch] = useState("");
-  const [dateFilter, setDateFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"" | ClaimStatus>("");
+  const [dateRange, setDateRange] = useState<DateRangeFilter>("all");
+
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
 
   const loadClaims = useCallback(async () => {
     setLoading(true);
     setError("");
 
     try {
-      const data = await getClaims(status || undefined);
+      const data = await getClaims();
       setClaims(data);
     } catch (requestError) {
       setError(getApiErrorMessage(requestError));
     } finally {
       setLoading(false);
     }
-  }, [status]);
+  }, []);
 
   useEffect(() => {
     void loadClaims();
   }, [loadClaims]);
 
+  const stats = useMemo(() => {
+    const totalClaims = claims.length;
+    const draftClaims = claims.filter((c) => c.status === "NEW").length;
+    const submittedClaims = claims.filter((c) => c.status === "SUBMITTED")
+      .length;
+    const pendingReview = claims.filter((c) => c.status === "UNDER_REVIEW")
+      .length;
+
+    return {
+      totalClaims,
+      draftClaims,
+      submittedClaims,
+      pendingReview,
+    };
+  }, [claims]);
+
   const filteredClaims = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
+    const dateCutoff = getDateCutoff(dateRange);
 
     return claims.filter((claim) => {
       const matchesSearch =
         !normalizedSearch ||
-        [
-          claim.claimNumber,
-          claim.customerName,
-          claim.initialPlateNumber,
-          claim.status,
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(normalizedSearch);
+        claim.claimNumber.toLowerCase().includes(normalizedSearch) ||
+        claim.customerName.toLowerCase().includes(normalizedSearch);
+
+      const matchesStatus = !statusFilter || claim.status === statusFilter;
 
       const matchesDate =
-        !dateFilter || claim.createdAt.startsWith(dateFilter);
+        !dateCutoff || new Date(claim.createdAt) >= dateCutoff;
 
-      return matchesSearch && matchesDate;
+      return matchesSearch && matchesStatus && matchesDate;
     });
-  }, [claims, search, dateFilter]);
+  }, [claims, search, statusFilter, dateRange]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredClaims.length / rowsPerPage));
+  const currentPage = Math.min(page, totalPages);
+
+  const pagedClaims = useMemo(() => {
+    const start = (currentPage - 1) * rowsPerPage;
+    return filteredClaims.slice(start, start + rowsPerPage);
+  }, [filteredClaims, currentPage, rowsPerPage]);
+
+  const handleResetFilters = () => {
+    setSearch("");
+    setStatusFilter("");
+    setDateRange("all");
+    setPage(1);
+  };
+
+  const columns: Column<ClaimSummary>[] = [
+    {
+      key: "claimNumber",
+      header: "Claim Number",
+      render: (claim) => (
+        <span className="font-semibold text-text">{claim.claimNumber}</span>
+      ),
+    },
+    {
+      key: "customer",
+      header: "Customer & Policy ID",
+      render: (claim) => (
+        <div className="min-w-0">
+          <p className="text-sm text-text">{claim.customerName}</p>
+          <p className="text-xs text-text-muted">Policy: —</p>
+        </div>
+      ),
+    },
+    {
+      key: "vehicle",
+      header: "Vehicle Information",
+      render: (claim) => (
+        <div className="min-w-0">
+          <p className="text-sm text-text">
+            {claim.initialPlateNumber || "—"}
+          </p>
+          <p className="text-xs text-text-muted">—</p>
+        </div>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (claim) => <StatusBadge status={claim.status} />,
+    },
+    {
+      key: "createdAt",
+      header: "Created Date",
+      render: (claim) => (
+        <span className="text-sm text-text">{formatDate(claim.createdAt)}</span>
+      ),
+    },
+    {
+      key: "updatedAt",
+      header: "Updated Date",
+      render: (claim) => (
+        <span className="text-sm text-text">
+          {formatDate(claim.updatedAt || claim.createdAt)}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      render: (claim) => (
+        <Link
+          to={`/claims/${claim.id}`}
+          className="text-sm font-semibold text-primary hover:text-primary-dark transition-colors"
+        >
+          View Details
+        </Link>
+      ),
+    },
+  ];
+
+  const tableFooter = (
+    <Pagination
+      currentPage={currentPage}
+      totalPages={totalPages}
+      rowsPerPage={rowsPerPage}
+      rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
+      onPageChange={setPage}
+      onRowsPerPageChange={(rows) => {
+        setRowsPerPage(rows);
+        setPage(1);
+      }}
+    />
+  );
+
+  if (loading) {
+    return <LoadingState message="Loading claims..." />;
+  }
+
+  if (error) {
+    return <ErrorState message={error} onRetry={() => void loadClaims()} />;
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-text">Claims</h1>
-          <p className="mt-1 text-sm text-text-muted">
-            Review and manage submitted claims.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => void loadClaims()}
-          className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text hover:bg-background"
+      {/* Page header */}
+      <div>
+        <nav
+          aria-label="Breadcrumb"
+          className="flex items-center gap-1.5 text-sm text-text-muted"
         >
-          <RefreshCw size={16} />
-          Refresh
-        </button>
+          <Link to="/dashboard" className="text-primary hover:text-primary-dark transition-colors">
+            Operations
+          </Link>
+          <ChevronRight size={14} className="text-text-muted" />
+          <span className="font-medium text-primary">Claims Queue</span>
+        </nav>
+
+        <h1 className="mt-2 text-2xl lg:text-3xl font-bold text-text">
+          Claims Triage & Directory
+        </h1>
+
+        <p className="mt-1 text-sm text-text-muted max-w-2xl">
+          Review submitted claims, monitor assessment lifecycle, and assign field
+          adjusters.
+        </p>
       </div>
 
+      {/* Statistics */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Total Claims"
+          value={stats.totalClaims}
+          secondary="Active portfolio records"
+          icon={FolderOpen}
+          iconClass="text-primary"
+        />
+        <StatCard
+          label="Draft Claims"
+          value={stats.draftClaims}
+          secondary="Awaiting customer submission"
+          icon={PenLine}
+          iconClass="text-gray-500"
+        />
+        <StatCard
+          label="Submitted Claims"
+          value={stats.submittedClaims}
+          secondary="Ready for initial review"
+          icon={Inbox}
+          iconClass="text-info"
+        />
+        <StatCard
+          label="Pending Review"
+          value={stats.pendingReview}
+          secondary="Requires inspection or sign-off"
+          icon={AlertCircle}
+          iconClass="text-accent"
+        />
+      </div>
+
+      {/* Filters */}
       <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
-        <div className="grid gap-3 md:grid-cols-[1fr_180px_180px]">
-          <label className="relative block">
-            <Search
-              size={17}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-            />
+        <div className="flex flex-wrap items-center gap-3 justify-between">
+          <div className="grid flex-1 gap-3 md:grid-cols-[1fr_200px_200px_auto] min-w-[320px]">
+            <label className="relative block">
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+              />
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(1);
+                }}
+                placeholder="Filter by Claim ID or Customer..."
+                className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-4 text-sm text-text outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+            </label>
 
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search claim, customer, or plate..."
-              className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-4 text-sm text-text outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </label>
+            <select
+              value={statusFilter}
+              onChange={(event) => {
+                setStatusFilter(event.target.value as "" | ClaimStatus);
+                setPage(1);
+              }}
+              className="rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-text outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            >
+              {STATUS_OPTIONS.map((option) => (
+                <option key={option.label} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
 
-          <select
-            value={status}
-            onChange={(event) =>
-              setStatus(event.target.value as "" | ClaimStatus)
-            }
-            className="rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-text outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-          >
-            {statusOptions.map((option) => (
-              <option key={option.label} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            <select
+              value={dateRange}
+              onChange={(event) => {
+                setDateRange(event.target.value as DateRangeFilter);
+                setPage(1);
+              }}
+              className="rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-text outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            >
+              {DATE_RANGE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
 
-          <input
-            type="date"
-            value={dateFilter}
-            onChange={(event) => setDateFilter(event.target.value)}
-            className="rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-text outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-          />
+            <Button
+              variant="secondary"
+              icon={<RefreshCw size={15} />}
+              onClick={handleResetFilters}
+            >
+              Reset Filters
+            </Button>
+          </div>
+
+          <span className="text-sm text-text-muted whitespace-nowrap">
+            Showing {filteredClaims.length} of {claims.length} claims
+          </span>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
-        {loading ? (
-          <LoadingState message="Loading claims..." />
-        ) : error ? (
-          <ErrorState message={error} onRetry={() => void loadClaims()} />
-        ) : filteredClaims.length === 0 ? (
-          <EmptyState message="No claims found." />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-border">
-              <thead className="bg-background">
-                <tr>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-muted">
-                    Claim Number
-                  </th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-muted">
-                    Customer
-                  </th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-muted">
-                    Plate Number
-                  </th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-muted">
-                    Status
-                  </th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold uppercase text-text-muted">
-                    Updated Time
-                  </th>
-                  <th className="px-5 py-3 text-right text-xs font-semibold uppercase text-text-muted">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-border">
-                {filteredClaims.map((claim) => (
-                  <tr key={claim.id} className="hover:bg-background">
-                    <td className="whitespace-nowrap px-5 py-4 text-sm font-semibold text-text">
-                      {claim.claimNumber}
-                    </td>
-
-                    <td className="whitespace-nowrap px-5 py-4 text-sm text-text-muted">
-                      {claim.customerName}
-                    </td>
-
-                    <td className="whitespace-nowrap px-5 py-4 text-sm text-text-muted">
-                      {claim.initialPlateNumber}
-                    </td>
-
-                    <td className="whitespace-nowrap px-5 py-4">
-                      <StatusBadge status={claim.status} />
-                    </td>
-
-                    <td className="whitespace-nowrap px-5 py-4 text-sm text-text-muted">
-                      {formatDate(claim.updatedAt ?? claim.createdAt)}
-                    </td>
-
-                    <td className="whitespace-nowrap px-5 py-4 text-right">
-                      <Link
-                        to={`/claims/${claim.id}`}
-                        className="text-sm font-semibold text-primary hover:text-primary-dark"
-                      >
-                        View details
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      {/* Claims table */}
+      <DataTable
+        columns={columns}
+        data={pagedClaims}
+        emptyMessage="No claims found."
+        keyExtractor={(claim) => claim.id}
+        footer={tableFooter}
+      />
     </div>
   );
 }
