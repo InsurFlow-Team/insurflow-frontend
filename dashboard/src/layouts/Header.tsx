@@ -7,10 +7,10 @@ interface HeaderProps {
 }
 
 const pageTitles: Record<string, string> = {
-  "/dashboard": "Dashboard",
-  "/claims": "Claims",
-  "/users": "Users",
+  "/dashboard": "Overview",
+  "/claims": "Claims Queue",
   "/settings": "Settings",
+  "/settings/users": "User Management",
 };
 
 export default function Header({
@@ -18,7 +18,7 @@ export default function Header({
 }: HeaderProps) {
   const location = useLocation();
   const { user } = useAuth();
-  const title = pageTitles[location.pathname] ?? "Dashboard";
+  const title = pageTitles[location.pathname] ?? "Overview";
   const userInitial = user?.name.charAt(0).toUpperCase() ?? "U";
 
   return (
