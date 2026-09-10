@@ -89,7 +89,13 @@ export function validateIncidentType(value: string): string | null {
   const required = validateRequired(value);
   if (required) return required;
 
-  const validTypes = ["COLLISION", "THEFT", "VANDALISM", "NATURAL_DISASTER", "FIRE", "OTHER"];
+  const validTypes = [
+    "COLLISION",
+    "REAR_END_COLLISION",
+    "SIDE_IMPACT",
+    "PARKING_DAMAGE",
+    "OTHER",
+  ];
   if (!validTypes.includes(value)) {
     return "Please select a valid incident type";
   }

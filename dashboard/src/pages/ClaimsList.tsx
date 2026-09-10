@@ -2,23 +2,29 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertCircle,
+  CheckCircle2,
   ChevronRight,
   FolderOpen,
   Inbox,
   PenLine,
+  Plus,
   RefreshCw,
   Search,
 } from "lucide-react";
-import { getClaims } from "../api/claims.service";
+import { createClaim, getClaims, toCreateClaimRequest } from "../api/claims.service";
 import { getApiErrorMessage } from "../api/client";
 import type { ClaimStatus, ClaimSummary } from "../types";
-import StatusBadge from "../components/ui/StatusBadge";
+import { useAuth } from "../contexts/AuthContext";
 import LoadingState from "../components/ui/LoadingState";
 import ErrorState from "../components/ui/ErrorState";
-import DataTable, { type Column } from "../components/ui/DataTable";
+import DataTable from "../components/ui/DataTable";
 import Pagination from "../components/ui/Pagination";
 import StatCard from "../components/ui/StatCard";
 import Button from "../components/ui/Button";
+import AddClaimModal from "../components/ui/AddClaimModal";
+import AssignClaimModal from "../components/ui/AssignClaimModal";
+import { buildClaimColumns } from "../components/claims/claimsColumns";
+import type { NewClaimData } from "../components/claim-form/claimFormConstants";
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
 
@@ -47,16 +53,6 @@ const DATE_RANGE_OPTIONS: Array<{
   { label: "Last 90 Days", value: "90days" },
 ];
 
-function formatDate(value?: string | null): string {
-  if (!value) return "—";
-
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(value));
-}
-
 function getDateCutoff(range: DateRangeFilter): Date | null {
   if (range === "all") return null;
 
@@ -76,9 +72,17 @@ function getDateCutoff(range: DateRangeFilter): Date | null {
 }
 
 export default function ClaimsList() {
+  const { user } = useAuth();
+  const canAssign = user?.role === "CLAIMS_OFFICER";
+
   const [claims, setClaims] = useState<ClaimSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [assignTarget, setAssignTarget] = useState<ClaimSummary | null>(null);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [successBanner, setSuccessBanner] = useState("");
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"" | ClaimStatus>("");
@@ -104,6 +108,33 @@ export default function ClaimsList() {
   useEffect(() => {
     void loadClaims();
   }, [loadClaims]);
+
+  async function handleCreate(claimData: NewClaimData): Promise<ClaimSummary> {
+    const created = await createClaim(toCreateClaimRequest(claimData));
+    setSuccessBanner(`${created.claimNumber} created successfully`);
+    await loadClaims();
+    return created;
+  }
+
+  function openAssign(claim: ClaimSummary) {
+    setAssignTarget(claim);
+    setIsAssignModalOpen(true);
+  }
+
+  function closeAssign() {
+    setIsAssignModalOpen(false);
+    setAssignTarget(null);
+  }
+
+  async function handleAssigned() {
+    if (assignTarget) {
+      setSuccessBanner(`${assignTarget.claimNumber} assigned successfully`);
+    }
+    await loadClaims();
+    closeAssign();
+  }
+
+  const columns = buildClaimColumns({ canAssign, onAssign: openAssign });
 
   const stats = useMemo(() => {
     const totalClaims = claims.length;
@@ -155,71 +186,6 @@ export default function ClaimsList() {
     setPage(1);
   };
 
-  const columns: Column<ClaimSummary>[] = [
-    {
-      key: "claimNumber",
-      header: "Claim Number",
-      render: (claim) => (
-        <span className="font-semibold text-text">{claim.claimNumber}</span>
-      ),
-    },
-    {
-      key: "customer",
-      header: "Customer & Policy ID",
-      render: (claim) => (
-        <div className="min-w-0">
-          <p className="text-sm text-text">{claim.customerName}</p>
-          <p className="text-xs text-text-muted">Policy: —</p>
-        </div>
-      ),
-    },
-    {
-      key: "vehicle",
-      header: "Vehicle Information",
-      render: (claim) => (
-        <div className="min-w-0">
-          <p className="text-sm text-text">
-            {claim.initialPlateNumber || "—"}
-          </p>
-          <p className="text-xs text-text-muted">—</p>
-        </div>
-      ),
-    },
-    {
-      key: "status",
-      header: "Status",
-      render: (claim) => <StatusBadge status={claim.status} />,
-    },
-    {
-      key: "createdAt",
-      header: "Created Date",
-      render: (claim) => (
-        <span className="text-sm text-text">{formatDate(claim.createdAt)}</span>
-      ),
-    },
-    {
-      key: "updatedAt",
-      header: "Updated Date",
-      render: (claim) => (
-        <span className="text-sm text-text">
-          {formatDate(claim.updatedAt || claim.createdAt)}
-        </span>
-      ),
-    },
-    {
-      key: "actions",
-      header: "Actions",
-      render: (claim) => (
-        <Link
-          to={`/claims/${claim.id}`}
-          className="text-sm font-semibold text-primary hover:text-primary-dark transition-colors"
-        >
-          View Details
-        </Link>
-      ),
-    },
-  ];
-
   const tableFooter = (
     <Pagination
       currentPage={currentPage}
@@ -244,27 +210,47 @@ export default function ClaimsList() {
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
-      <div>
-        <nav
-          aria-label="Breadcrumb"
-          className="flex items-center gap-1.5 text-sm text-text-muted"
+      {successBanner && (
+        <div
+          role="status"
+          className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
         >
-          <Link to="/dashboard" className="text-primary hover:text-primary-dark transition-colors">
-            Operations
-          </Link>
-          <ChevronRight size={14} className="text-text-muted" />
-          <span className="font-medium text-primary">Claims Queue</span>
-        </nav>
+          <CheckCircle2 size={16} className="flex-shrink-0" />
+          <span>{successBanner}</span>
+        </div>
+      )}
 
-        <h1 className="mt-2 text-2xl lg:text-3xl font-bold text-text">
-          Claims Triage & Directory
-        </h1>
+      {/* Page header */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <nav
+            aria-label="Breadcrumb"
+            className="flex items-center gap-1.5 text-sm text-text-muted"
+          >
+            <Link to="/dashboard" className="text-primary hover:text-primary-dark transition-colors">
+              Operations
+            </Link>
+            <ChevronRight size={14} className="text-text-muted" />
+            <span className="font-medium text-primary">Claims Queue</span>
+          </nav>
 
-        <p className="mt-1 text-sm text-text-muted max-w-2xl">
-          Review submitted claims, monitor assessment lifecycle, and assign field
-          adjusters.
-        </p>
+          <h1 className="mt-2 text-2xl lg:text-3xl font-bold text-text">
+            Claims Triage & Directory
+          </h1>
+
+          <p className="mt-1 text-sm text-text-muted max-w-2xl">
+            Review submitted claims, monitor assessment lifecycle, and assign field
+            adjusters.
+          </p>
+        </div>
+
+        <Button
+          variant="primary"
+          icon={<Plus size={15} />}
+          onClick={() => setIsCreateModalOpen(true)}
+        >
+          Add Claim
+        </Button>
       </div>
 
       {/* Statistics */}
@@ -373,6 +359,21 @@ export default function ClaimsList() {
         keyExtractor={(claim) => claim.id}
         footer={tableFooter}
       />
+
+      <AddClaimModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={handleCreate}
+      />
+
+      {assignTarget && (
+        <AssignClaimModal
+          isOpen={isAssignModalOpen}
+          onClose={closeAssign}
+          claimId={assignTarget.id}
+          onAssigned={() => void handleAssigned()}
+        />
+      )}
     </div>
   );
 }

@@ -61,13 +61,31 @@ export function getApiErrorMessage(error: unknown) {
       );
     }
 
+    const data = error.response?.data;
+    const details = (data?.errors ?? [])
+      .map((e) => e.details ?? e.code)
+      .filter((detail): detail is string => Boolean(detail));
+
+    if (details.length) {
+      return data?.message
+        ? `${data.message}: ${details.join(" | ")}`
+        : details.join(" | ");
+    }
+
     return (
-      error.response?.data?.message ??
-      "Unable to connect to the server. Please try again."
+      data?.message ?? "Unable to connect to the server. Please try again."
     );
   }
 
   return "Something went wrong. Please try again.";
+}
+
+export function getApiErrorCode(error: unknown) {
+  if (axios.isAxiosError<ApiErrorResponse>(error)) {
+    return error.response?.data?.errors?.[0]?.code ?? null;
+  }
+
+  return null;
 }
 
 export default apiClient;

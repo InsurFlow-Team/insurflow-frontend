@@ -47,10 +47,10 @@ export default function Modal({
 
       {/* Panel */}
       <div
-        className={`relative bg-surface rounded-2xl border border-border shadow-xl w-full ${sizeClasses[size]} z-10`}
+        className={`relative bg-surface rounded-2xl border border-border shadow-xl w-full ${sizeClasses[size]} z-10 flex flex-col max-h-[calc(100vh-2rem)]`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <h2 id="modal-title" className="text-base font-semibold text-text">
             {title}
           </h2>
@@ -64,7 +64,7 @@ export default function Modal({
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5">{children}</div>
+        <div className="px-6 py-5 overflow-y-auto">{children}</div>
       </div>
     </div>
   );

@@ -10,6 +10,8 @@ export type ClaimStatus =
   | "APPROVED"
   | "CLOSED";
 
+export type ClaimPriority = "LOW" | "MEDIUM" | "HIGH";
+
 export type InspectionTaskStatus = "ASSIGNED" | "IN_PROGRESS" | "SUBMITTED";
 
 export type Availability = "AVAILABLE" | "UNAVAILABLE";
@@ -46,6 +48,34 @@ export interface ClaimSummary {
   initialPlateNumber: string;
   createdAt: string;
   updatedAt?: string;
+}
+
+// The full claim model collected by the Create New Claim form. Only the five
+// backend-verified fields reach POST /claims (see toCreateClaimRequest);
+// accident/damage/coordinates stay frontend-only until the backend supports
+// them, and the optional assignment group is only used when an adjuster is
+// selected.
+export interface CreateClaimDraft {
+  customerName: string;
+  customerPhone: string;
+  initialPlateNumber: string;
+  incidentType: string;
+  incidentLocation: string;
+  accidentDate: string;
+  accidentTime: string;
+  description: string;
+  damageDescription: string;
+  address: string;
+  latitude: string;
+  longitude: string;
+  insurancePolicyNumber?: string;
+  vehicleMake?: string;
+  vehicleModel?: string;
+  vehicleYear?: string;
+  vehicleColor?: string;
+  adjusterId?: string;
+  priority?: ClaimPriority;
+  assignmentNotes?: string;
 }
 
 // ─── Lookup domain types ──────────────────────────────────────────────────────

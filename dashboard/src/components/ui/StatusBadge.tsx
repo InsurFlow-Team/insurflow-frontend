@@ -52,7 +52,11 @@ const statusConfig: Record<Status, StatusConfig> = {
 };
 
 export default function StatusBadge({ status }: StatusBadgeProps) {
-  const config = statusConfig[status];
+  const config =
+    statusConfig[status] ?? {
+      label: "Unknown",
+      classes: "bg-gray-100 text-gray-500 border-gray-200",
+    };
 
   return (
     <span

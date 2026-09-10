@@ -48,8 +48,12 @@ export default function AddClaimModal({
   const [assignmentError, setAssignmentError] = useState("");
   const [submitError, setSubmitError] = useState("");
 
-  const { adjusters, loading: adjustersLoading, reload: reloadAdjusters } =
-    useFieldAdjusters();
+  const {
+    adjusters,
+    loading: adjustersLoading,
+    error: adjustersError,
+    reload: reloadAdjusters,
+  } = useFieldAdjusters();
 
   // Reset form when modal closes
   useEffect(() => {
@@ -236,6 +240,8 @@ export default function AddClaimModal({
           disabled={isSubmitting}
           adjusters={adjusters}
           adjustersLoading={adjustersLoading}
+          adjustersError={adjustersError}
+          onRetryAdjusters={reloadAdjusters}
           selectedAdjuster={selectedAdjuster}
           open={showAssignment}
           assignmentError={assignmentError}

@@ -44,6 +44,7 @@ import Input from "../components/ui/Input";
 import Select from "../components/ui/Select";
 import StatCard from "../components/ui/StatCard";
 import { useUsers } from "../hooks/useUsers";
+import { useAuth } from "../contexts/AuthContext";
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
 
@@ -123,6 +124,9 @@ function EditUserForm({ user, onCancel, onSave }: EditUserFormProps) {
 }
 
 export default function Users() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
+
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<Role | "">("");
   const [statusFilter, setStatusFilter] = useState<UserStatus | "">("");
@@ -443,13 +447,19 @@ export default function Users() {
           </p>
         </div>
 
-        <Button
-          icon={<UserPlus size={16} />}
-          onClick={() => setIsModalOpen(true)}
-          className="shrink-0"
-        >
-          Add User
-        </Button>
+        {isAdmin ? (
+          <Button
+            icon={<UserPlus size={16} />}
+            onClick={() => setIsModalOpen(true)}
+            className="shrink-0"
+          >
+            Add User
+          </Button>
+        ) : (
+          <span className="shrink-0 text-sm text-text-muted">
+            Only administrators can add users.
+          </span>
+        )}
       </div>
 
       {/* Statistics */}
