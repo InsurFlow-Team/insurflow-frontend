@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
-import { fireEvent, screen } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/dom";
 import userEvent from "@testing-library/user-event";
+
+// Re-export for convenience
+export { screen, fireEvent };
 
 export const PLATE_PLACEHOLDER = "ABC-1234 or ١٢٣٤ أ ب ج";
 
