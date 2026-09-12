@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, cleanup } from "@testing-library/react";
+import { screen } from "@testing-library/dom";
 import { MemoryRouter } from "react-router-dom";
 import { fillClaimForm, setupUserEvent } from "../test/test-utils";
 

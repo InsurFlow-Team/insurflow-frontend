@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { render, cleanup } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/dom";
 import type { ClaimSummary, FieldAdjuster } from "../../types";
 import { fillClaimForm, PLATE_PLACEHOLDER, setupUserEvent } from "../../test/test-utils";
 
