@@ -16,12 +16,14 @@ export type InspectionTaskStatus = "ASSIGNED" | "IN_PROGRESS" | "SUBMITTED";
 
 export type Availability = "AVAILABLE" | "UNAVAILABLE";
 
+// The backend POST /users contract: only these four fields. It rejects `status`
+// ("status is not allowed") and ADMIN as a role value. New users start ACTIVE
+// by default server-side.
 export type CreateUserRequest = {
   name: string;
   employeeCode: string;
   password: string;
-  role: Role;
-  status: UserStatus;
+  role: "CLAIMS_OFFICER" | "FIELD_ADJUSTER";
 };
 
 export interface User {

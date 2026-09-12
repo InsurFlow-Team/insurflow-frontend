@@ -5,15 +5,14 @@ import FormField from "../ui/FormField";
 import Input from "../ui/Input";
 import Select from "../ui/Select";
 import Button from "../ui/Button";
-import { ROLE_OPTIONS, STATUS_OPTIONS } from "../../utils/user";
-import type { Role, UserStatus } from "../../types";
+import { CREATE_ROLE_OPTIONS } from "../../utils/user";
+import type { Role } from "../../types";
 
 export type CreateUserFormValues = {
   name: string;
   employeeCode: string;
   password: string;
   role: Role | "";
-  status: UserStatus | "";
 };
 
 interface CreateUserModalProps {
@@ -78,19 +77,13 @@ export default function CreateUserModal({
             value={values.role}
             onChange={onChange}
             placeholder="Select Role"
-            options={ROLE_OPTIONS}
+            options={CREATE_ROLE_OPTIONS}
           />
         </FormField>
 
-        <FormField label="Status" required error={errors.status}>
-          <Select
-            name="status"
-            value={values.status}
-            onChange={onChange}
-            placeholder="Select Status"
-            options={STATUS_OPTIONS}
-          />
-        </FormField>
+        <p className="text-xs text-text-muted">
+          New users start with Active status.
+        </p>
 
         {error && (
           <div className="flex items-center gap-2 rounded-lg bg-danger/10 px-3 py-2.5 text-sm text-danger">

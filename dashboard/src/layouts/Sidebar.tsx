@@ -45,7 +45,7 @@ const settingsParent: NavigationItem = {
   label: "Settings",
   path: "/settings",
   icon: <Settings size={18} />,
-  roles: ["ADMIN", "CLAIMS_OFFICER"],
+  roles: ["ADMIN"],
   end: true,
 };
 
@@ -54,7 +54,7 @@ const settingsChildren: NavigationItem[] = [
     label: "User Management",
     path: "/settings/users",
     icon: <Users size={18} />,
-    roles: ["ADMIN", "CLAIMS_OFFICER"],
+    roles: ["ADMIN"],
   },
 ];
 
