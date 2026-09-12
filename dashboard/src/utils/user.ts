@@ -15,6 +15,12 @@ export const ROLE_OPTIONS: Array<{ value: Role; label: string }> = [
   { value: "FIELD_ADJUSTER", label: "Field Adjuster" },
 ];
 
+// POST /users rejects ADMIN ("role must be one of [CLAIMS_OFFICER,
+// FIELD_ADJUSTER]"), so the Create User form must not offer it.
+export const CREATE_ROLE_OPTIONS = ROLE_OPTIONS.filter(
+  (option) => option.value !== "ADMIN",
+);
+
 export const STATUS_OPTIONS: Array<{ value: UserStatus; label: string }> = [
   { value: "ACTIVE", label: "Active" },
   { value: "INACTIVE", label: "Inactive" },

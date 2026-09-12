@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, Users } from "lucide-react";
 import Button from "../components/ui/Button";
+import ChangePasswordCard from "../components/settings/ChangePasswordCard";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -43,6 +44,8 @@ export default function Settings() {
           </Button>
         </div>
       </section>
+
+      <ChangePasswordCard />
     </div>
   );
 }
