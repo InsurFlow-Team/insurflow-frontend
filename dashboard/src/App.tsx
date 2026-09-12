@@ -30,8 +30,8 @@ function App() {
             />
           </Route>
 
-          {/* TODO: Revert to ADMIN only before production */}
-          <Route element={<RoleGuard allowedRoles={["ADMIN", "CLAIMS_OFFICER"]} />}>
+          {/* Settings + management are ADMIN-only */}
+          <Route element={<RoleGuard allowedRoles={["ADMIN"]} />}>
             <Route path="/settings" element={<Outlet />}>
               <Route index element={<Settings />} />
               <Route path="users" element={<Users />} />

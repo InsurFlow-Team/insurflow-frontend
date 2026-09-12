@@ -1,29 +1,30 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  AlertCircle,
   Ban,
   CheckCircle,
   ChevronRight,
   FileText,
+  KeyRound,
   Lock,
   MapPin,
   Pencil,
   RefreshCw,
   Search,
   Shield,
+  Trash2,
   UserPlus,
   Users as UsersIcon,
+  X,
   type LucideIcon,
 } from "lucide-react";
-import type { Role, User, UserStatus } from "../types";
+import type { CreateUserRequest, Role, User, UserStatus } from "../types";
 import { useForm } from "../hooks/useForm";
 import {
   validateEmployeeCode,
   validateName,
   validatePassword,
   validateRole,
-  validateStatus,
 } from "../utils/validation";
 import {
   ROLE_OPTIONS,
@@ -38,94 +39,20 @@ import DataTable, { type Column } from "../components/ui/DataTable";
 import Pagination from "../components/ui/Pagination";
 import StatusBadge from "../components/ui/StatusBadge";
 import RoleBadge from "../components/ui/RoleBadge";
-import Modal from "../components/ui/Modal";
-import FormField from "../components/ui/FormField";
-import Input from "../components/ui/Input";
-import Select from "../components/ui/Select";
 import StatCard from "../components/ui/StatCard";
+import Modal from "../components/ui/Modal";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
+import CreateUserModal from "../components/users/CreateUserModal";
+import EditUserForm from "../components/users/EditUserForm";
+import ResetPasswordModal from "../components/users/ResetPasswordModal";
 import { useUsers } from "../hooks/useUsers";
 import { useAuth } from "../contexts/AuthContext";
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
 
-interface EditUserFormProps {
-  user: User;
-  onCancel: () => void;
-  onSave: (patch: {
-    name: string;
-    employeeCode: string;
-    role: Role;
-    status: UserStatus;
-  }) => void;
-}
-
-function EditUserForm({ user, onCancel, onSave }: EditUserFormProps) {
-  const [name, setName] = useState(user.name);
-  const [employeeCode, setEmployeeCode] = useState(user.employeeCode);
-  const [role, setRole] = useState<Role>(user.role);
-  const [status, setStatus] = useState<UserStatus>(getUserStatus(user));
-
-  const nameError = validateName(name);
-  const codeError = validateEmployeeCode(employeeCode);
-  const isValid = !nameError && !codeError;
-
-  return (
-    <div className="space-y-4">
-      <FormField label="Name" required error={nameError || undefined}>
-        <Input
-          name="name"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder="Ahmed Ali"
-        />
-      </FormField>
-
-      <FormField label="Employee Code" required error={codeError || undefined}>
-        <Input
-          name="employeeCode"
-          value={employeeCode}
-          onChange={(event) => setEmployeeCode(event.target.value)}
-          placeholder="FA-001"
-        />
-      </FormField>
-
-      <FormField label="Role" required>
-        <Select
-          name="role"
-          value={role}
-          onChange={(event) => setRole(event.target.value as Role)}
-          options={ROLE_OPTIONS}
-        />
-      </FormField>
-
-      <FormField label="Status" required>
-        <Select
-          name="status"
-          value={status}
-          onChange={(event) => setStatus(event.target.value as UserStatus)}
-          options={STATUS_OPTIONS}
-        />
-      </FormField>
-
-      <div className="flex gap-3 pt-2">
-        <Button variant="secondary" className="flex-1" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button
-          className="flex-1"
-          onClick={() => onSave({ name, employeeCode, role, status })}
-          disabled={!isValid}
-        >
-          Save Changes
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 export default function Users() {
-  const { user } = useAuth();
-  const isAdmin = user?.role === "ADMIN";
+  const { user: currentUser } = useAuth();
+  const isAdmin = currentUser?.role === "ADMIN";
 
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<Role | "">("");
@@ -134,6 +61,9 @@ export default function Users() {
   const [page, setPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [userToDeactivate, setUserToDeactivate] = useState<User | null>(null);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [userToReset, setUserToReset] = useState<User | null>(null);
 
   const {
     users,
@@ -143,6 +73,12 @@ export default function Users() {
     addUserLoading,
     addUserError,
     addUserSuccess,
+    setUserStatus,
+    resetPassword,
+    deleteUser,
+    actionError,
+    clearActionError,
+    isActionPending,
     updateUserLocal,
   } = useUsers();
 
@@ -151,21 +87,18 @@ export default function Users() {
     employeeCode: string;
     password: string;
     role: Role | "";
-    status: UserStatus | "";
   }>(
     {
       name: "",
       employeeCode: "",
       password: "",
       role: "",
-      status: "",
     },
     {
       name: validateName,
       employeeCode: validateEmployeeCode,
       password: validatePassword,
       role: validateRole,
-      status: validateStatus,
     },
   );
 
@@ -277,8 +210,7 @@ export default function Users() {
         name: values.name,
         employeeCode: values.employeeCode,
         password: values.password,
-        role: values.role as Role,
-        status: values.status as UserStatus,
+        role: values.role as CreateUserRequest["role"],
       },
       handleClose,
     );
@@ -291,13 +223,24 @@ export default function Users() {
     setPage(1);
   };
 
-  // TEMPORARY frontend-only actions. The backend has no
-  // activate/deactivate/edit endpoints yet — status toggles mutate local state
-  // only. Replace with PATCH /users/:id calls when the API supports them.
-  function handleToggleStatus(user: User) {
-    updateUserLocal(user.id, {
-      status: getUserStatus(user) === "ACTIVE" ? "INACTIVE" : "ACTIVE",
-    });
+  // Activating needs no confirmation. Deactivating is guarded by ConfirmDialog
+  // (see userToDeactivate) because it locks the account out.
+  async function handleActivate(user: User) {
+    await setUserStatus(user.id, "ACTIVE");
+  }
+
+  async function handleDeactivateConfirm() {
+    if (!userToDeactivate) return;
+    const user = userToDeactivate;
+    await setUserStatus(user.id, "INACTIVE");
+    setUserToDeactivate(null);
+  }
+
+  async function handleDeleteConfirm() {
+    if (!userToDelete) return;
+    const user = userToDelete;
+    await deleteUser(user.id);
+    setUserToDelete(null);
   }
 
   function handleEditSave(patch: {
@@ -365,6 +308,7 @@ export default function Users() {
       header: "Actions",
       render: (user) => {
         const isActive = getUserStatus(user) === "ACTIVE";
+        const isSelf = user.id === currentUser?.id;
 
         return (
           <div className="flex items-center gap-1.5">
@@ -377,23 +321,44 @@ export default function Users() {
               Edit
             </button>
 
-            {isActive ? (
+            <button
+              type="button"
+              onClick={() => setUserToReset(user)}
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 hover:text-text transition-colors"
+            >
+              <KeyRound size={14} />
+              Reset
+            </button>
+
+            {!isSelf &&
+              (isActive ? (
+                <button
+                  type="button"
+                  onClick={() => setUserToDeactivate(user)}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-danger hover:bg-danger-bg transition-colors"
+                >
+                  <Ban size={14} />
+                  Deactivate
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleActivate(user)}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-emerald-600 hover:bg-emerald-50 transition-colors"
+                >
+                  <CheckCircle size={14} />
+                  Activate
+                </button>
+              ))}
+
+            {isAdmin && !isSelf && (
               <button
                 type="button"
-                onClick={() => handleToggleStatus(user)}
+                onClick={() => setUserToDelete(user)}
                 className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-danger hover:bg-danger-bg transition-colors"
               >
-                <Ban size={14} />
-                Deactivate
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => handleToggleStatus(user)}
-                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-emerald-600 hover:bg-emerald-50 transition-colors"
-              >
-                <CheckCircle size={14} />
-                Activate
+                <Trash2 size={14} />
+                Delete
               </button>
             )}
           </div>
@@ -544,6 +509,23 @@ export default function Users() {
         </div>
       )}
 
+      {actionError && (
+        <div className="flex items-center justify-between gap-3 rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">
+          <div className="flex items-center gap-2">
+            <Ban size={16} />
+            <span>{actionError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={clearActionError}
+            className="text-danger/70 hover:text-danger transition-colors"
+            aria-label="Dismiss"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* User table */}
       <DataTable
         columns={columns}
@@ -556,81 +538,17 @@ export default function Users() {
       />
 
       {/* Create User modal */}
-      <Modal isOpen={isModalOpen} onClose={handleClose} title="Create User">
-        <div className="space-y-4">
-          <FormField label="Name" required error={errors.name}>
-            <Input
-              name="name"
-              value={values.name}
-              onChange={handleChange}
-              placeholder="Ahmed Ali"
-            />
-          </FormField>
-
-          <FormField label="Employee Code" required error={errors.employeeCode}>
-            <Input
-              name="employeeCode"
-              value={values.employeeCode}
-              onChange={handleChange}
-              placeholder="FA-001"
-            />
-          </FormField>
-
-          <FormField label="Password" required error={errors.password}>
-            <Input
-              name="password"
-              type="password"
-              value={values.password}
-              onChange={handleChange}
-              placeholder="••••••••"
-            />
-          </FormField>
-
-          <FormField label="Role" required error={errors.role}>
-            <Select
-              name="role"
-              value={values.role}
-              onChange={handleChange}
-              placeholder="Select Role"
-              options={ROLE_OPTIONS}
-            />
-          </FormField>
-
-          <FormField label="Status" required error={errors.status}>
-            <Select
-              name="status"
-              value={values.status}
-              onChange={handleChange}
-              placeholder="Select Status"
-              options={STATUS_OPTIONS}
-            />
-          </FormField>
-
-          {addUserError && (
-            <div className="flex items-center gap-2 rounded-lg bg-danger/10 px-3 py-2.5 text-sm text-danger">
-              <AlertCircle size={16} />
-              <span>{addUserError}</span>
-            </div>
-          )}
-
-          <div className="flex gap-3 pt-2">
-            <Button
-              variant="secondary"
-              className="flex-1"
-              onClick={handleClose}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="flex-1"
-              onClick={handleSubmit}
-              disabled={!isValid || addUserLoading}
-            >
-              {addUserLoading ? "Creating..." : "Create User"}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      <CreateUserModal
+        isOpen={isModalOpen}
+        values={values}
+        errors={errors}
+        isValid={isValid}
+        loading={addUserLoading}
+        error={addUserError ?? undefined}
+        onChange={handleChange}
+        onCancel={handleClose}
+        onSubmit={handleSubmit}
+      />
 
       {/* Edit User modal (TEMPORARY frontend-only — no backend endpoint yet) */}
       <Modal
@@ -646,6 +564,53 @@ export default function Users() {
           />
         )}
       </Modal>
+
+      {/* Deactivate confirmation */}
+      <ConfirmDialog
+        isOpen={userToDeactivate !== null}
+        title="Deactivate User"
+        confirmLabel="Deactivate"
+        loading={isActionPending}
+        onCancel={() => setUserToDeactivate(null)}
+        onConfirm={handleDeactivateConfirm}
+      >
+        {userToDeactivate && (
+          <p className="text-sm text-text-muted">
+            <span className="font-medium text-text">
+              {userToDeactivate.name}
+            </span>{" "}
+            ({userToDeactivate.employeeCode}) will no longer be able to sign in.
+            You can reactivate them at any time.
+          </p>
+        )}
+      </ConfirmDialog>
+
+      {/* Reset Password modal */}
+      <ResetPasswordModal
+        user={userToReset}
+        onClose={() => setUserToReset(null)}
+        onSubmit={resetPassword}
+      />
+
+      {/* Delete confirmation */}
+      <ConfirmDialog
+        isOpen={userToDelete !== null}
+        title="Delete User"
+        confirmLabel="Delete"
+        loading={isActionPending}
+        onCancel={() => setUserToDelete(null)}
+        onConfirm={handleDeleteConfirm}
+      >
+        {userToDelete && (
+          <p className="text-sm text-text-muted">
+            <span className="font-medium text-text">
+              {userToDelete.name}
+            </span>{" "}
+            ({userToDelete.employeeCode}) will be permanently removed from the
+            system along with all access. This action cannot be undone.
+          </p>
+        )}
+      </ConfirmDialog>
     </div>
   );
 }
