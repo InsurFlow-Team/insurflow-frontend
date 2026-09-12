@@ -1,23 +1,31 @@
-import { useState } from "react";
-import { CheckCircle, Eye, EyeOff, KeyRound } from "lucide-react";
+import { useCallback, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Eye, EyeOff, KeyRound } from "lucide-react";
 import FormField from "../ui/FormField";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
 import { changePassword } from "../../api/auth.service";
 import { getApiErrorMessage } from "../../api/client";
 import { validatePassword, validateRequired } from "../../utils/validation";
+import { useAuth } from "../../contexts/AuthContext";
 
 export default function ChangePasswordCard() {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const currentError = currentPassword ? null : validateRequired(currentPassword);
   const newPasswordError = validatePassword(newPassword);
+  const sameAsCurrentError =
+    currentPassword && newPassword && newPassword === currentPassword
+      ? "New password must be different from the current password"
+      : null;
   const matchError =
     confirmPassword && confirmPassword !== newPassword
       ? "Passwords do not match"
@@ -25,24 +33,30 @@ export default function ChangePasswordCard() {
   const isSubmittable =
     !currentError &&
     !newPasswordError &&
+    !sameAsCurrentError &&
     !matchError &&
     newPassword.length >= 8 &&
     confirmPassword.length > 0;
 
-  function handleSubmit() {
+  const handleSubmit = useCallback(() => {
     if (!isSubmittable) return;
 
     setLoading(true);
     setError(null);
-    setSuccess(false);
 
     changePassword(currentPassword, newPassword)
       .then(() => {
-        setSuccess(true);
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-        if (show) setShow(false);
+        // The backend keeps the current (stateless) token valid but issues no
+        // new one. Per the backend contract the frontend must force a fresh
+        // sign-in so the new password is used (and the old token dies).
+        logout();
+        navigate("/login", {
+          replace: true,
+          state: {
+            message:
+              "Password changed successfully. Please sign in again with your new password.",
+          },
+        });
       })
       .catch((passwordError) => {
         setError(getApiErrorMessage(passwordError));
@@ -50,7 +64,13 @@ export default function ChangePasswordCard() {
       .finally(() => {
         setLoading(false);
       });
-  }
+  }, [
+    isSubmittable,
+    currentPassword,
+    newPassword,
+    logout,
+    navigate,
+  ]);
 
   return (
     <section className="rounded-xl border border-border bg-surface p-5 shadow-sm">
@@ -77,7 +97,7 @@ export default function ChangePasswordCard() {
           />
         </FormField>
 
-        <FormField label="New Password" required error={newPasswordError || undefined}>
+        <FormField label="New Password" required error={newPasswordError || sameAsCurrentError || undefined}>
           <Input
             name="newPassword"
             type={show ? "text" : "password"}
@@ -109,13 +129,6 @@ export default function ChangePasswordCard() {
         {error && (
           <div className="flex items-center gap-2 rounded-lg bg-danger/10 px-3 py-2.5 text-sm text-danger">
             <span>{error}</span>
-          </div>
-        )}
-
-        {success && (
-          <div className="flex items-center gap-2 rounded-lg bg-success/10 px-3 py-2.5 text-sm text-success">
-            <CheckCircle size={16} />
-            <span>Password updated successfully.</span>
           </div>
         )}
 
