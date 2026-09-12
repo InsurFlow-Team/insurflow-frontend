@@ -39,12 +39,24 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    // A 401 on the change-password endpoint with INVALID_CREDENTIALS means the
+    // CURRENT password was wrong (per the backend contract) — the session is
+    // still valid and must NOT be destroyed. Every other 401 destroys it.
     if (error.response?.status === 401) {
-      localStorage.removeItem(TOKEN_STORAGE_KEY);
-      localStorage.removeItem(USER_STORAGE_KEY);
+      const url = error.config?.url ?? "";
+      const isInvalidCurrentPassword =
+        url.includes("/auth/change-password") &&
+        (error.response.data?.errors ?? []).some(
+          (entry: { code?: string }) => entry.code === "INVALID_CREDENTIALS",
+        );
 
-      if (window.location.pathname !== "/login") {
-        window.location.replace("/login");
+      if (!isInvalidCurrentPassword) {
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
+        localStorage.removeItem(USER_STORAGE_KEY);
+
+        if (window.location.pathname !== "/login") {
+          window.location.replace("/login");
+        }
       }
     }
 

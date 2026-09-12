@@ -1,14 +1,19 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
-import { AlertCircle, Loader2, ShieldCheck } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { AlertCircle, CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { login } from "../api/auth.service";
 import { getApiErrorMessage } from "../api/client";
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { saveSession, logout } = useAuth();
+
+  const successMessage = (
+    location.state as { message?: string } | null
+  )?.message;
 
   const [organizationCode, setOrganizationCode] = useState("");
   const [employeeCode, setEmployeeCode] = useState("");
@@ -77,6 +82,16 @@ export default function Login() {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {successMessage && (
+            <div
+              role="status"
+              className="flex items-start gap-2 rounded-lg border border-success/30 bg-success/10 px-3 py-2.5 text-sm text-success"
+            >
+              <CheckCircle2 size={17} className="mt-0.5 shrink-0" />
+              <span>{successMessage}</span>
+            </div>
+          )}
+
           <div>
             <label
               htmlFor="organizationCode"
