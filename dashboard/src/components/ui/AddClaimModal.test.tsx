@@ -44,6 +44,7 @@ const CREATED_SUMMARY: ClaimSummary = {
 
 const onSubmit = vi.fn();
 const onClose = vi.fn();
+const onAssignmentFailed = vi.fn();
 
 beforeEach(() => {
   vi.mocked(getFieldAdjusters).mockResolvedValue([FA_ADJUSTER]);
@@ -52,6 +53,7 @@ beforeEach(() => {
   onSubmit.mockReset();
   onSubmit.mockResolvedValue(CREATED_SUMMARY);
   onClose.mockReset();
+  onAssignmentFailed.mockReset();
 });
 
 afterEach(() => {
@@ -143,10 +145,15 @@ describe("AddClaimModal", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("on assignment failure the claim stays created, is not re-created, and assignment can be retried", async () => {
+  it("on assignment failure the claim is still created, the modal closes, and the failure is reported", async () => {
     const user = setupUserEvent();
     const { container } = render(
-      <AddClaimModal isOpen onClose={onClose} onSubmit={onSubmit} />,
+      <AddClaimModal
+        isOpen
+        onClose={onClose}
+        onSubmit={onSubmit}
+        onAssignmentFailed={onAssignmentFailed}
+      />,
     );
 
     await fillClaimForm(container);
@@ -170,20 +177,12 @@ describe("AddClaimModal", () => {
       expect(onSubmit).toHaveBeenCalledTimes(1);
     });
 
-    // Clearly report: claim created, assignment failed
-    expect(
-      await screen.findByText(/The claim was created, but assigning the field adjuster failed/i),
-    ).toBeTruthy();
-
     // The claim is not re-created
     expect(onSubmit).toHaveBeenCalledTimes(1);
 
-    // Created claim state + retry affordance are shown
-    expect(screen.getByText(/was created. Assignment was not saved/i)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Retry Assignment" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Finish Without Assignment" })).toBeTruthy();
-
-    // Modal is NOT closed as if everything succeeded
-    expect(onClose).not.toHaveBeenCalled();
+    // The failure is reported to the page, and the modal closes (not kept open)
+    expect(onAssignmentFailed).toHaveBeenCalledTimes(1);
+    expect(onAssignmentFailed).toHaveBeenCalledWith(CREATED_SUMMARY);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

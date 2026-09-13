@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Ban,
@@ -15,7 +15,6 @@ import {
   Trash2,
   UserPlus,
   Users as UsersIcon,
-  X,
   type LucideIcon,
 } from "lucide-react";
 import type { CreateUserRequest, Role, User, UserStatus } from "../types";
@@ -47,6 +46,7 @@ import EditUserForm from "../components/users/EditUserForm";
 import ResetPasswordModal from "../components/users/ResetPasswordModal";
 import { useUsers } from "../hooks/useUsers";
 import { useAuth } from "../contexts/AuthContext";
+import { toast } from "../contexts/ToastContext";
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
 
@@ -77,10 +77,21 @@ export default function Users() {
     resetPassword,
     deleteUser,
     actionError,
-    clearActionError,
     isActionPending,
     updateUserLocal,
   } = useUsers();
+
+  useEffect(() => {
+    if (addUserSuccess) {
+      toast("success", "User created successfully.");
+    }
+  }, [addUserSuccess]);
+
+  useEffect(() => {
+    if (actionError) {
+      toast("error", actionError);
+    }
+  }, [actionError]);
 
   const { values, errors, handleChange, isValid, reset } = useForm<{
     name: string;
@@ -309,13 +320,15 @@ export default function Users() {
       render: (user) => {
         const isActive = getUserStatus(user) === "ACTIVE";
         const isSelf = user.id === currentUser?.id;
+        const rowDisabled = isActionPending;
 
         return (
           <div className="flex items-center gap-1.5">
             <button
               type="button"
+              disabled={rowDisabled}
               onClick={() => setEditingUser(user)}
-              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 hover:text-text transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Pencil size={14} />
               Edit
@@ -323,8 +336,9 @@ export default function Users() {
 
             <button
               type="button"
+              disabled={rowDisabled}
               onClick={() => setUserToReset(user)}
-              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 hover:text-text transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
             >
               <KeyRound size={14} />
               Reset
@@ -334,8 +348,9 @@ export default function Users() {
               (isActive ? (
                 <button
                   type="button"
+                  disabled={rowDisabled}
                   onClick={() => setUserToDeactivate(user)}
-                  className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-danger hover:bg-danger-bg transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-danger hover:bg-danger-bg focus:outline-none focus-visible:ring-2 focus-visible:ring-danger/40 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Ban size={14} />
                   Deactivate
@@ -343,8 +358,9 @@ export default function Users() {
               ) : (
                 <button
                   type="button"
+                  disabled={rowDisabled}
                   onClick={() => handleActivate(user)}
-                  className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-emerald-600 hover:bg-emerald-50 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-emerald-600 hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <CheckCircle size={14} />
                   Activate
@@ -354,8 +370,9 @@ export default function Users() {
             {isAdmin && !isSelf && (
               <button
                 type="button"
+                disabled={rowDisabled}
                 onClick={() => setUserToDelete(user)}
-                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-danger hover:bg-danger-bg transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-danger hover:bg-danger-bg focus:outline-none focus-visible:ring-2 focus-visible:ring-danger/40 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Trash2 size={14} />
                 Delete
@@ -439,12 +456,14 @@ export default function Users() {
         <div className="flex flex-wrap items-center gap-3 justify-between">
           <div className="grid flex-1 gap-3 md:grid-cols-[1fr_200px_200px_auto] min-w-[320px]">
             <label className="relative block">
+              <span className="sr-only">Search users</span>
               <Search
                 size={16}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
               />
               <input
                 type="search"
+                aria-label="Search users"
                 value={search}
                 onChange={(event) => {
                   setSearch(event.target.value);
@@ -456,6 +475,7 @@ export default function Users() {
             </label>
 
             <select
+              aria-label="Filter by role"
               value={roleFilter}
               onChange={(event) => {
                 setRoleFilter(event.target.value as Role | "");
@@ -472,6 +492,7 @@ export default function Users() {
             </select>
 
             <select
+              aria-label="Filter by status"
               value={statusFilter}
               onChange={(event) => {
                 setStatusFilter(event.target.value as UserStatus | "");
@@ -501,30 +522,6 @@ export default function Users() {
           </span>
         </div>
       </div>
-
-      {addUserSuccess && (
-        <div className="flex items-center gap-2 rounded-lg bg-success/10 px-4 py-3 text-sm text-success">
-          <CheckCircle size={16} />
-          <span>User created successfully.</span>
-        </div>
-      )}
-
-      {actionError && (
-        <div className="flex items-center justify-between gap-3 rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">
-          <div className="flex items-center gap-2">
-            <Ban size={16} />
-            <span>{actionError}</span>
-          </div>
-          <button
-            type="button"
-            onClick={clearActionError}
-            className="text-danger/70 hover:text-danger transition-colors"
-            aria-label="Dismiss"
-          >
-            <X size={16} />
-          </button>
-        </div>
-      )}
 
       {/* User table */}
       <DataTable

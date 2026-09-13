@@ -15,7 +15,9 @@ import type { ClaimDetails as ClaimDetailsType } from "../types";
 import StatusBadge from "../components/ui/StatusBadge";
 import LoadingState from "../components/ui/LoadingState";
 import ErrorState from "../components/ui/ErrorState";
-import ConfirmationDialog from "../components/ui/ConfirmationDialog";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
+import Button from "../components/ui/Button";
+import { toast } from "../contexts/ToastContext";
 
 function formatDate(value?: string | null) {
   if (!value) return "—";
@@ -54,8 +56,6 @@ export default function ClaimDetails() {
   const [reviewing, setReviewing] = useState(false);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [error, setError] = useState("");
-  const [actionError, setActionError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
 
   const loadClaim = useCallback(async () => {
     if (!claimId) return;
@@ -81,18 +81,17 @@ export default function ClaimDetails() {
     if (!claimId) return;
 
     setReviewing(true);
-    setActionError("");
-    setSuccessMessage("");
 
     try {
       await startClaimReview(claimId);
       await loadClaim();
 
-      setSuccessMessage(
+      toast(
+        "success",
         "Claim review started successfully. Status changed to UNDER_REVIEW.",
       );
     } catch (requestError) {
-      setActionError(getApiErrorMessage(requestError));
+      toast("error", getApiErrorMessage(requestError));
     } finally {
       setReviewing(false);
       setShowReviewDialog(false);
@@ -164,29 +163,15 @@ export default function ClaimDetails() {
         </div>
 
         {canStartReview && (
-          <button
-            type="button"
+          <Button
             onClick={() => setShowReviewDialog(true)}
             disabled={reviewing}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-dark px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
+            icon={<PlayCircle size={17} />}
           >
-            <PlayCircle size={17} />
             Start Review
-          </button>
+          </Button>
         )}
       </div>
-
-      {successMessage && (
-        <div className="rounded-lg border border-primary/20 bg-primary-light px-4 py-3 text-sm font-medium text-primary-dark">
-          {successMessage}
-        </div>
-      )}
-
-      {actionError && (
-        <div className="rounded-lg border border-danger/20 bg-red-50 px-4 py-3 text-sm text-danger">
-          {actionError}
-        </div>
-      )}
 
       <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-text">
@@ -375,9 +360,9 @@ export default function ClaimDetails() {
         )}
       </section>
 
-      <ConfirmationDialog
+      <ConfirmDialog
         isOpen={showReviewDialog}
-        onClose={() => setShowReviewDialog(false)}
+        onCancel={() => setShowReviewDialog(false)}
         onConfirm={() => void handleStartReview()}
         title="Start claim review?"
         message="This will change the claim status from SUBMITTED to UNDER_REVIEW."
