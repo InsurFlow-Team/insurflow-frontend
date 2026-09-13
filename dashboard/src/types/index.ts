@@ -5,9 +5,12 @@ export type UserStatus = "ACTIVE" | "INACTIVE";
 export type ClaimStatus =
   | "NEW"
   | "ASSIGNED"
+  | "IN_PROGRESS"
   | "SUBMITTED"
   | "UNDER_REVIEW"
+  | "CORRECTION_REQUIRED"
   | "APPROVED"
+  | "REJECTED"
   | "CLOSED";
 
 export type ClaimPriority = "LOW" | "MEDIUM" | "HIGH";
