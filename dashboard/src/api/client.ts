@@ -79,9 +79,13 @@ export function getApiErrorMessage(error: unknown) {
       .filter((detail): detail is string => Boolean(detail));
 
     if (details.length) {
-      return data?.message
-        ? `${data.message}: ${details.join(" | ")}`
-        : details.join(" | ");
+      // Avoid "message: message" duplication when the backend repeats the same
+      // text in both fields (e.g. 409 EMPLOYEE_CODE_TAKEN).
+      const joined = details.join(" | ");
+      if (data?.message && joined !== data.message) {
+        return `${data.message}: ${joined}`;
+      }
+      return data?.message ?? joined;
     }
 
     return (

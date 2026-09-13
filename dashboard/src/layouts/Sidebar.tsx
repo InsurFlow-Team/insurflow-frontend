@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   FileText,
@@ -6,6 +6,7 @@ import {
   LogOut,
   Settings,
   ShieldCheck,
+  UserRound,
   Users,
   X,
 } from "lucide-react";
@@ -37,6 +38,12 @@ const navigationItems: NavigationItem[] = [
     label: "Claims Queue",
     path: "/claims",
     icon: <FileText size={18} />,
+    roles: ["ADMIN", "CLAIMS_OFFICER"],
+  },
+  {
+    label: "Profile",
+    path: "/profile",
+    icon: <UserRound size={18} />,
     roles: ["ADMIN", "CLAIMS_OFFICER"],
   },
 ];
@@ -73,6 +80,18 @@ export default function Sidebar({
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
+  // Escape closes the mobile drawer.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [isOpen, onClose]);
+
   const handleLogout = () => {
     logout();
     onClose();
@@ -81,8 +100,11 @@ export default function Sidebar({
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-40 w-[280px] bg-surface border-r border-border flex flex-col h-screen shrink-0 transform transition-transform duration-200 lg:static lg:translate-x-0 ${
-        isOpen ? "translate-x-0" : "-translate-x-full"
+      aria-label="Primary navigation"
+      className={`fixed inset-y-0 left-0 z-40 w-[280px] bg-surface border-r border-border flex flex-col h-screen shrink-0 transform transition-[transform,visibility] duration-200 lg:static lg:translate-x-0 lg:visible ${
+        isOpen
+          ? "translate-x-0 visible"
+          : "-translate-x-full invisible"
       }`}
     >
       {/* Product header */}
@@ -205,7 +227,7 @@ export default function Sidebar({
             <p className="text-xs text-white/60 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-success shrink-0" />
               <span className="truncate">
-                {user?.role.replace(/_/g, " ") ?? "—"} • v4.18.2 • Live
+                {user?.role.replace(/_/g, " ") ?? "—"}
               </span>
             </p>
           </div>

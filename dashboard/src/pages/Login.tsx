@@ -46,9 +46,7 @@ export default function Login() {
       }
 
       saveSession(accessToken, user);
-      navigate(user.role === "ADMIN" ? "/users" : "/dashboard", {
-        replace: true,
-      });
+      navigate("/dashboard", { replace: true });
     } catch (requestError) {
       setError(getApiErrorMessage(requestError));
     } finally {

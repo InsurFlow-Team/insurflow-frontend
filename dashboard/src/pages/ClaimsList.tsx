@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertCircle,
@@ -73,7 +73,8 @@ function getDateCutoff(range: DateRangeFilter): Date | null {
 
 export default function ClaimsList() {
   const { user } = useAuth();
-  const canAssign = user?.role === "CLAIMS_OFFICER";
+  const canAssign =
+    user?.role === "ADMIN" || user?.role === "CLAIMS_OFFICER";
 
   const [claims, setClaims] = useState<ClaimSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,8 +82,8 @@ export default function ClaimsList() {
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [assignTarget, setAssignTarget] = useState<ClaimSummary | null>(null);
-  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [successBanner, setSuccessBanner] = useState("");
+  const [errorBanner, setErrorBanner] = useState("");
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"" | ClaimStatus>("");
@@ -91,15 +92,25 @@ export default function ClaimsList() {
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(25);
 
+  const claimsRef = useRef<ClaimSummary[]>([]);
+
   const loadClaims = useCallback(async () => {
     setLoading(true);
     setError("");
 
     try {
       const data = await getClaims();
+      claimsRef.current = data;
       setClaims(data);
     } catch (requestError) {
-      setError(getApiErrorMessage(requestError));
+      const message = getApiErrorMessage(requestError);
+      // A failed first load → full-page error; a failed refetch → banner so
+      // the already-rendered data stays visible.
+      if (claimsRef.current.length > 0) {
+        setErrorBanner(message);
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -108,6 +119,13 @@ export default function ClaimsList() {
   useEffect(() => {
     void loadClaims();
   }, [loadClaims]);
+
+  // Auto-dismiss the success banner after a few seconds.
+  useEffect(() => {
+    if (!successBanner) return;
+    const timerId = window.setTimeout(() => setSuccessBanner(""), 6000);
+    return () => window.clearTimeout(timerId);
+  }, [successBanner]);
 
   async function handleCreate(claimData: NewClaimData): Promise<ClaimSummary> {
     const created = await createClaim(toCreateClaimRequest(claimData));
@@ -118,15 +136,14 @@ export default function ClaimsList() {
 
   function openAssign(claim: ClaimSummary) {
     setAssignTarget(claim);
-    setIsAssignModalOpen(true);
   }
 
   function closeAssign() {
-    setIsAssignModalOpen(false);
     setAssignTarget(null);
   }
 
   async function handleAssigned() {
+    setErrorBanner("");
     if (assignTarget) {
       setSuccessBanner(`${assignTarget.claimNumber} assigned successfully`);
     }
@@ -200,11 +217,11 @@ export default function ClaimsList() {
     />
   );
 
-  if (loading) {
+  if (loading && claims.length === 0) {
     return <LoadingState message="Loading claims..." />;
   }
 
-  if (error) {
+  if (error && claims.length === 0) {
     return <ErrorState message={error} onRetry={() => void loadClaims()} />;
   }
 
@@ -217,6 +234,16 @@ export default function ClaimsList() {
         >
           <CheckCircle2 size={16} className="flex-shrink-0" />
           <span>{successBanner}</span>
+        </div>
+      )}
+
+      {errorBanner && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+        >
+          <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+          <span>{errorBanner}</span>
         </div>
       )}
 
@@ -242,12 +269,23 @@ export default function ClaimsList() {
             Review submitted claims, monitor assessment lifecycle, and assign field
             adjusters.
           </p>
+
+          {user?.organizationName && (
+            <p className="mt-2 text-xs text-text-muted">
+              <span className="font-medium text-text">Organization:</span>{" "}
+              {user.organizationName}
+            </p>
+          )}
         </div>
 
         <Button
           variant="primary"
           icon={<Plus size={15} />}
-          onClick={() => setIsCreateModalOpen(true)}
+          onClick={() => {
+            setSuccessBanner("");
+            setErrorBanner("");
+            setIsCreateModalOpen(true);
+          }}
         >
           Add Claim
         </Button>
@@ -290,12 +328,14 @@ export default function ClaimsList() {
         <div className="flex flex-wrap items-center gap-3 justify-between">
           <div className="grid flex-1 gap-3 md:grid-cols-[1fr_200px_200px_auto] min-w-[320px]">
             <label className="relative block">
+              <span className="sr-only">Search claims</span>
               <Search
                 size={16}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
               />
               <input
                 type="search"
+                aria-label="Search claims"
                 value={search}
                 onChange={(event) => {
                   setSearch(event.target.value);
@@ -307,6 +347,7 @@ export default function ClaimsList() {
             </label>
 
             <select
+              aria-label="Filter by status"
               value={statusFilter}
               onChange={(event) => {
                 setStatusFilter(event.target.value as "" | ClaimStatus);
@@ -322,6 +363,7 @@ export default function ClaimsList() {
             </select>
 
             <select
+              aria-label="Filter by date range"
               value={dateRange}
               onChange={(event) => {
                 setDateRange(event.target.value as DateRangeFilter);
@@ -364,11 +406,16 @@ export default function ClaimsList() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreate}
+        onAssignmentFailed={(created) =>
+          setErrorBanner(
+            `${created.claimNumber} was created, but the field adjuster was not assigned. You can assign it from the list.`,
+          )
+        }
       />
 
       {assignTarget && (
         <AssignClaimModal
-          isOpen={isAssignModalOpen}
+          isOpen
           onClose={closeAssign}
           claimId={assignTarget.id}
           onAssigned={() => void handleAssigned()}
