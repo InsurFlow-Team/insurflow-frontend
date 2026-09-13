@@ -6,7 +6,7 @@ import { formatDate } from "../../utils/claims";
 import type { ClaimSummary } from "../../types";
 
 interface ClaimColumnsOptions {
-  // Role gate (CLAIMS_OFFICER only) computed by the page. The per-row status
+  // Role gate (ADMIN + CLAIMS_OFFICER) computed by the page. The per-row status
   // check (assign only from NEW) stays here so the matrix is enforced in one
   // place.
   canAssign?: boolean;

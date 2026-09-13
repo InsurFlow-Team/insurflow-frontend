@@ -6,18 +6,6 @@ interface RoleGuardProps {
   allowedRoles: Role[];
 }
 
-function getDefaultRoute(role: Role) {
-  if (role === "ADMIN") {
-    return "/users";
-  }
-
-  if (role === "CLAIMS_OFFICER") {
-    return "/dashboard";
-  }
-
-  return "/login";
-}
-
 export default function RoleGuard({ allowedRoles }: RoleGuardProps) {
   const { user } = useAuth();
 
@@ -26,7 +14,7 @@ export default function RoleGuard({ allowedRoles }: RoleGuardProps) {
   }
 
   if (!allowedRoles.includes(user.role)) {
-    return <Navigate to={getDefaultRoute(user.role)} replace />;
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return <Outlet />;

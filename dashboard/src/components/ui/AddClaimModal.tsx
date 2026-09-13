@@ -29,12 +29,14 @@ interface AddClaimModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (claimData: NewClaimData) => Promise<ClaimSummary>;
+  onAssignmentFailed?: (created: ClaimSummary) => void;
 }
 
 export default function AddClaimModal({
   isOpen,
   onClose,
   onSubmit,
+  onAssignmentFailed,
 }: AddClaimModalProps) {
   const { values, errors, handleChange, isValid, reset } = useForm(
     INITIAL_FORM_STATE,
@@ -44,7 +46,6 @@ export default function AddClaimModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showOptionalFields, setShowOptionalFields] = useState(false);
   const [showAssignment, setShowAssignment] = useState(false);
-  const [createdClaim, setCreatedClaim] = useState<ClaimSummary | null>(null);
   const [assignmentError, setAssignmentError] = useState("");
   const [submitError, setSubmitError] = useState("");
 
@@ -61,7 +62,6 @@ export default function AddClaimModal({
       reset();
       setShowOptionalFields(false);
       setShowAssignment(false);
-      setCreatedClaim(null);
       setAssignmentError("");
       setSubmitError("");
     }
@@ -109,7 +109,6 @@ export default function AddClaimModal({
     reset();
     setShowOptionalFields(false);
     setShowAssignment(false);
-    setCreatedClaim(null);
     setAssignmentError("");
     setSubmitError("");
     onClose();
@@ -143,34 +142,16 @@ export default function AddClaimModal({
       if (values.adjusterId) {
         const assigned = await runAssignment(newClaim.id);
         if (!assigned) {
-          // Claim created but assignment failed — keep the modal open with the
-          // created claim so the assignment can be retried without re-creating.
-          setCreatedClaim(newClaim);
-          return;
+          // Claim was created but the assignment failed — report it to the page
+          // and still close the form. The claim stays listed so it can be
+          // assigned later from the row.
+          onAssignmentFailed?.(newClaim);
         }
       }
 
       completeSuccess();
     } catch (createError) {
       setSubmitError(getApiErrorMessage(createError));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleRetryAssignment = async () => {
-    if (!createdClaim || !values.adjusterId || isSubmitting) {
-      return;
-    }
-
-    setSubmitError("");
-    setIsSubmitting(true);
-
-    try {
-      const assigned = await runAssignment(createdClaim.id);
-      if (assigned) {
-        completeSuccess();
-      }
     } finally {
       setIsSubmitting(false);
     }
@@ -263,56 +244,29 @@ export default function AddClaimModal({
         )}
 
         {/* Actions */}
-        {createdClaim ? (
-          <div className="flex items-center justify-between gap-3 pt-4 border-t border-border">
-            <p className="text-xs text-text-muted">
-              Claim {createdClaim.claimNumber} was created. Assignment was not saved.
-            </p>
-            <div className="flex gap-3">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={handleClose}
-                disabled={isSubmitting}
-              >
-                Finish Without Assignment
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                loading={isSubmitting}
-                onClick={() => void handleRetryAssignment()}
-                disabled={isSubmitting || !values.adjusterId || !isPrioritySelected(values.priority)}
-              >
-                Retry Assignment
-              </Button>
-            </div>
+        <div className="flex items-center justify-between gap-3 pt-4 border-t border-border">
+          <p className="text-xs text-text-muted">
+            <span className="text-danger">*</span> Required fields must be filled
+          </p>
+          <div className="flex gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleClose}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              loading={isSubmitting}
+              disabled={isSubmitting || !isValid}
+            >
+              {values.adjusterId ? "Create & Assign" : "Create Claim"}
+            </Button>
           </div>
-        ) : (
-          <div className="flex items-center justify-between gap-3 pt-4 border-t border-border">
-            <p className="text-xs text-text-muted">
-              <span className="text-danger">*</span> Required fields must be filled
-            </p>
-            <div className="flex gap-3">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={handleClose}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                loading={isSubmitting}
-                disabled={isSubmitting || !isValid}
-              >
-                {values.adjusterId ? "Create & Assign" : "Create Claim"}
-              </Button>
-            </div>
-          </div>
-        )}
+        </div>
       </form>
     </Modal>
   );

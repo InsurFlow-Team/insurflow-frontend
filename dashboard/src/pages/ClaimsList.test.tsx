@@ -247,13 +247,46 @@ describe("ClaimsList", () => {
     expect(getClaims).toHaveBeenCalledTimes(2);
   });
 
-  it("hides the Assign action for non-officer roles (ADMIN) even on NEW claims", async () => {
+  it("lets an ADMIN assign a NEW claim straight from the list row", async () => {
     authRole.value = "ADMIN";
-    vi.mocked(getClaims).mockResolvedValue([FULL_ROW]);
+    vi.mocked(getClaims)
+      .mockResolvedValueOnce([FULL_ROW])
+      .mockResolvedValueOnce([{ ...FULL_ROW, status: "ASSIGNED" }]);
+    vi.mocked(getFieldAdjusters).mockResolvedValue([ADJUSTER]);
+    vi.mocked(assignClaim).mockResolvedValue({
+      id: "clm-1",
+      claimNumber: "CLM-2026-0001",
+      status: "ASSIGNED",
+      priority: "MEDIUM",
+      assignedTo: ADJUSTER.id,
+      assignedBy: "ad-1",
+      assignedAt: "2026-09-09T11:50:00.000Z",
+    });
 
+    const user = setupUserEvent();
     await renderPage();
 
-    expect(await screen.findByText(CLAIM_NUMBER_TEXT)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Assign/i })).toBeFalsy();
+    const assignButton = await screen.findByRole("button", {
+      name: /Assign/i,
+    });
+    await user.click(assignButton);
+
+    await user.selectOptions(
+      await screen.findByDisplayValue("Select field adjuster"),
+      ADJUSTER.id,
+    );
+    await user.click(screen.getByRole("button", { name: "Save Assignment" }));
+
+    expect(assignClaim).toHaveBeenCalledWith("clm-1", {
+      adjusterId: ADJUSTER.id,
+      priority: "MEDIUM",
+      notes: "",
+    });
+
+    expect(
+      await screen.findByText(/CLM-2026-0001 assigned successfully/i),
+    ).toBeTruthy();
+
+    expect(getClaims).toHaveBeenCalledTimes(2);
   });
 });

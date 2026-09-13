@@ -40,6 +40,7 @@ export default function Button({
       className={`
         inline-flex items-center justify-center font-medium rounded-lg border
         transition-colors duration-150 cursor-pointer
+        focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1
         disabled:opacity-50 disabled:cursor-not-allowed
         ${variantClasses[variant]}
         ${sizeClasses[size]}
