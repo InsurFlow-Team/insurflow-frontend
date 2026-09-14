@@ -29,6 +29,7 @@ import type { NewClaimData } from "../components/claim-form/claimFormConstants";
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
 
 type DateRangeFilter = "all" | "7days" | "30days" | "90days";
+type SortOption = "newest" | "oldest" | "claim-asc" | "customer-asc";
 const STATUS_OPTIONS: Array<{
   label: string;
   value: "" | ClaimStatus;
@@ -53,6 +54,15 @@ const DATE_RANGE_OPTIONS: Array<{
   { label: "Last 7 Days", value: "7days" },
   { label: "Last 30 Days", value: "30days" },
   { label: "Last 90 Days", value: "90days" },
+];
+const SORT_OPTIONS: Array<{
+  label: string;
+  value: SortOption;
+}> = [
+  { label: "Newest First", value: "newest" },
+  { label: "Oldest First", value: "oldest" },
+  { label: "Claim Number", value: "claim-asc" },
+  { label: "Customer Name", value: "customer-asc" },
 ];
 
 function getDateCutoff(range: DateRangeFilter): Date | null {
@@ -89,6 +99,7 @@ export default function ClaimsList() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"" | ClaimStatus>("");
   const [dateRange, setDateRange] = useState<DateRangeFilter>("all");
+  const [sortBy, setSortBy] = useState<SortOption>("newest");
 
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(25);
@@ -175,17 +186,42 @@ export default function ClaimsList() {
   }, [claims, search, statusFilter, dateRange]);
 
   const totalPages = Math.max(1, Math.ceil(filteredClaims.length / rowsPerPage));
+  const sortedClaims = useMemo(() => {
+  return [...filteredClaims].sort((first, second) => {
+    switch (sortBy) {
+      case "oldest":
+        return (
+          new Date(first.createdAt).getTime() -
+          new Date(second.createdAt).getTime()
+        );
+
+      case "claim-asc":
+        return first.claimNumber.localeCompare(second.claimNumber);
+
+      case "customer-asc":
+        return first.customerName.localeCompare(second.customerName);
+
+      case "newest":
+      default:
+        return (
+          new Date(second.createdAt).getTime() -
+          new Date(first.createdAt).getTime()
+        );
+    }
+  });
+}, [filteredClaims, sortBy]);
   const currentPage = Math.min(page, totalPages);
 
   const pagedClaims = useMemo(() => {
     const start = (currentPage - 1) * rowsPerPage;
-    return filteredClaims.slice(start, start + rowsPerPage);
-  }, [filteredClaims, currentPage, rowsPerPage]);
+    return sortedClaims.slice(start, start + rowsPerPage);
+  }, [sortedClaims, currentPage, rowsPerPage]);
 
   const handleResetFilters = () => {
     setSearch("");
     setStatusFilter("");
     setDateRange("all");
+    setSortBy("newest");
     setPage(1);
   };
 
@@ -247,7 +283,23 @@ export default function ClaimsList() {
           </p>
         </div>
 
-        <Button
+        <select
+  value={sortBy}
+  onChange={(event) => {
+    setSortBy(event.target.value as SortOption);
+    setPage(1);
+  }}
+  aria-label="Sort claims"
+  className="rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-text outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+>
+  {SORT_OPTIONS.map((option) => (
+    <option key={option.value} value={option.value}>
+      {option.label}
+    </option>
+  ))}
+</select>
+
+       <Button
           variant="primary"
           icon={<Plus size={15} />}
           onClick={() => setIsCreateModalOpen(true)}
