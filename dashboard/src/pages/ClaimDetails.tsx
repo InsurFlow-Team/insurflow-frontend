@@ -136,6 +136,14 @@ export default function ClaimDetails() {
       new Date(String(secondEvent.timestamp ?? "")).getTime() -
       new Date(String(firstEvent.timestamp ?? "")).getTime(),
   );
+  const evidenceItems = [
+  ...(claim.evidence ?? []),
+  ...(claim.attachments ?? []),
+];
+
+const signature = claim.signature ?? null;
+const decisions = claim.decisions ?? [];
+const correctionNotes = claim.correctionNotes ?? [];
 
   const canStartReview = claim.status === "SUBMITTED";
 
@@ -321,6 +329,195 @@ export default function ClaimDetails() {
           )}
       </section>
 
+      <div className="grid gap-6 lg:grid-cols-2">
+  <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
+    <h2 className="text-lg font-semibold text-text">
+      Evidence & Attachments
+    </h2>
+
+    {evidenceItems.length === 0 ? (
+      <p className="mt-5 text-sm text-text-muted">
+        No evidence or attachments available.
+      </p>
+    ) : (
+      <div className="mt-5 space-y-3">
+        {evidenceItems.map((item, index) => {
+          const itemName = String(
+            item.fileName ??
+              item.name ??
+              item.type ??
+              `Evidence ${index + 1}`,
+          );
+
+          const itemUrl =
+            typeof item.url === "string"
+              ? item.url
+              : typeof item.fileUrl === "string"
+                ? item.fileUrl
+                : null;
+
+          return (
+            <div
+              key={`${itemName}-${index}`}
+              className="flex items-center justify-between gap-3 rounded-lg border border-border p-3"
+            >
+              <span className="text-sm font-medium text-text">
+                {itemName}
+              </span>
+
+              {itemUrl && (
+                <a
+                  href={itemUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm font-semibold text-primary hover:text-primary-dark"
+                >
+                  View
+                </a>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    )}
+  </section>
+
+  <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
+    <h2 className="text-lg font-semibold text-text">
+      Customer Signature
+    </h2>
+
+    <div className="mt-5 grid gap-5 sm:grid-cols-2">
+      <InfoRow
+        label="Signature Status"
+        value={signature ? "Signed" : "Not available"}
+      />
+
+      <InfoRow
+        label="Signed By"
+        value={
+          signature
+            ? String(
+                signature.signerName ??
+                  signature.signedBy ??
+                  "Customer",
+              )
+            : null
+        }
+      />
+
+      <InfoRow
+        label="Signed At"
+        value={
+          signature
+            ? formatDate(
+                String(
+                  signature.signedAt ??
+                    signature.timestamp ??
+                    "",
+                ),
+              )
+            : null
+        }
+      />
+    </div>
+  </section>
+</div>
+
+
+<div className="grid gap-6 lg:grid-cols-2">
+  <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
+    <h2 className="text-lg font-semibold text-text">
+      Decisions
+    </h2>
+
+    {decisions.length === 0 ? (
+      <p className="mt-5 text-sm text-text-muted">
+        No decisions available.
+      </p>
+    ) : (
+      <div className="mt-5 space-y-3">
+        {decisions.map((decision, index) => (
+          <div
+            key={`decision-${index}`}
+            className="rounded-lg border border-border p-4"
+          >
+            <p className="text-sm font-semibold text-text">
+              {String(
+                decision.decision ??
+                  decision.action ??
+                  decision.status ??
+                  "Decision",
+              )}
+            </p>
+
+            <p className="mt-2 text-sm text-text-muted">
+              {String(
+                decision.notes ??
+                  decision.reason ??
+                  "No additional notes.",
+              )}
+            </p>
+
+            {Boolean(decision.createdAt || decision.timestamp) && (
+              <p className="mt-2 text-xs text-text-muted">
+                {formatDate(
+                  String(
+                    decision.createdAt ??
+                      decision.timestamp ??
+                      "",
+                  ),
+                )}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+    )}
+  </section>
+
+  <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
+    <h2 className="text-lg font-semibold text-text">
+      Correction Notes
+    </h2>
+
+    {correctionNotes.length === 0 ? (
+      <p className="mt-5 text-sm text-text-muted">
+        No correction notes available.
+      </p>
+    ) : (
+      <div className="mt-5 space-y-3">
+        {correctionNotes.map((note, index) => (
+          <div
+            key={`correction-${index}`}
+            className="rounded-lg border border-border p-4"
+          >
+            <p className="text-sm text-text">
+              {String(
+                note.note ??
+                  note.message ??
+                  note.reason ??
+                  "Correction requested",
+              )}
+            </p>
+
+            {Boolean(note.createdAt || note.timestamp) && (
+              <p className="mt-2 text-xs text-text-muted">
+                {formatDate(
+                  String(
+                    note.createdAt ??
+                      note.timestamp ??
+                      "",
+                  ),
+                )}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+    )}
+  </section>
+</div>
       <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-text">
           Claim Timeline
