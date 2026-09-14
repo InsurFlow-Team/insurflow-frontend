@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import {
+import { Link, useNavigate } from "react-router-dom";import {
   AlertCircle,
   CheckCircle2,
   ChevronRight,
@@ -84,6 +83,7 @@ function getDateCutoff(range: DateRangeFilter): Date | null {
 }
 
 export default function ClaimsList() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const canAssign = user?.role === "CLAIMS_OFFICER";
 
@@ -426,6 +426,7 @@ export default function ClaimsList() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreate}
+        onSuccess={(claim) => navigate(`/claims/${claim.id}`)}
       />
 
       {assignTarget && (
