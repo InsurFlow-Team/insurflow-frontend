@@ -29,7 +29,6 @@ import type { NewClaimData } from "../components/claim-form/claimFormConstants";
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
 
 type DateRangeFilter = "all" | "7days" | "30days" | "90days";
-
 const STATUS_OPTIONS: Array<{
   label: string;
   value: "" | ClaimStatus;
@@ -37,9 +36,12 @@ const STATUS_OPTIONS: Array<{
   { label: "All Statuses", value: "" },
   { label: "New", value: "NEW" },
   { label: "Assigned", value: "ASSIGNED" },
+  { label: "In Progress", value: "IN_PROGRESS" },
   { label: "Submitted", value: "SUBMITTED" },
   { label: "Under Review", value: "UNDER_REVIEW" },
+  { label: "Correction Required", value: "CORRECTION_REQUIRED" },
   { label: "Approved", value: "APPROVED" },
+  { label: "Rejected", value: "REJECTED" },
   { label: "Closed", value: "CLOSED" },
 ];
 
@@ -174,10 +176,11 @@ export default function ClaimsList() {
     const dateCutoff = getDateCutoff(dateRange);
 
     return claims.filter((claim) => {
-      const matchesSearch =
-        !normalizedSearch ||
-        claim.claimNumber.toLowerCase().includes(normalizedSearch) ||
-        claim.customerName.toLowerCase().includes(normalizedSearch);
+    const matchesSearch =
+  !normalizedSearch ||
+  claim.claimNumber.toLowerCase().includes(normalizedSearch) ||
+  claim.customerName.toLowerCase().includes(normalizedSearch) ||
+  claim.initialPlateNumber.toLowerCase().includes(normalizedSearch);
 
       const matchesStatus = !statusFilter || claim.status === statusFilter;
 
@@ -341,7 +344,7 @@ export default function ClaimsList() {
                   setSearch(event.target.value);
                   setPage(1);
                 }}
-                placeholder="Filter by Claim ID or Customer..."
+                placeholder="Search by claim number, customer, or plate..."
                 className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-4 text-sm text-text outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </label>
