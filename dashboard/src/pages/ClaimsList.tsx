@@ -392,12 +392,19 @@ export default function ClaimsList() {
             </select>
 
             <Button
-              variant="secondary"
-              icon={<RefreshCw size={15} />}
-              onClick={handleResetFilters}
-            >
-              Reset Filters
-            </Button>
+  variant="secondary"
+  icon={<RefreshCw size={15} />}
+  onClick={() => void loadClaims()}
+>
+  Refresh
+</Button>
+
+<Button
+  variant="secondary"
+  onClick={handleResetFilters}
+>
+  Reset Filters
+</Button>
           </div>
 
           <span className="text-sm text-text-muted whitespace-nowrap">
