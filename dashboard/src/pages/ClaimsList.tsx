@@ -1,5 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   AlertCircle,
   CheckCircle2,
@@ -84,6 +90,7 @@ function getDateCutoff(range: DateRangeFilter): Date | null {
 }
 
 export default function ClaimsList() {
+  const [searchParams, setSearchParams] = useSearchParams();  
   const { user } = useAuth();
   const canAssign =
     user?.role === "ADMIN" || user?.role === "CLAIMS_OFFICER";
@@ -97,13 +104,40 @@ export default function ClaimsList() {
   const [successBanner, setSuccessBanner] = useState("");
   const [errorBanner, setErrorBanner] = useState("");
 
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"" | ClaimStatus>("");
-  const [dateRange, setDateRange] = useState<DateRangeFilter>("all");
-  const [sortBy, setSortBy] = useState<SortOption>("newest");
+    const [search, setSearch] = useState(
+    () => searchParams.get("search") ?? "",
+  );
+
+  const [statusFilter, setStatusFilter] = useState<"" | ClaimStatus>(
+    () => (searchParams.get("status") as "" | ClaimStatus) ?? "",
+  );
+
+  const [dateRange, setDateRange] = useState<DateRangeFilter>(
+    () => (searchParams.get("date") as DateRangeFilter) ?? "all",
+  );
+
+  const [sortBy, setSortBy] = useState<SortOption>(
+    () => (searchParams.get("sort") as SortOption) ?? "newest",
+  );
 
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(25);
+    useEffect(() => {
+    const params = new URLSearchParams();
+
+    if (search) params.set("search", search);
+    if (statusFilter) params.set("status", statusFilter);
+    if (dateRange !== "all") params.set("date", dateRange);
+    if (sortBy !== "newest") params.set("sort", sortBy);
+
+    setSearchParams(params, { replace: true });
+  }, [
+    search,
+    statusFilter,
+    dateRange,
+    sortBy,
+    setSearchParams,
+  ]);
 
   const claimsRef = useRef<ClaimSummary[]>([]);
 
