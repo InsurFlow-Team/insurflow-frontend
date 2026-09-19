@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import {
   ArrowLeft,
   ExternalLink,
@@ -50,6 +51,7 @@ function InfoRow({
 
 export default function ClaimDetails() {
   const { claimId } = useParams<{ claimId: string }>();
+    const { user } = useAuth();
 
   const [claim, setClaim] = useState<ClaimDetailsType | null>(null);
   const [loading, setLoading] = useState(true);
@@ -145,8 +147,10 @@ const signature = claim.signature ?? null;
 const decisions = claim.decisions ?? [];
 const correctionNotes = claim.correctionNotes ?? [];
 
-  const canStartReview = claim.status === "SUBMITTED";
-
+const canStartReview =
+  user?.role === "CLAIMS_OFFICER" &&
+  claim.status === "SUBMITTED";
+  
   return (
     <div className="space-y-6">
       <Link
