@@ -5,8 +5,11 @@ import {
   useRef,
   useState,
 } from "react";
-import { Link, useSearchParams } from "react-router-dom";
 import {
+  Link,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";import {
   AlertCircle,
   CheckCircle2,
   ChevronRight,
@@ -90,6 +93,7 @@ function getDateCutoff(range: DateRangeFilter): Date | null {
 }
 
 export default function ClaimsList() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();  
   const { user } = useAuth();
   const canAssign =
@@ -502,6 +506,9 @@ export default function ClaimsList() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreate}
+                onSuccess={(created) =>
+          navigate(`/claims/${created.id}`)
+        }
         onAssignmentFailed={(created) =>
           setErrorBanner(
             `${created.claimNumber} was created, but the field adjuster was not assigned. You can assign it from the list.`,

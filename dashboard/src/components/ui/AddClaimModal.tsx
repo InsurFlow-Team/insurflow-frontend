@@ -30,6 +30,7 @@ interface AddClaimModalProps {
   onClose: () => void;
   onSubmit: (claimData: NewClaimData) => Promise<ClaimSummary>;
   onAssignmentFailed?: (created: ClaimSummary) => void;
+  onSuccess?: (created: ClaimSummary) => void;
 }
 
 export default function AddClaimModal({
@@ -37,6 +38,7 @@ export default function AddClaimModal({
   onClose,
   onSubmit,
   onAssignmentFailed,
+  onSuccess,
 }: AddClaimModalProps) {
   const { values, errors, handleChange, isValid, reset } = useForm(
     INITIAL_FORM_STATE,
@@ -114,7 +116,7 @@ export default function AddClaimModal({
     onClose();
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!isValid || isSubmitting) {
@@ -124,7 +126,6 @@ export default function AddClaimModal({
     setSubmitError("");
     setAssignmentError("");
 
-    // Priority is only required when an adjuster is actually selected
     if (values.adjusterId && !isPrioritySelected(values.priority)) {
       setAssignmentError(
         "Select a priority when assigning a field adjuster.",
@@ -135,27 +136,27 @@ export default function AddClaimModal({
     setIsSubmitting(true);
 
     try {
-      // 1. Create the claim
       const newClaim = await onSubmit(values);
 
-      // 2. Optionally assign a field adjuster
       if (values.adjusterId) {
         const assigned = await runAssignment(newClaim.id);
+
         if (!assigned) {
-          // Claim was created but the assignment failed — report it to the page
-          // and still close the form. The claim stays listed so it can be
-          // assigned later from the row.
           onAssignmentFailed?.(newClaim);
+          completeSuccess();
+          return;
         }
       }
 
       completeSuccess();
+      onSuccess?.(newClaim);
     } catch (createError) {
       setSubmitError(getApiErrorMessage(createError));
     } finally {
       setIsSubmitting(false);
     }
   };
+
 
   const handleClose = () => {
     if (!isSubmitting) {
