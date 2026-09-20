@@ -17,6 +17,7 @@ import StatusBadge from "../components/ui/StatusBadge";
 import LoadingState from "../components/ui/LoadingState";
 import ErrorState from "../components/ui/ErrorState";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
+import Modal from "../components/ui/Modal";
 import Button from "../components/ui/Button";
 import { toast } from "../contexts/ToastContext";
 
@@ -58,6 +59,10 @@ export default function ClaimDetails() {
   const [reviewing, setReviewing] = useState(false);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [error, setError] = useState("");
+  const [previewImage, setPreviewImage] = useState<{
+  url: string;
+  name: string;
+} | null>(null);
 
   const loadClaim = useCallback(async () => {
     if (!claimId) return;
@@ -346,6 +351,7 @@ const canStartReview =
     ) : (
       <div className="mt-5 space-y-3">
         {evidenceItems.map((item, index) => {
+         
           const itemName = String(
             item.fileName ??
               item.name ??
@@ -360,6 +366,10 @@ const canStartReview =
                 ? item.fileUrl
                 : null;
 
+                const isImage =
+  itemUrl !== null &&
+  /\.(png|jpe?g|gif|webp|bmp|svg)(\?.*)?$/i.test(itemUrl);
+
           return (
             <div
               key={`${itemName}-${index}`}
@@ -369,16 +379,30 @@ const canStartReview =
                 {itemName}
               </span>
 
-              {itemUrl && (
-                <a
-                  href={itemUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm font-semibold text-primary hover:text-primary-dark"
-                >
-                  View
-                </a>
-              )}
+              {itemUrl &&
+  (isImage ? (
+    <button
+      type="button"
+      onClick={() =>
+        setPreviewImage({
+          url: itemUrl,
+          name: itemName,
+        })
+      }
+      className="text-sm font-semibold text-primary hover:text-primary-dark"
+    >
+      Preview
+    </button>
+  ) : (
+    <a
+      href={itemUrl}
+      target="_blank"
+      rel="noreferrer"
+      className="text-sm font-semibold text-primary hover:text-primary-dark"
+    >
+      Open
+    </a>
+  ))}
             </div>
           );
         })}
@@ -560,6 +584,31 @@ const canStartReview =
           </div>
         )}
       </section>
+      <Modal
+  isOpen={Boolean(previewImage)}
+  onClose={() => setPreviewImage(null)}
+  title={previewImage?.name ?? "Image Preview"}
+  size="lg"
+>
+  {previewImage && (
+    <div className="space-y-4">
+      <img
+        src={previewImage.url}
+        alt={previewImage.name}
+        className="max-h-[70vh] w-full rounded-lg object-contain"
+      />
+
+      <a
+        href={previewImage.url}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex text-sm font-semibold text-primary hover:text-primary-dark"
+      >
+        Open original image
+      </a>
+    </div>
+  )}
+</Modal>
 
       <ConfirmDialog
         isOpen={showReviewDialog}
