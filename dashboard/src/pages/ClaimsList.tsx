@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { createClaim, getClaims, toCreateClaimRequest } from "../api/claims.service";
 import { getApiErrorMessage } from "../api/client";
 import type { ClaimStatus, ClaimSummary } from "../types";
@@ -20,12 +21,15 @@ import ClaimsStats, {
 import {
   getDateCutoff,
   type DateRangeFilter,
+  type SortOption,
 } from "../components/claims/filterOptions";
 import type { NewClaimData } from "../components/claim-form/claimFormConstants";
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
 
 export default function ClaimsList() {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();  
   const { user } = useAuth();
   const canAssign =
     user?.role === "ADMIN" || user?.role === "CLAIMS_OFFICER";
@@ -41,12 +45,40 @@ export default function ClaimsList() {
   const [successBanner, setSuccessBanner] = useState("");
   const [errorBanner, setErrorBanner] = useState("");
 
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"" | ClaimStatus>("");
-  const [dateRange, setDateRange] = useState<DateRangeFilter>("all");
+    const [search, setSearch] = useState(
+    () => searchParams.get("search") ?? "",
+  );
+
+  const [statusFilter, setStatusFilter] = useState<"" | ClaimStatus>(
+    () => (searchParams.get("status") as "" | ClaimStatus) ?? "",
+  );
+
+  const [dateRange, setDateRange] = useState<DateRangeFilter>(
+    () => (searchParams.get("date") as DateRangeFilter) ?? "all",
+  );
+
+  const [sortBy, setSortBy] = useState<SortOption>(
+    () => (searchParams.get("sort") as SortOption) ?? "newest",
+  );
 
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(25);
+    useEffect(() => {
+    const params = new URLSearchParams();
+
+    if (search) params.set("search", search);
+    if (statusFilter) params.set("status", statusFilter);
+    if (dateRange !== "all") params.set("date", dateRange);
+    if (sortBy !== "newest") params.set("sort", sortBy);
+
+    setSearchParams(params, { replace: true });
+  }, [
+    search,
+    statusFilter,
+    dateRange,
+    sortBy,
+    setSearchParams,
+  ]);
 
   const claimsRef = useRef<ClaimSummary[]>([]);
 
@@ -149,10 +181,11 @@ export default function ClaimsList() {
     const dateCutoff = getDateCutoff(dateRange);
 
     return claims.filter((claim) => {
-      const matchesSearch =
-        !normalizedSearch ||
-        claim.claimNumber.toLowerCase().includes(normalizedSearch) ||
-        claim.customerName.toLowerCase().includes(normalizedSearch);
+    const matchesSearch =
+  !normalizedSearch ||
+  claim.claimNumber.toLowerCase().includes(normalizedSearch) ||
+  claim.customerName.toLowerCase().includes(normalizedSearch) ||
+  claim.initialPlateNumber.toLowerCase().includes(normalizedSearch);
 
       const matchesStatus = !statusFilter || claim.status === statusFilter;
 
@@ -164,17 +197,42 @@ export default function ClaimsList() {
   }, [claims, search, statusFilter, dateRange]);
 
   const totalPages = Math.max(1, Math.ceil(filteredClaims.length / rowsPerPage));
+  const sortedClaims = useMemo(() => {
+  return [...filteredClaims].sort((first, second) => {
+    switch (sortBy) {
+      case "oldest":
+        return (
+          new Date(first.createdAt).getTime() -
+          new Date(second.createdAt).getTime()
+        );
+
+      case "claim-asc":
+        return first.claimNumber.localeCompare(second.claimNumber);
+
+      case "customer-asc":
+        return first.customerName.localeCompare(second.customerName);
+
+      case "newest":
+      default:
+        return (
+          new Date(second.createdAt).getTime() -
+          new Date(first.createdAt).getTime()
+        );
+    }
+  });
+}, [filteredClaims, sortBy]);
   const currentPage = Math.min(page, totalPages);
 
   const pagedClaims = useMemo(() => {
     const start = (currentPage - 1) * rowsPerPage;
-    return filteredClaims.slice(start, start + rowsPerPage);
-  }, [filteredClaims, currentPage, rowsPerPage]);
+    return sortedClaims.slice(start, start + rowsPerPage);
+  }, [sortedClaims, currentPage, rowsPerPage]);
 
   const handleResetFilters = () => {
     setSearch("");
     setStatusFilter("");
     setDateRange("all");
+    setSortBy("newest");
     setPage(1);
   };
 
@@ -215,6 +273,7 @@ export default function ClaimsList() {
         search={search}
         statusFilter={statusFilter}
         dateRange={dateRange}
+        sortBy={sortBy}
         totalFiltered={filteredClaims.length}
         totalClaims={claims.length}
         onSearchChange={(value) => {
@@ -229,9 +288,13 @@ export default function ClaimsList() {
           setDateRange(value);
           setPage(1);
         }}
+        onSortChange={(value) => {
+          setSortBy(value);
+          setPage(1);
+        }}
+        onRefresh={() => void loadClaims()}
         onReset={handleResetFilters}
       />
-
       <DataTable
         columns={columns}
         data={pagedClaims}
@@ -250,6 +313,7 @@ export default function ClaimsList() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreate}
+        onSuccess={(created) => navigate(`/claims/${created.id}`)}
       />
 
       {assignTarget && (

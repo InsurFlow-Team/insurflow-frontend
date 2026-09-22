@@ -38,6 +38,11 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/claims" element={<ClaimsList />} />
               <Route path="/claims/:claimId" element={<ClaimDetails />} />
+              <Route
+  path="/claims/:claimId/report"
+  element={<ClaimDetails reportMode />}
+/>
+
               <Route path="/adjusters" element={<AdjustersDirectory />} />
               <Route path="/adjusters/:adjusterId" element={<AdjusterDetails />} />
               <Route

@@ -11,6 +11,7 @@ export type ClaimStatus =
   | "UNDER_REVIEW"
   | "CORRECTION_REQUIRED"
   | "APPROVED"
+  | "REJECTED"
   | "CLOSED";
 
 export type ClaimPriority = "LOW" | "MEDIUM" | "HIGH";
@@ -148,6 +149,11 @@ export interface ClaimDetails {
   accident: Record<string, unknown> | null;
   location: Record<string, unknown> | null;
   timeline: Array<Record<string, unknown>>;
+  evidence?: Array<Record<string, unknown>>;
+attachments?: Array<Record<string, unknown>>;
+signature?: Record<string, unknown> | null;
+decisions?: Array<Record<string, unknown>>;
+correctionNotes?: Array<Record<string, unknown>>;
 
   createdAt: string;
   updatedAt: string;

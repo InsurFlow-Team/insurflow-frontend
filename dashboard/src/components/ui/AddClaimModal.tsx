@@ -23,12 +23,14 @@ interface AddClaimModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (claimData: NewClaimData) => Promise<ClaimSummary>;
+  onSuccess?: (created: ClaimSummary) => void;
 }
 
 export default function AddClaimModal({
   isOpen,
   onClose,
   onSubmit,
+  onSuccess,
 }: AddClaimModalProps) {
   const { values, errors, handleChange, isValid, reset } = useForm(
     INITIAL_FORM_STATE,
@@ -48,7 +50,7 @@ export default function AddClaimModal({
     }
   }, [isOpen, reset]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!isValid || isSubmitting) {
@@ -60,19 +62,21 @@ export default function AddClaimModal({
 
     try {
       // Create claim only - no assignment
-      await onSubmit(values);
+      const newClaim = await onSubmit(values);
 
       // Success: close modal and reset
       reset();
       setShowPreciseLocation(true);
       setSubmitError("");
       onClose();
+      onSuccess?.(newClaim);
     } catch (createError) {
       setSubmitError(getApiErrorMessage(createError));
     } finally {
       setIsSubmitting(false);
     }
   };
+
 
   const handleClose = () => {
     if (!isSubmitting) {

@@ -60,3 +60,37 @@ a {
 h1, h2, h3, h4, p {
   margin-top: 0;
 }
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .claim-report,
+  .claim-report * {
+    visibility: visible;
+  }
+
+  .claim-report {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    padding: 0;
+    background: white;
+  }
+
+  .claim-report a,
+  .claim-report button {
+    display: none !important;
+  }
+
+  .claim-report section,
+  .claim-report > div {
+    break-inside: avoid;
+    box-shadow: none !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+}

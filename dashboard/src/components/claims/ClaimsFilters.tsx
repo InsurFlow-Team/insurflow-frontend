@@ -2,8 +2,10 @@ import { RefreshCw, Search } from "lucide-react";
 import Button from "../ui/Button";
 import {
   DATE_RANGE_OPTIONS,
+  SORT_OPTIONS,
   STATUS_OPTIONS,
   type DateRangeFilter,
+  type SortOption,
 } from "./filterOptions";
 import type { ClaimStatus } from "../../types";
 
@@ -11,11 +13,14 @@ interface ClaimsFiltersProps {
   search: string;
   statusFilter: "" | ClaimStatus;
   dateRange: DateRangeFilter;
+  sortBy: SortOption;
   totalFiltered: number;
   totalClaims: number;
   onSearchChange: (value: string) => void;
   onStatusChange: (value: "" | ClaimStatus) => void;
   onDateRangeChange: (value: DateRangeFilter) => void;
+  onSortChange: (value: SortOption) => void;
+  onRefresh: () => void;
   onReset: () => void;
 }
 
@@ -23,17 +28,20 @@ export default function ClaimsFilters({
   search,
   statusFilter,
   dateRange,
+  sortBy,
   totalFiltered,
   totalClaims,
   onSearchChange,
   onStatusChange,
   onDateRangeChange,
+  onSortChange,
+  onRefresh,
   onReset,
 }: ClaimsFiltersProps) {
   return (
     <div className="rounded-xl border border-border bg-surface p-4 shadow-sm">
       <div className="flex flex-wrap items-center gap-3 justify-between">
-        <div className="grid flex-1 gap-3 md:grid-cols-[1fr_200px_200px_auto] min-w-[320px]">
+        <div className="grid flex-1 gap-3 md:grid-cols-[1fr_200px_200px_200px_auto] min-w-[320px]">
           <label className="relative block">
             <span className="sr-only">Search claims</span>
             <Search
@@ -80,9 +88,31 @@ export default function ClaimsFilters({
             ))}
           </select>
 
+          <select
+            aria-label="Sort claims"
+            value={sortBy}
+            onChange={(event) =>
+              onSortChange(event.target.value as SortOption)
+            }
+            className="rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-text outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+          >
+            {SORT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+
           <Button
             variant="secondary"
             icon={<RefreshCw size={15} />}
+            onClick={onRefresh}
+          >
+            Refresh
+          </Button>
+
+          <Button
+            variant="secondary"
             onClick={onReset}
           >
             Reset Filters

@@ -32,14 +32,15 @@ const statusConfig: Record<Status, StatusConfig> = {
   // Claim
   NEW:          { label: "New",           classes: "bg-gray-100 text-gray-700 border-gray-200" },
   PENDING_ACCEPTANCE: { label: "Awaiting Reply", classes: "bg-blue-50 text-blue-700 border-blue-200" },
+  ASSIGNED:     { label: "Assigned",      classes: "bg-purple-50 text-purple-700 border-purple-200" },
+  IN_PROGRESS:  { label: "In Progress",   classes: "bg-yellow-50 text-yellow-700 border-yellow-200" },
   SUBMITTED:    { label: "Submitted",     classes: "bg-blue-50 text-info border-blue-200" },
   UNDER_REVIEW: { label: "Under Review",  classes: "bg-accent-light text-accent border-amber-200" },
   CORRECTION_REQUIRED: { label: "Correction Required", classes: "bg-rose-50 text-rose-700 border-rose-200" },
   APPROVED:     { label: "Approved",      classes: "bg-emerald-50 text-emerald-600 border-emerald-200" },
+  REJECTED:     { label: "Rejected",      classes: "bg-red-50 text-danger border-danger/20" },
   CLOSED:       { label: "Closed",        classes: "bg-gray-100 text-gray-500 border-gray-200" },
   // Inspection Task
-  ASSIGNED:     { label: "Assigned",      classes: "bg-purple-50 text-purple-700 border-purple-200" },
-  IN_PROGRESS:  { label: "In Progress",   classes: "bg-yellow-50 text-yellow-700 border-yellow-200" },
   // Availability
   AVAILABLE: {
     label: "Available",
