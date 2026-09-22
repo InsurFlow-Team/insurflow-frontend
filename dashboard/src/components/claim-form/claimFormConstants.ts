@@ -1,10 +1,8 @@
 import type { ChangeEvent } from "react";
 import {
   validateRequired,
-  validatePhone,
   validatePlateNumber,
   validateIncidentType,
-  validateDescription,
   validateCoordinate,
 } from "../../utils/validation";
 import type { ClaimPriority, CreateClaimDraft } from "../../types";

@@ -30,7 +30,7 @@ export default function AccidentDescriptionSection({
         <div className="relative">
           <textarea
             name="description"
-            value={values.description}
+            value={values.description ?? ""}
             onChange={onChange}
             placeholder="Provide a detailed description of how the incident occurred. Include events leading up to the accident, what happened during, and immediate aftermath..."
             rows={4}
@@ -39,7 +39,7 @@ export default function AccidentDescriptionSection({
             className={TEXTAREA_CLASS_NAME(Boolean(errors.description))}
           />
           <div className="absolute bottom-2 right-2 text-xs text-text-muted">
-            {values.description.length}/{MAX_DESCRIPTION_LENGTH}
+            {(values.description ?? "").length}/{MAX_DESCRIPTION_LENGTH}
           </div>
         </div>
         <p className="mt-1.5 text-xs text-text-muted">
@@ -51,7 +51,7 @@ export default function AccidentDescriptionSection({
         <div className="relative">
           <textarea
             name="damageDescription"
-            value={values.damageDescription}
+            value={values.damageDescription ?? ""}
             onChange={onChange}
             placeholder="Describe visible damage to the vehicle. Include affected parts, severity, and any other observations..."
             rows={3}
@@ -60,7 +60,7 @@ export default function AccidentDescriptionSection({
             className={TEXTAREA_CLASS_NAME(Boolean(errors.damageDescription))}
           />
           <div className="absolute bottom-2 right-2 text-xs text-text-muted">
-            {values.damageDescription.length}/{MAX_DAMAGE_LENGTH}
+            {(values.damageDescription ?? "").length}/{MAX_DAMAGE_LENGTH}
           </div>
         </div>
         <p className="mt-1.5 text-xs text-text-muted">
