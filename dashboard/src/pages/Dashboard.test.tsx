@@ -100,6 +100,23 @@ describe("Dashboard", () => {
     expect(screen.getByText("CLM-A")).toBeTruthy();
   });
 
+  it("renders a Correction Required card fed by the real status count", async () => {
+    vi.mocked(getClaims).mockResolvedValue([
+      makeClaim({ claimNumber: "CLM-C1", status: "NEW" }),
+      makeClaim({ claimNumber: "CLM-C2", status: "CORRECTION_REQUIRED" }),
+      makeClaim({ claimNumber: "CLM-C3", status: "CORRECTION_REQUIRED" }),
+    ]);
+
+    await renderPage();
+
+    expect(await screen.findByText("Total Claims")).toBeTruthy();
+    const correctionCard = screen
+      .getAllByText("Correction Required")
+      .find((element) => element.closest("article"));
+    expect(correctionCard).toBeTruthy();
+    expect(correctionCard?.closest("article")?.textContent).toContain("2");
+  });
+
   it("shows the backend error with a retry that refetches from the API", async () => {
     const serverError = Object.assign(
       new Error("Request failed with status code 500"),

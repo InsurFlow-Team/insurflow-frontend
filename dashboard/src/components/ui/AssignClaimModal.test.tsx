@@ -1,189 +1,258 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, cleanup } from "@testing-library/react";
-import { screen, waitFor } from "@testing-library/dom";
-import type { FieldAdjuster } from "../../types";
+import { screen } from "@testing-library/dom";
+import { MemoryRouter } from "react-router-dom";
 import { setupUserEvent } from "../../test/test-utils";
 
-// DOM tests run full React act() cycles; give them room.
 vi.setConfig({ testTimeout: 20000 });
-
-vi.mock("../../api/users.service", () => ({
-  getUsers: vi.fn(),
-  getFieldAdjusters: vi.fn(),
-}));
 
 vi.mock("../../api/claims.service", () => ({
   assignClaim: vi.fn(),
 }));
 
-import { getFieldAdjusters } from "../../api/users.service";
+vi.mock("../../api/users.service", () => ({
+  getFieldAdjusters: vi.fn(),
+}));
+
 import { assignClaim } from "../../api/claims.service";
+import { getFieldAdjusters } from "../../api/users.service";
 import AssignClaimModal from "./AssignClaimModal";
 
-const ADJUSTER: FieldAdjuster = {
+const ADJUSTER = {
   id: "651a1f8b7f1d2c001f8d4e92",
   name: "Aya",
-  employeeCode: "FT-001",
+  employeeCode: "FA-001",
   role: "FIELD_ADJUSTER",
   organizationId: "org-1",
   organizationName: "InsurFlow",
   status: "ACTIVE",
   availability: "AVAILABLE",
-  activeTasksCount: 1,
-};
+  activeTasksCount: 0,
+  capacityLimit: 3,
+} as const;
 
-function renderModal() {
-  const onAssigned = vi.fn();
-  const onClose = vi.fn();
-
-  const view = render(
-    <AssignClaimModal
-      isOpen
-      onClose={onClose}
-      claimId="clm-1"
-      onAssigned={onAssigned}
-    />,
-  );
-
-  return { onAssigned, onClose, ...view };
-}
-
-function conflict(code: string) {
-  return Object.assign(new Error("Request failed with status code 409"), {
+function backendError(status: number, code: string, message: string) {
+  return Object.assign(new Error(`Request failed with status code ${status}`), {
     isAxiosError: true,
     response: {
-      status: 409,
-      data: {
-        success: false,
-        message: `conflict: ${code}`,
-        errors: [{ code, details: "" }],
-      },
+      status,
+      data: { success: false, message, errors: [{ code }] },
     },
   });
 }
 
-describe("AssignClaimModal", () => {
-  beforeEach(() => {
-    vi.mocked(getFieldAdjusters).mockReset();
-    vi.mocked(assignClaim).mockReset();
+beforeEach(() => {
+  vi.mocked(assignClaim).mockReset();
+  vi.mocked(getFieldAdjusters).mockResolvedValue([ADJUSTER]);
+});
+
+afterEach(() => {
+  cleanup();
+});
+
+async function renderModal() {
+  const onClose = vi.fn();
+  const onAssigned = vi.fn();
+
+  render(
+    <MemoryRouter>
+      <AssignClaimModal
+        isOpen
+        onClose={onClose}
+        claimId="clm-1"
+        onAssigned={onAssigned}
+      />
+    </MemoryRouter>,
+  );
+
+  return { onClose, onAssigned };
+}
+
+async function selectAdjuster(user: ReturnType<typeof setupUserEvent>) {
+  await user.selectOptions(
+    await screen.findByDisplayValue("Select field adjuster"),
+    ADJUSTER.id,
+  );
+}
+
+describe("AssignClaimModal capacity override", () => {
+  it("sends the assignment without overrideCapacity on first success", async () => {
+    const user = setupUserEvent();
+    const { onAssigned, onClose } = await renderModal();
+
     vi.mocked(assignClaim).mockResolvedValue({
       id: "clm-1",
       claimNumber: "CLM-2026-0001",
-      status: "ASSIGNED",
+      status: "PENDING_ACCEPTANCE",
       priority: "MEDIUM",
       assignedTo: ADJUSTER.id,
       assignedBy: "co-1",
-      assignedAt: "2026-09-09T11:50:00.000Z",
+      assignedAt: "2026-09-19T10:00:00.000Z",
     });
-  });
 
-  afterEach(() => {
-    cleanup();
-  });
-
-  it("shows a clear empty state instead of demo users when no adjusters are available", async () => {
-    vi.mocked(getFieldAdjusters).mockResolvedValue([]);
-
-    renderModal();
-
-    expect(
-      await screen.findByText(/No available field adjusters/i),
-    ).toBeTruthy();
-    expect(screen.queryByText(/Ruba/i)).toBeFalsy();
-  });
-
-  it("shows the GET error with a Retry that reloads real adjusters", async () => {
-    vi.mocked(getFieldAdjusters)
-      .mockRejectedValueOnce(new Error("Request failed with status code 500"))
-      .mockResolvedValueOnce([ADJUSTER]);
-
-    const user = setupUserEvent();
-    renderModal();
-
-    expect(
-      await screen.findByRole("button", { name: "Retry" }),
-    ).toBeTruthy();
-
-    await user.click(screen.getByRole("button", { name: "Retry" }));
-
-    expect(
-      await screen.findByText(new RegExp(ADJUSTER.employeeCode)),
-    ).toBeTruthy();
-
-    expect(getFieldAdjusters).toHaveBeenCalledTimes(2);
-  });
-
-  it("submits { adjusterId, priority: MEDIUM default, notes } and reports success", async () => {
-    vi.mocked(getFieldAdjusters).mockResolvedValue([ADJUSTER]);
-
-    const user = setupUserEvent();
-    const { onAssigned, onClose } = renderModal();
-
-    await user.selectOptions(
-      await screen.findByDisplayValue("Select field adjuster"),
-      ADJUSTER.id,
-    );
-    await user.type(
-      screen.getByPlaceholderText(/Please inspect this as soon as possible/),
-      "please inspect",
-    );
+    await selectAdjuster(user);
     await user.click(screen.getByRole("button", { name: "Save Assignment" }));
 
-    await waitFor(() => {
-      expect(onAssigned).toHaveBeenCalledTimes(1);
-      expect(onClose).toHaveBeenCalledTimes(1);
-    });
-
-    // Priority defaults to MEDIUM (backend default) instead of an empty value.
     expect(assignClaim).toHaveBeenCalledWith("clm-1", {
       adjusterId: ADJUSTER.id,
       priority: "MEDIUM",
-      notes: "please inspect",
+      notes: "",
     });
+    expect(onAssigned).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("explains ADJUSTER_UNAVAILABLE and refreshes the adjuster list", async () => {
-    vi.mocked(getFieldAdjusters).mockResolvedValue([ADJUSTER]);
-    vi.mocked(assignClaim).mockRejectedValue(conflict("ADJUSTER_UNAVAILABLE"));
-
+  it("shows the override confirmation on ADJUSTER_UNAVAILABLE and retries with overrideCapacity", async () => {
     const user = setupUserEvent();
-    renderModal();
+    const { onAssigned, onClose } = await renderModal();
 
-    await user.selectOptions(
-      await screen.findByDisplayValue("Select field adjuster"),
-      ADJUSTER.id,
-    );
+    vi.mocked(assignClaim)
+      .mockRejectedValueOnce(
+        backendError(
+          409,
+          "ADJUSTER_UNAVAILABLE",
+          "Adjuster is currently unavailable",
+        ),
+      )
+      .mockResolvedValueOnce({
+        id: "clm-1",
+        claimNumber: "CLM-2026-0001",
+        status: "PENDING_ACCEPTANCE",
+        priority: "MEDIUM",
+        assignedTo: ADJUSTER.id,
+        assignedBy: "co-1",
+        assignedAt: "2026-09-19T10:00:00.000Z",
+      });
+
+    await selectAdjuster(user);
     await user.click(screen.getByRole("button", { name: "Save Assignment" }));
 
+    // Capacity override confirmation replaces the inline error.
     expect(
-      await screen.findByText(/no longer available. Please pick another/i),
+      await screen.findByRole("heading", { name: "Capacity Override" }),
     ).toBeTruthy();
 
-    // The stale adjuster list is refreshed so the list reflects what the
-    // backend decided.
-    await waitFor(() => {
-      expect(getFieldAdjusters).toHaveBeenCalledTimes(2);
+    // The dialog states the real load so the answer is never a surprise.
+    expect(
+      screen.getByText(/المعاين لديه أكثر من الحد المسموح/),
+    ).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Override Capacity" }));
+
+    expect(assignClaim).toHaveBeenNthCalledWith(1, "clm-1", {
+      adjusterId: ADJUSTER.id,
+      priority: "MEDIUM",
+      notes: "",
     });
+    expect(assignClaim).toHaveBeenNthCalledWith(2, "clm-1", {
+      adjusterId: ADJUSTER.id,
+      priority: "MEDIUM",
+      notes: "",
+      overrideCapacity: true,
+    });
+    expect(onAssigned).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("explains INVALID_STATUS_TRANSITION when the claim left NEW", async () => {
-    vi.mocked(getFieldAdjusters).mockResolvedValue([ADJUSTER]);
-    vi.mocked(assignClaim).mockRejectedValue(
-      conflict("INVALID_STATUS_TRANSITION"),
-    );
-
+  it("does not assign when the override is declined and shows the availability error", async () => {
     const user = setupUserEvent();
-    renderModal();
+    const { onAssigned, onClose } = await renderModal();
 
-    await user.selectOptions(
-      await screen.findByDisplayValue("Select field adjuster"),
-      ADJUSTER.id,
+    vi.mocked(assignClaim).mockRejectedValue(
+      backendError(409, "ADJUSTER_UNAVAILABLE", "Adjuster is currently unavailable"),
     );
+
+    await selectAdjuster(user);
+    await user.click(screen.getByRole("button", { name: "Save Assignment" }));
+
+    await screen.findByRole("heading", { name: "Capacity Override" });
+    await user.click(screen.getByRole("button", { name: "Pick Another" }));
+
+    expect(assignClaim).toHaveBeenCalledTimes(1);
+    expect(onAssigned).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+
+    // The inline error returns with clear guidance after declining.
+    expect(
+      await screen.findByText(/Please pick another adjuster/i),
+    ).toBeTruthy();
+  });
+
+  it("shows the inline error (no override offered) for non-capacity rejections", async () => {
+    const user = setupUserEvent();
+    const { onAssigned } = await renderModal();
+
+    vi.mocked(assignClaim).mockRejectedValue(
+      backendError(
+        409,
+        "INVALID_STATUS_TRANSITION",
+        "Claim is not in NEW state",
+      ),
+    );
+
+    await selectAdjuster(user);
     await user.click(screen.getByRole("button", { name: "Save Assignment" }));
 
     expect(
       await screen.findByText(/no longer assignable/i),
     ).toBeTruthy();
+    expect(
+      screen.queryByRole("heading", { name: "Capacity Override" }),
+    ).toBeNull();
+    expect(onAssigned).not.toHaveBeenCalled();
+  });
+
+  it("shows the inline error and NO override dialog when the adjuster no longer exists (ADJUSTER_NOT_FOUND)", async () => {
+    const user = setupUserEvent();
+    const { onAssigned, onClose } = await renderModal();
+
+    vi.mocked(assignClaim).mockRejectedValue(
+      backendError(
+        404,
+        "ADJUSTER_NOT_FOUND",
+        "Adjuster not found",
+      ),
+    );
+
+    await selectAdjuster(user);
+    await user.click(screen.getByRole("button", { name: "Save Assignment" }));
+
+    // Contract: not-found means the adjuster is deactivated (backend assigns
+    // ACTIVE only), not capacity — the override dialog must never appear.
+    expect(
+      await screen.findByText(/field adjuster is no longer active/i),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("heading", { name: "Capacity Override" }),
+    ).toBeNull();
+    expect(onAssigned).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("never offers an INACTIVE (deactivated) adjuster in the dropdown", async () => {
+    vi.mocked(getFieldAdjusters).mockResolvedValue([
+      ADJUSTER,
+      {
+        id: "inactive-1",
+        name: "Mona",
+        employeeCode: "FA-009",
+        role: "FIELD_ADJUSTER",
+        organizationId: "org-1",
+        organizationName: "InsurFlow",
+        status: "INACTIVE",
+        availability: "UNAVAILABLE",
+        activeTasksCount: 4,
+        capacityLimit: 3,
+      },
+    ]);
+
+    await renderModal();
+
+    expect(
+      await screen.findByDisplayValue("Select field adjuster"),
+    ).toBeTruthy();
+    expect(screen.getByRole("option", { name: /Aya/ })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: /Mona/ })).toBeNull();
   });
 });

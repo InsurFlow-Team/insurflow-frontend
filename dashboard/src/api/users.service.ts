@@ -1,5 +1,6 @@
 import apiClient from "./client";
 import type { ApiResponse } from "./client";
+import { normalizeGeoPoint } from "../utils/geo";
 import type {
   Availability,
   CreateUserRequest,
@@ -46,10 +47,12 @@ export async function createUser(userData: CreateUserRequest): Promise<User> {
   return normalizeUser(response.data.data);
 }
 
-export async function getFieldAdjusters(): Promise<FieldAdjuster[]> {
+export async function getFieldAdjusters(claimId?: string): Promise<FieldAdjuster[]> {
   const response = await apiClient.get<
     ApiResponse<Array<Record<string, unknown>>>
-  >("/users/adjusters");
+  >("/users/adjusters", {
+    params: claimId ? { claimId } : undefined,
+  });
 
   return response.data.data.map((adjuster) => ({
     ...normalizeUser(adjuster),
@@ -59,7 +62,20 @@ export async function getFieldAdjusters(): Promise<FieldAdjuster[]> {
       typeof adjuster.activeTasksCount === "number"
         ? adjuster.activeTasksCount
         : 0,
+    capacityLimit:
+      typeof adjuster.capacityLimit === "number" ? adjuster.capacityLimit : null,
+    location: normalizeGeoPoint(adjuster.location),
+    distanceKm:
+      typeof adjuster.distanceKm === "number" ? adjuster.distanceKm : null,
   }));
+}
+
+export async function getFieldAdjusterById(
+  adjusterId: string,
+): Promise<FieldAdjuster | null> {
+  const adjusters = await getFieldAdjusters();
+
+  return adjusters.find((adjuster) => adjuster.id === adjusterId) ?? null;
 }
 
 export async function updateUserStatus(
@@ -74,8 +90,4 @@ export async function resetUserPassword(
   newPassword: string,
 ): Promise<void> {
   await apiClient.patch(`/users/${userId}/reset-password`, { newPassword });
-}
-
-export async function deleteUser(userId: string): Promise<void> {
-  await apiClient.delete(`/users/${userId}`);
 }

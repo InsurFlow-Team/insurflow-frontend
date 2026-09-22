@@ -1,4 +1,4 @@
-import { Pencil, Ban, CheckCircle } from "lucide-react";
+import { Ban, CheckCircle, KeyRound, Pencil } from "lucide-react";
 import type { Column } from "../ui/DataTable";
 import RoleBadge from "../ui/RoleBadge";
 import StatusBadge from "../ui/StatusBadge";
@@ -12,12 +12,23 @@ import type { User } from "../../types";
 
 interface UserColumnsHandlers {
   onEdit?: (user: User) => void;
+  onReset?: (user: User) => void;
   onToggleStatus?: (user: User) => void;
+  /** Disables every row action while a status mutation is pending. */
+  disabled?: boolean;
+  /** Hides Deactivate/Activate for the signed-in user themself. */
+  currentUserId?: string;
 }
+
+const rowActionClass =
+  "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium focus:outline-none focus-visible:ring-2 transition-colors disabled:cursor-not-allowed disabled:opacity-50";
 
 export function buildUserColumns({
   onEdit,
+  onReset,
   onToggleStatus,
+  disabled = false,
+  currentUserId,
 }: UserColumnsHandlers): Column<User>[] {
   const columns: Column<User>[] = [
     {
@@ -69,43 +80,58 @@ export function buildUserColumns({
     },
   ];
 
-  if (onEdit && onToggleStatus) {
+  if (onEdit && onReset && onToggleStatus) {
     columns.push({
       key: "actions",
       header: "Actions",
       render: (user) => {
         const isActive = getUserStatus(user) === "ACTIVE";
+        const isSelf = user.id === currentUserId;
 
         return (
           <div className="flex items-center gap-1.5">
             <button
               type="button"
+              disabled={disabled}
               onClick={() => onEdit(user)}
-              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 hover:text-text transition-colors"
+              className={`${rowActionClass} text-text-muted hover:text-text hover:bg-background focus-visible:ring-primary/40`}
             >
               <Pencil size={14} />
               Edit
             </button>
 
-            {isActive ? (
-              <button
-                type="button"
-                onClick={() => onToggleStatus(user)}
-                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-danger hover:bg-danger-bg transition-colors"
-              >
-                <Ban size={14} />
-                Deactivate
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => onToggleStatus(user)}
-                className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-emerald-600 hover:bg-emerald-50 transition-colors"
-              >
-                <CheckCircle size={14} />
-                Activate
-              </button>
-            )}
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => onReset(user)}
+              className={`${rowActionClass} text-text-muted hover:text-text hover:bg-background focus-visible:ring-primary/40`}
+            >
+              <KeyRound size={14} />
+              Reset
+            </button>
+
+            {!isSelf &&
+              (isActive ? (
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onToggleStatus(user)}
+                  className={`${rowActionClass} text-danger hover:bg-danger-bg focus-visible:ring-danger/40`}
+                >
+                  <Ban size={14} />
+                  Deactivate
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onToggleStatus(user)}
+                  className={`${rowActionClass} text-emerald-600 hover:bg-emerald-50 focus-visible:ring-emerald-400/40`}
+                >
+                  <CheckCircle size={14} />
+                  Activate
+                </button>
+              ))}
           </div>
         );
       },

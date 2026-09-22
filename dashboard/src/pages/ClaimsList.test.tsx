@@ -31,10 +31,22 @@ vi.mock("../api/claims.service", async (importOriginal) => {
   };
 });
 
+vi.mock("../api/policy.service", () => ({
+  verifyPolicy: vi.fn(),
+}));
+
 import { getClaims, createClaim, assignClaim } from "../api/claims.service";
+import { verifyPolicy } from "../api/policy.service";
 import { getFieldAdjusters } from "../api/users.service";
 import ClaimsList from "./ClaimsList";
-import type { ClaimSummary } from "../types";
+import type { ClaimSummary, PolicyInfo } from "../types";
+
+const VERIFIED_POLICY: PolicyInfo = {
+  policyNumber: "POL-1000203",
+  status: "ACTIVE",
+  startDate: "2026-01-01T00:00:00.000Z",
+  expiryDate: "2026-12-31T23:59:59.000Z",
+};
 
 const FULL_ROW: ClaimSummary = {
   id: "clm-1",
@@ -71,6 +83,8 @@ const ADJUSTER = {
 
 beforeEach(() => {
   vi.mocked(getFieldAdjusters).mockResolvedValue([]);
+  vi.mocked(verifyPolicy).mockReset();
+  vi.mocked(verifyPolicy).mockResolvedValue(VERIFIED_POLICY);
 });
 
 afterEach(() => {
@@ -86,9 +100,19 @@ async function renderPage() {
   return utils;
 }
 
-async function openCreateModal() {
+// The claim intake flow is gated by policy verification: Add Claim → verify a
+// policy → only then does the existing intake form open.
+async function openCreateModal(policyNumber = "POL-1000203") {
   const user = setupUserEvent();
   await user.click(await screen.findByRole("button", { name: "Add Claim" }));
+
+  const input = await screen.findByRole("textbox", { name: "Policy Number" });
+  await user.type(input, policyNumber);
+  await user.click(screen.getByRole("button", { name: /تحقق من الوثيقة/i }));
+
+  await user.click(
+    await screen.findByRole("button", { name: /متابعة تسجيل الحادث/i }),
+  );
   await screen.findByText("Create New Claim");
 }
 
@@ -121,19 +145,25 @@ describe("ClaimsList", () => {
     await openCreateModal();
     await fillClaimForm(container);
 
+    // The intake flow is gated: the policy was verified before the form opened.
+    expect(verifyPolicy).toHaveBeenCalledWith("POL-1000203");
+
     const user = setupUserEvent();
     await user.click(screen.getByRole("button", { name: /Create Claim/i }));
 
     expect(await screen.findByText("CLM-2026-0099")).toBeTruthy();
 
-    // POST payload contains ONLY the five verified contract fields — no
+    // POST payload contains ONLY the verified contract fields — no
     // accidentDate/accidentTime/description/damageDescription ever reach the API.
+    // Coordinates are required (location is mandatory), sent top-level as numbers.
     expect(createClaim).toHaveBeenCalledWith({
       customerName: "Ahmed Ibrahim",
       customerPhone: "0512345678",
       initialPlateNumber: "ABC-1234",
       incidentType: "COLLISION",
       incidentLocation: "Riyadh - King Fahd Road",
+      latitude: 24.7136,
+      longitude: 46.6753,
     });
 
     // The list was refreshed from GET /claims (initial + post-create refresh).
@@ -193,6 +223,42 @@ describe("ClaimsList", () => {
     expect(await screen.findByText("CLM-X")).toBeTruthy();
     // Missing customer/vehicle/date render as dashes instead of crashing.
     expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+  });
+
+  it("does not reach the claim intake form when policy verification fails", async () => {
+    vi.mocked(getClaims).mockResolvedValue([]);
+    vi.mocked(verifyPolicy).mockRejectedValue(
+      Object.assign(new Error("Policy not found. Check the number and try again."), {
+        isAxiosError: true,
+        response: {
+          status: 404,
+          data: {
+            success: false,
+            message: "Policy not found. Check the number and try again.",
+          },
+        },
+      }),
+    );
+
+    const user = setupUserEvent();
+    await renderPage();
+
+    await user.click(await screen.findByRole("button", { name: "Add Claim" }));
+    await user.type(
+      await screen.findByRole("textbox", { name: "Policy Number" }),
+      "00000000",
+    );
+    await user.click(screen.getByRole("button", { name: /تحقق من الوثيقة/i }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toMatch(/not found/);
+
+    // The gate holds: no continue action, no intake form, and no claim API call.
+    expect(
+      screen.queryByRole("button", { name: /متابعة تسجيل الحادث/i }),
+    ).toBeNull();
+    expect(screen.queryByText("Create New Claim")).toBeNull();
+    expect(createClaim).not.toHaveBeenCalled();
   });
 
   it("renders an empty list message when GET /claims returns no rows", async () => {

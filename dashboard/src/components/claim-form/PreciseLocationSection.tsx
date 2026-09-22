@@ -1,11 +1,14 @@
-import { MapPin } from "lucide-react";
-import FormField from "../ui/FormField";
-import Input from "../ui/Input";
+import { AlertCircle, CheckCircle2, MapPin } from "lucide-react";
+import LocationMapPicker from "./LocationMapPicker";
 import type { ClaimFormSectionProps } from "./claimFormConstants";
+import { toMapCoordinates } from "../../utils/map";
+
+const DEFAULT_CENTER: [number, number] = [24.7136, 46.6753]; // Riyadh
 
 interface PreciseLocationSectionProps extends ClaimFormSectionProps {
   open: boolean;
   onToggle: () => void;
+  onSetLocation?: (latitude: number, longitude: number) => void;
 }
 
 export default function PreciseLocationSection({
@@ -15,7 +18,32 @@ export default function PreciseLocationSection({
   disabled,
   open,
   onToggle,
+  onSetLocation,
 }: PreciseLocationSectionProps) {
+  const coords = toMapCoordinates(values.latitude, values.longitude);
+  const position: [number, number] | null = coords
+    ? [coords.latitude, coords.longitude]
+    : null;
+
+  const handleSetCoordinates = (lat: number, lng: number) => {
+    if (disabled) return;
+    const formattedLat = Number(lat.toFixed(6));
+    const formattedLng = Number(lng.toFixed(6));
+
+    if (onSetLocation) {
+      onSetLocation(formattedLat, formattedLng);
+    } else {
+      onChange({
+        target: { name: "latitude", value: String(formattedLat) },
+      } as React.ChangeEvent<HTMLInputElement>);
+      onChange({
+        target: { name: "longitude", value: String(formattedLng) },
+      } as React.ChangeEvent<HTMLInputElement>);
+    }
+  };
+
+  const hasCoordinatesError = Boolean(errors.latitude || errors.longitude);
+
   return (
     <div className="space-y-4">
       <button
@@ -24,54 +52,76 @@ export default function PreciseLocationSection({
         className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-dark transition-colors"
       >
         <MapPin size={16} />
-        <span>{open ? "Hide" : "Add"} Precise Location Details</span>
-        <span className="text-xs text-text-muted ml-1">(Optional)</span>
+        <span>📍 مكان الحادث (Incident Location)</span>
+        <span className="text-xs text-danger ml-1">* Required</span>
       </button>
 
       {open && (
         <div className="space-y-4 p-4 rounded-lg bg-surface-soft border border-border">
-          <FormField label="Street Address" error={errors.address}>
-            <Input
-              type="text"
-              name="address"
-              placeholder="Full street address"
-              value={values.address || ""}
-              onChange={onChange}
-              error={errors.address}
-              icon={<MapPin size={16} />}
-              disabled={disabled}
-            />
-          </FormField>
+          <p className="text-xs text-text-muted">
+            🗺️ تحديد موقع الحادث على الخريطة: انقر على الخريطة أدناه لتحديد موقع الحادث بالتحديد.
+          </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Latitude" error={errors.latitude}>
-              <Input
-                type="number"
-                name="latitude"
-                placeholder="e.g., 24.7136"
-                value={values.latitude || ""}
-                onChange={onChange}
-                error={errors.latitude}
-                disabled={disabled}
-                step="any"
-              />
-              <p className="mt-1 text-xs text-text-muted">Between -90 and 90</p>
-            </FormField>
-
-            <FormField label="Longitude" error={errors.longitude}>
-              <Input
-                type="number"
-                name="longitude"
-                placeholder="e.g., 46.6753"
-                value={values.longitude || ""}
-                onChange={onChange}
-                error={errors.longitude}
-                disabled={disabled}
-                step="any"
-              />
-              <p className="mt-1 text-xs text-text-muted">Between -180 and 180</p>
-            </FormField>
+          {/* Selected incident coordinates badge */}
+          <div className="flex items-center justify-between p-3 rounded-lg bg-surface border border-border text-sm">
+            <div className="flex items-center gap-2">
+              {position ? (
+                <>
+                  <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                  <span className="font-medium text-text">
+                    موقع الحادث المحدد (Incident Location): {position[0].toFixed(5)}, {position[1].toFixed(5)}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <MapPin size={16} className="text-amber-500 shrink-0" />
+                  <span className="text-text-muted">
+                    لم يتم تحديد موقع الحادث بعد. انقر على الخريطة أدناه لتحديد الموقع.
+                  </span>
+                </>
+              )}
+            </div>
           </div>
+
+          {/* Accessible hidden inputs to maintain form state bindings */}
+          <input
+            type="text"
+            name="latitude"
+            className="sr-only"
+            aria-hidden="true"
+            value={values.latitude || ""}
+            onChange={onChange}
+          />
+          <input
+            type="text"
+            name="longitude"
+            className="sr-only"
+            aria-hidden="true"
+            value={values.longitude || ""}
+            onChange={onChange}
+          />
+
+          <LocationMapPicker
+            center={position ?? DEFAULT_CENTER}
+            selected={position}
+            onSelect={handleSetCoordinates}
+            disabled={disabled}
+          />
+
+          {/* Error messages */}
+          {hasCoordinatesError && (
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-lg border border-danger/20 bg-red-50 px-3 py-2.5 text-sm text-danger"
+            >
+              <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+              <span>
+                {errors.latitude ||
+                  errors.longitude ||
+                  "Both latitude and longitude incident coordinates are required."}
+              </span>
+            </div>
+          )}
         </div>
       )}
     </div>
