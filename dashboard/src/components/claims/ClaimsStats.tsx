@@ -1,16 +1,29 @@
-import { FolderOpen, PenLine, Inbox, AlertCircle } from "lucide-react";
+import {
+  AlertCircle,
+  Clock,
+  FolderOpen,
+  Inbox,
+  PenLine,
+  Wrench,
+} from "lucide-react";
 import StatCard from "../ui/StatCard";
 
-export interface ClaimsStatsData {
+export interface ClaimsStats {
   totalClaims: number;
-  draftClaims: number;
+  newClaims: number;
+  awaitingReply: number;
   submittedClaims: number;
   pendingReview: number;
+  inProgress: number;
 }
 
-export default function ClaimsStats({ stats }: { stats: ClaimsStatsData }) {
+interface ClaimsStatsProps {
+  stats: ClaimsStats;
+}
+
+export default function ClaimsStats({ stats }: ClaimsStatsProps) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
       <StatCard
         label="Total Claims"
         value={stats.totalClaims}
@@ -19,14 +32,28 @@ export default function ClaimsStats({ stats }: { stats: ClaimsStatsData }) {
         iconClass="text-primary"
       />
       <StatCard
-        label="Draft Claims"
-        value={stats.draftClaims}
+        label="New"
+        value={stats.newClaims}
         secondary="Awaiting customer submission"
         icon={PenLine}
         iconClass="text-gray-500"
       />
       <StatCard
-        label="Submitted Claims"
+        label="Awaiting Reply"
+        value={stats.awaitingReply}
+        secondary="Pending adjuster acceptance"
+        icon={Clock}
+        iconClass="text-info"
+      />
+      <StatCard
+        label="In Progress"
+        value={stats.inProgress}
+        secondary="Inspections underway"
+        icon={Wrench}
+        iconClass="text-accent"
+      />
+      <StatCard
+        label="Submitted"
         value={stats.submittedClaims}
         secondary="Ready for initial review"
         icon={Inbox}

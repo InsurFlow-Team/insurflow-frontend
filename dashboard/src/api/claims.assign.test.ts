@@ -76,4 +76,32 @@ describe("assignClaim", () => {
       }),
     ).rejects.toThrow();
   });
+
+  it("omits overrideCapacity when not requested and includes it when true", async () => {
+    mockedPost.mockResolvedValue({ data: { success: true, data: null } });
+
+    await assignClaim("clm-4", {
+      adjusterId: "adj-4",
+      priority: "HIGH",
+      notes: "",
+    });
+    await assignClaim("clm-5", {
+      adjusterId: "adj-4",
+      priority: "HIGH",
+      notes: "",
+      overrideCapacity: true,
+    });
+
+    expect(mockedPost).toHaveBeenNthCalledWith(1, "/claims/clm-4/assign", {
+      adjusterId: "adj-4",
+      priority: "HIGH",
+      notes: "",
+    });
+    expect(mockedPost).toHaveBeenNthCalledWith(2, "/claims/clm-5/assign", {
+      adjusterId: "adj-4",
+      priority: "HIGH",
+      notes: "",
+      overrideCapacity: true,
+    });
+  });
 });

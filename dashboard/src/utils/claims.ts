@@ -9,9 +9,12 @@ export const STATUS_OPTIONS: Array<{
 }> = [
   { label: "All Statuses", value: "" },
   { label: "New", value: "NEW" },
+  { label: "Awaiting Reply", value: "PENDING_ACCEPTANCE" },
   { label: "Assigned", value: "ASSIGNED" },
+  { label: "In Progress", value: "IN_PROGRESS" },
   { label: "Submitted", value: "SUBMITTED" },
   { label: "Under Review", value: "UNDER_REVIEW" },
+  { label: "Correction Required", value: "CORRECTION_REQUIRED" },
   { label: "Approved", value: "APPROVED" },
   { label: "Closed", value: "CLOSED" },
 ];

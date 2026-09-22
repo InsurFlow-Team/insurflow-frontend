@@ -18,7 +18,16 @@ describe("getAvailableClaimActions", () => {
   });
 
   it("never offers ASSIGN once the claim left NEW (assignment only from NEW)", () => {
-    const statuses = ["ASSIGNED", "SUBMITTED", "UNDER_REVIEW", "APPROVED", "CLOSED"] as const;
+    const statuses = [
+      "PENDING_ACCEPTANCE",
+      "ASSIGNED",
+      "IN_PROGRESS",
+      "SUBMITTED",
+      "CORRECTION_REQUIRED",
+      "UNDER_REVIEW",
+      "APPROVED",
+      "CLOSED",
+    ] as const;
 
     for (const status of statuses) {
       expect(

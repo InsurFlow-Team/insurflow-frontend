@@ -5,7 +5,7 @@ import type { ClaimStatus, Role } from "../types";
 // API accepts.
 //
 // Status    Role            Action offered
-// NEW       CLAIMS_OFFICER  ASSIGN (POST /claims/:id/assign, NEW → ASSIGNED)
+// NEW       CLAIMS_OFFICER  ASSIGN (POST /claims/:id/assign, NEW → PENDING_ACCEPTANCE)
 // SUBMITTED any             START_REVIEW (POST /claims/:id/review/start)
 //
 // Assignment is intentionally limited to CLAIMS_OFFICER even though

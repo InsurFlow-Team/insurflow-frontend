@@ -15,9 +15,11 @@ export function setupUserEvent() {
 
 // Fills every required field of the Create New Claim form. Shared by
 // AddClaimModal and ClaimsList tests so both exercise identical input.
+// Coordinates are required since 2026-09-20 (claims must be placeable on the
+// dispatch map), so they are filled by default.
 export async function fillClaimForm(
   container: HTMLElement,
-  options: { includePlate?: boolean } = {},
+  options: { includePlate?: boolean; includeCoordinates?: boolean } = {},
 ) {
   const user = setupUserEvent();
 
@@ -43,12 +45,19 @@ export async function fillClaimForm(
     target: { value: "14:30" },
   });
 
-  await user.type(
-    screen.getByPlaceholderText(/Provide a detailed description/),
-    "Rear collision while waiting at a red light on the highway.",
-  );
-  await user.type(
-    screen.getByPlaceholderText(/Describe visible damage/),
-    "Bumper cracked and trunk lid is misaligned.",
-  );
+  const descTextarea = screen.getByPlaceholderText(/Provide a detailed description/);
+  const damageTextarea = screen.getByPlaceholderText(/Describe visible damage/);
+  fireEvent.change(descTextarea, {
+    target: { value: "Rear collision while waiting at a red light on the highway." },
+  });
+  fireEvent.change(damageTextarea, {
+    target: { value: "Bumper cracked and trunk lid is misaligned." },
+  });
+
+  if (options.includeCoordinates !== false) {
+    const latInput = container.querySelector('input[name="latitude"]');
+    const lngInput = container.querySelector('input[name="longitude"]');
+    if (latInput) fireEvent.change(latInput, { target: { value: "24.7136" } });
+    if (lngInput) fireEvent.change(lngInput, { target: { value: "46.6753" } });
+  }
 }

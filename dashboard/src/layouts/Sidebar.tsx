@@ -1,76 +1,18 @@
-import React, { useEffect } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
-import {
-  FileText,
-  LayoutDashboard,
-  LogOut,
-  Settings,
-  ShieldCheck,
-  UserRound,
-  Users,
-  X,
-} from "lucide-react";
-import type { Role } from "../types";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { ShieldCheck, X } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
-import { userInitials } from "../utils/user";
-
-interface NavigationItem {
-  label: string;
-  path: string;
-  icon: React.ReactNode;
-  roles: Role[];
-  end?: boolean;
-}
+import NavItem from "./sidebar/NavItem";
+import SidebarUserCard from "./sidebar/SidebarUserCard";
+import {
+  navigationItems,
+  settingsChildren,
+  settingsParent,
+} from "./sidebar/navigation.tsx";
 
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
-}
-
-const navigationItems: NavigationItem[] = [
-  {
-    label: "Overview",
-    path: "/dashboard",
-    icon: <LayoutDashboard size={18} />,
-    roles: ["ADMIN", "CLAIMS_OFFICER"],
-  },
-  {
-    label: "Claims Queue",
-    path: "/claims",
-    icon: <FileText size={18} />,
-    roles: ["ADMIN", "CLAIMS_OFFICER"],
-  },
-  {
-    label: "Profile",
-    path: "/profile",
-    icon: <UserRound size={18} />,
-    roles: ["ADMIN", "CLAIMS_OFFICER"],
-  },
-];
-
-const settingsParent: NavigationItem = {
-  label: "Settings",
-  path: "/settings",
-  icon: <Settings size={18} />,
-  roles: ["ADMIN"],
-  end: true,
-};
-
-const settingsChildren: NavigationItem[] = [
-  {
-    label: "User Management",
-    path: "/settings/users",
-    icon: <Users size={18} />,
-    roles: ["ADMIN"],
-  },
-];
-
-function navLinkClass(isActive: boolean) {
-  return `relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 ${
-    isActive
-      ? "bg-blue-50 text-primary"
-      : "text-gray-500 hover:bg-gray-50 hover:text-primary"
-  }`;
 }
 
 export default function Sidebar({
@@ -98,13 +40,15 @@ export default function Sidebar({
     navigate("/login", { replace: true });
   };
 
+  const visibleNavigationItems = navigationItems.filter(
+    (item) => user && item.roles.includes(user.role),
+  );
+
   return (
     <aside
       aria-label="Primary navigation"
       className={`fixed inset-y-0 left-0 z-40 w-[280px] bg-surface border-r border-border flex flex-col h-screen shrink-0 transform transition-[transform,visibility] duration-200 lg:static lg:translate-x-0 lg:visible ${
-        isOpen
-          ? "translate-x-0 visible"
-          : "-translate-x-full invisible"
+        isOpen ? "translate-x-0 visible" : "-translate-x-full invisible"
       }`}
     >
       {/* Product header */}
@@ -139,110 +83,40 @@ export default function Sidebar({
       {/* Navigation */}
       <nav className="flex-1 px-3 py-5 overflow-y-auto">
         <div className="space-y-1">
-          {navigationItems
-            .filter((item) => user && item.roles.includes(user.role))
-            .map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                end={item.end}
-                onClick={onClose}
-                className={({ isActive }) => navLinkClass(isActive)}
-              >
-                {({ isActive }) => (
-                  <>
-                    {isActive && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 bg-primary rounded-r-full" />
-                    )}
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </>
-                )}
-              </NavLink>
-            ))}
+          {visibleNavigationItems.map((item) => (
+            <NavItem key={item.path} item={item} onNavigate={onClose} />
+          ))}
         </div>
 
-        <div className="mt-6">
-          <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wide text-text-muted">
-            Settings
-          </p>
+        {user && settingsParent.roles.includes(user.role) && (
+          <div className="mt-6">
+            <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+              Settings
+            </p>
 
-          {user && settingsParent.roles.includes(user.role) && (
-            <NavLink
-              to={settingsParent.path}
-              end={settingsParent.end}
-              onClick={onClose}
-              className={({ isActive }) => navLinkClass(isActive)}
-            >
-              {({ isActive }) => (
-                <>
-                  {isActive && (
-                    <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 bg-primary rounded-r-full" />
-                  )}
-                  {settingsParent.icon}
-                  <span>{settingsParent.label}</span>
-                </>
-              )}
-            </NavLink>
-          )}
+            <NavItem item={settingsParent} onNavigate={onClose} />
 
-          <div className="mt-1 ml-3 border-l border-border pl-1.5 space-y-1">
-            {settingsChildren
-              .filter((item) => user && item.roles.includes(user.role))
-              .map((item) => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  end={item.end}
-                  onClick={onClose}
-                  className={({ isActive }) => navLinkClass(isActive)}
-                >
-                  {({ isActive }) => (
-                    <>
-                      {isActive && (
-                        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 bg-primary rounded-r-full" />
-                      )}
-                      <span className="w-[18px] shrink-0 flex justify-center">
-                        {item.icon}
-                      </span>
-                      <span>{item.label}</span>
-                    </>
-                  )}
-                </NavLink>
-              ))}
+            <div className="mt-1 ml-3 border-l border-border pl-1.5 space-y-1">
+              {settingsChildren
+                .filter((item) => item.roles.includes(user.role))
+                .map((item) => (
+                  <NavItem
+                    key={item.path}
+                    item={item}
+                    onNavigate={onClose}
+                    indent
+                  />
+                ))}
+            </div>
           </div>
-        </div>
+        )}
       </nav>
 
-      {/* Current user card */}
-      <div className="px-3 py-3 border-t border-border">
-        <div className="rounded-xl bg-primary px-3 py-3 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-white font-semibold text-sm shrink-0">
-            {userInitials(user?.name ?? "")}
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-white truncate">
-              {user?.name ?? "User"}
-            </p>
-            <p className="text-xs text-white/60 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-success shrink-0" />
-              <span className="truncate">
-                {user?.role.replace(/_/g, " ") ?? "—"}
-              </span>
-            </p>
-          </div>
-        </div>
-
-        {/* Logout */}
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="mt-3 flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-danger-bg hover:text-danger transition-colors duration-150 w-full"
-        >
-          <LogOut size={18} />
-          <span>Logout</span>
-        </button>
-      </div>
+      <SidebarUserCard
+        userName={user?.name ?? "User"}
+        userRole={user?.role ?? "—"}
+        onLogout={handleLogout}
+      />
     </aside>
   );
 }
