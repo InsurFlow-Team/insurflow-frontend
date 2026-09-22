@@ -126,119 +126,111 @@ export default function AddClaimModal({
     reset();
   };
 
-  // If verification not done yet, don't show main modal
-  if (!verifiedPolicy) {
-    return (
-      <PolicyVerificationModal
-        isOpen={showPolicyVerification}
-        onClose={handleClose}
-        onVerified={handlePolicyVerified}
-      />
-    );
-  }
-
   return (
     <>
-      <Modal
-        isOpen={isOpen}
-        onClose={handleClose}
-        title="إنشاء مطالبة جديدة"
-        size="lg"
-      >
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Info Banner */}
-          <div className="flex items-start gap-3 p-4 rounded-lg bg-primary-light border border-primary/10">
-            <AlertCircle
-              size={18}
-              className="text-primary mt-0.5 flex-shrink-0"
-            />
-            <div className="text-sm">
-              <p className="font-medium text-primary mb-1">
-                معلومات المطالبة المطلوبة
-              </p>
-              <p className="text-text-muted">
-                البيانات أدناه محققة من النظام. يرجى إدخال معلومات الحادث
-                وتحديد موقعه على الخريطة.
-              </p>
-            </div>
-          </div>
-
-          {/* Verified Policy Summary */}
-          <VerifiedPolicySummary verifiedPolicy={verifiedPolicy} />
-
-          {/* Change verification button */}
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={handleChangeVerification}
-              disabled={isSubmitting}
-              className="text-sm text-primary hover:text-primary-dark font-medium disabled:opacity-50"
-            >
-              <ArrowRight size={14} className="inline mr-1" />
-              تغيير البوليصة
-            </button>
-          </div>
-
-          {/* Incident Information */}
-          <ClaimIncidentSection
-            values={values}
-            errors={errors}
-            onChange={handleChange}
-            disabled={isSubmitting}
-          />
-
-          {/* Incident Location */}
-          <ClaimIncidentLocationSection
-            values={values}
-            errors={errors}
-            onChange={handleChange}
-            disabled={isSubmitting}
-          />
-
-          {/* Submit Error */}
-          {submitError && (
-            <div
-              role="alert"
-              className="flex items-start gap-2 rounded-lg border border-danger/20 bg-red-50 px-4 py-3 text-sm text-danger"
-            >
-              <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
-              <span>{submitError}</span>
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex items-center justify-between gap-3 pt-4 border-t border-border">
-            <p className="text-xs text-text-muted">
-              <span className="text-danger">*</span> جميع الحقول مطلوبة
-            </p>
-            <div className="flex gap-3">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={handleClose}
-                disabled={isSubmitting}
-              >
-                إلغاء
-              </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                loading={isSubmitting}
-                disabled={isSubmitting || !isValid}
-              >
-                إنشاء المطالبة
-              </Button>
-            </div>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Policy Verification Modal (can be re-opened) */}
+      {/* Policy Verification Modal - shown first or when user clicks "change policy" */}
       <PolicyVerificationModal
-        isOpen={showPolicyVerification && verifiedPolicy !== null}
-        onClose={() => setShowPolicyVerification(false)}
+        isOpen={showPolicyVerification && !verifiedPolicy}
+        onClose={handleClose}
         onVerified={handlePolicyVerified}
       />
+
+      {/* Main Claim Creation Modal - shown only after verification succeeds */}
+      {verifiedPolicy && (
+        <Modal
+          isOpen={isOpen}
+          onClose={handleClose}
+          title="إنشاء مطالبة جديدة"
+          size="lg"
+        >
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Info Banner */}
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-primary-light border border-primary/10">
+              <AlertCircle
+                size={18}
+                className="text-primary mt-0.5 flex-shrink-0"
+              />
+              <div className="text-sm">
+                <p className="font-medium text-primary mb-1">
+                  معلومات المطالبة المطلوبة
+                </p>
+                <p className="text-text-muted">
+                  البيانات أدناه محققة من النظام. يرجى إدخال معلومات الحادث
+                  وتحديد موقعه على الخريطة.
+                </p>
+              </div>
+            </div>
+
+            {/* Verified Policy Summary */}
+            <VerifiedPolicySummary verifiedPolicy={verifiedPolicy} />
+
+            {/* Change verification button */}
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleChangeVerification}
+                disabled={isSubmitting}
+                className="text-sm text-primary hover:text-primary-dark font-medium disabled:opacity-50"
+              >
+                <ArrowRight size={14} className="inline mr-1" />
+                تغيير البوليصة
+              </button>
+            </div>
+
+            {/* Incident Information */}
+            <ClaimIncidentSection
+              values={values}
+              errors={errors}
+              onChange={handleChange}
+              disabled={isSubmitting}
+            />
+
+            {/* Incident Location */}
+            <ClaimIncidentLocationSection
+              values={values}
+              errors={errors}
+              onChange={handleChange}
+              disabled={isSubmitting}
+            />
+
+            {/* Submit Error */}
+            {submitError && (
+              <div
+                role="alert"
+                className="flex items-start gap-2 rounded-lg border border-danger/20 bg-red-50 px-4 py-3 text-sm text-danger"
+              >
+                <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+                <span>{submitError}</span>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex items-center justify-between gap-3 pt-4 border-t border-border">
+              <p className="text-xs text-text-muted">
+                <span className="text-danger">*</span> جميع الحقول مطلوبة
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleClose}
+                  disabled={isSubmitting}
+                >
+                  إلغاء
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  loading={isSubmitting}
+                  disabled={isSubmitting || !isValid}
+                >
+                  إنشاء المطالبة
+                </Button>
+              </div>
+            </div>
+          </form>
+        </Modal>
+      )}
     </>
   );
 }
