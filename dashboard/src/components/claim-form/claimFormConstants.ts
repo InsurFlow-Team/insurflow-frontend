@@ -44,42 +44,27 @@ export function isPrioritySelected(priority: ClaimPriority | undefined) {
   return Boolean(priority) && VALID_PRIORITIES.includes(priority as ClaimPriority);
 }
 
-// Module-level constants so useForm receives referentially stable initial
-// values and validators. Keeping them inline used to recreate both on every
-// render, which made useForm's reset/handleChange identities change every
-// render and loop the resetEffect ("Maximum update depth exceeded").
+// Initial form state for new claim intake flow.
+// After policy verification, policyId and plateNumber are set from verified data.
 export const INITIAL_FORM_STATE: NewClaimData = {
-  customerName: "",
-  customerPhone: "",
-  insurancePolicyNumber: "",
-  initialPlateNumber: "",
-  vehicleMake: "",
-  vehicleModel: "",
-  vehicleYear: "",
-  vehicleColor: "",
+  policyId: "",
+  plateNumber: "",
   incidentType: "",
   incidentLocation: "",
-  accidentDate: "",
-  accidentTime: "",
-  description: "",
-  damageDescription: "",
-  address: "",
+  incidentDate: "",
   latitude: "",
   longitude: "",
 };
 
+// Validators for required fields in new claim intake flow
 export const FORM_VALIDATORS: Partial<
   Record<keyof NewClaimData, (value: string) => string | null>
 > = {
-  customerName: validateRequired,
-  customerPhone: validatePhone,
-  initialPlateNumber: validatePlateNumber,
+  policyId: validateRequired,
+  plateNumber: validatePlateNumber,
   incidentType: validateIncidentType,
   incidentLocation: validateRequired,
-  accidentDate: validateRequired,
-  accidentTime: validateRequired,
-  description: (value) => validateDescription(value, 20),
-  damageDescription: (value) => validateDescription(value, 10),
+  incidentDate: validateRequired,
   latitude: (value) => validateCoordinate(value, "latitude"),
   longitude: (value) => validateCoordinate(value, "longitude"),
 };
