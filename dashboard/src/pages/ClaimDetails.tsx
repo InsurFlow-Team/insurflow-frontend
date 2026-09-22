@@ -28,8 +28,11 @@ import CorrectionNotesSection from "../components/claim-details/CorrectionNotesS
 import { toast } from "../contexts/ToastContext";
 import { useAuth } from "../contexts/AuthContext";
 
-export default function ClaimDetails() {
-  const { claimId } = useParams<{ claimId: string }>();
+export default function ClaimDetails({
+  reportMode = false,
+}: {
+  reportMode?: boolean;
+}) {  const { claimId } = useParams<{ claimId: string }>();
 
   const { user } = useAuth();
 
@@ -147,17 +150,22 @@ export default function ClaimDetails() {
 
   const canManageAssignment = isAdminOrOfficer;
 
-  const canStartReview =
-    claim.status === "SUBMITTED" && user?.role === "CLAIMS_OFFICER";
+ const canStartReview =
+  !reportMode &&
+  claim.status === "SUBMITTED" &&
+  user?.role === "CLAIMS_OFFICER";
 
-  const canAssign = claim.status === "NEW" && canManageAssignment;
+ const canAssign =
+  !reportMode && claim.status === "NEW" && canManageAssignment;
 
   const isUnderReview = claim.status === "UNDER_REVIEW";
 
-  const canSubmitDecision = isUnderReview && isAdminOrOfficer;
-
+ const canSubmitDecision =
+  !reportMode && isUnderReview && isAdminOrOfficer;
   const canRequestCorrection =
-    isUnderReview && user?.role === "CLAIMS_OFFICER";
+  !reportMode &&
+  isUnderReview &&
+  user?.role === "CLAIMS_OFFICER";
 
   function handleAssigned() {
     setShowAssignModal(false);
@@ -169,8 +177,11 @@ export default function ClaimDetails() {
   }
 
   return (
-    <div className="space-y-6">
-      <ClaimDetailHeader
+<div
+  className={`space-y-6 ${reportMode ? "claim-report" : ""}`}
+>      <ClaimDetailHeader 
+       claimId={claimId ?? ""}
+       reportMode={reportMode}
         claimNumber={claim.claimNumber}
         status={claim.status}
         canStartReview={canStartReview}
