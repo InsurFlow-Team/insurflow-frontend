@@ -11,6 +11,7 @@ export type ClaimStatus =
   | "UNDER_REVIEW"
   | "CORRECTION_REQUIRED"
   | "APPROVED"
+  | "REJECTED"
   | "CLOSED";
 
 export type ClaimPriority = "LOW" | "MEDIUM" | "HIGH";
@@ -72,18 +73,22 @@ export interface ClaimSummary {
 
 
 export interface CreateClaimDraft {
-  customerName: string;
-  customerPhone: string;
-  initialPlateNumber: string;
+  policyId: string; // Required: comes from policy verification
+  plateNumber: string; // Required: verified plate number
   incidentType: string;
   incidentLocation: string;
-  accidentDate: string;
-  accidentTime: string;
-  description: string;
-  damageDescription: string;
-  address: string;
-  latitude: string;
-  longitude: string;
+  incidentDate: string; // YYYY-MM-DD
+  latitude: string; // Form value (string), converted to number in service
+  longitude: string; // Form value (string), converted to number in service
+  // Legacy fields - kept for backward compatibility but not used in new flow
+  customerName?: string;
+  customerPhone?: string;
+  initialPlateNumber?: string;
+  accidentDate?: string;
+  accidentTime?: string;
+  description?: string;
+  damageDescription?: string;
+  address?: string;
   insurancePolicyNumber?: string;
   vehicleMake?: string;
   vehicleModel?: string;
@@ -121,6 +126,48 @@ export interface PolicyInfo {
   expiryDate?: string | null;
 }
 
+// ─── Policy Verification ──────────────────────────────────────────────────────
+
+export interface PolicyVerificationRequest {
+  policyNumber?: string;
+  plateNumber?: string;
+  incidentDate?: string; // YYYY-MM-DD format
+}
+
+export interface PolicyVerificationResponse {
+  isEligible: boolean;
+  policy: {
+    id: string;
+    policyNumber: string;
+    status: PolicyStatus;
+    startDate: string;
+    expiryDate: string;
+  };
+  vehicle: {
+    id: string;
+    plateNumber: string;
+    make?: string;
+    model?: string;
+    year?: number;
+    color?: string;
+  };
+  customer: {
+    id: string;
+    name: string;
+    phone: string;
+  };
+}
+
+export type PolicyVerificationErrorCode =
+  | "VALIDATION_ERROR"
+  | "INVALID_INCIDENT_DATE"
+  | "POLICY_NOT_FOUND"
+  | "VEHICLE_NOT_FOUND"
+  | "POLICY_EXPIRED"
+  | "POLICY_CANCELLED"
+  | "POLICY_NOT_ACTIVE_ON_DATE"
+  | "VEHICLE_MISMATCH";
+
 // ─── Claim details ────────────────────────────────────────────────────────────
 
 export interface ClaimDetails {
@@ -132,10 +179,11 @@ export interface ClaimDetails {
 
   vehicle: VehicleInfo;
 
-  policy?: PolicyInfo;
+  policy?: PolicyInfo | null;
 
   incidentType: string;
   incidentLocation: string;
+  incidentCoordinates?: GeoPoint | null; // Reported incident location
 
   assignment: {
     assignedTo: unknown | null;
@@ -146,9 +194,13 @@ export interface ClaimDetails {
   };
 
   accident: Record<string, unknown> | null;
-  location: Record<string, unknown> | null;
+  location?: GeoPoint | null; // Actual field inspection location (mobile only)
   timeline: Array<Record<string, unknown>>;
 
   createdAt: string;
   updatedAt: string;
+  createdBy?: unknown | null;
+  closedBy?: unknown | null;
+  closedAt?: string | null;
+  closingNotes?: string | null;
 }
