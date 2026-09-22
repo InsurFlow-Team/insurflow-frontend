@@ -22,6 +22,7 @@ export const CLAIM_STATUS_COLORS: Record<ClaimStatus, string> = {
   UNDER_REVIEW: "#14B8A6",
   CORRECTION_REQUIRED: "#EF4444",
   APPROVED: "#10B981",
+  REJECTED: "#DC2626",
   CLOSED: "#64748B",
 };
 

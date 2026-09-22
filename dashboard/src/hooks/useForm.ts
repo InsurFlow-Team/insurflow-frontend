@@ -57,6 +57,7 @@ export function useForm<T>(
 
   return {
     values,
+    setValues, // Expose setValues for programmatic updates
     errors,
     handleChange,
     isValid,
