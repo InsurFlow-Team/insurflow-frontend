@@ -13,16 +13,15 @@ import apiClient from "./client";
 import {
   getUsers,
   getFieldAdjusters,
+  getFieldAdjusterById,
   createUser,
   updateUserStatus,
   resetUserPassword,
-  deleteUser,
 } from "./users.service";
 
 const mockedGet = vi.mocked(apiClient.get);
 const mockedPost = vi.mocked(apiClient.post);
 const mockedPatch = vi.mocked(apiClient.patch);
-const mockedDelete = vi.mocked(apiClient.delete);
 
 describe("getFieldAdjusters", () => {
   beforeEach(() => {
@@ -40,7 +39,7 @@ describe("getFieldAdjusters", () => {
 
     await getFieldAdjusters();
 
-    expect(mockedGet).toHaveBeenCalledWith("/users/adjusters");
+    expect(mockedGet).toHaveBeenCalledWith("/users/adjusters", { params: undefined });
   });
 
   it("normalizes real backend adjusters (id/_id, availability, activeTasksCount)", async () => {
@@ -77,6 +76,9 @@ describe("getFieldAdjusters", () => {
         status: "ACTIVE",
         availability: "AVAILABLE",
         activeTasksCount: 2,
+        capacityLimit: null,
+        location: null,
+        distanceKm: null,
       },
     ]);
   });
@@ -85,6 +87,69 @@ describe("getFieldAdjusters", () => {
     mockedGet.mockRejectedValue(new Error("Request failed with status code 500"));
 
     await expect(getFieldAdjusters()).rejects.toThrow();
+  });
+
+  it("keeps the backend capacityLimit when the backend sends it", async () => {
+    mockedGet.mockResolvedValue({
+      data: {
+        success: true,
+        message: "ok",
+        data: [
+          {
+            _id: "651a1f8b7f1d2c001f8d4e93",
+            name: "Omar",
+            employeeCode: "FT-002",
+            role: "FIELD_ADJUSTER",
+            organizationId: "org-1",
+            organizationName: "InsurFlow",
+            status: "ACTIVE",
+            availability: "UNAVAILABLE",
+            activeTasksCount: 4,
+            capacityLimit: 3,
+            location: { latitude: 21.4858, longitude: 39.1925 },
+            distanceKm: 4.2,
+          },
+        ],
+      },
+    });
+
+    await expect(getFieldAdjusters()).resolves.toEqual([
+      expect.objectContaining({
+        activeTasksCount: 4,
+        capacityLimit: 3,
+        location: { latitude: 21.4858, longitude: 39.1925, capturedAt: null },
+        distanceKm: 4.2,
+      }),
+    ]);
+  });
+
+  it("finds an adjuster by id and returns null for an unknown id", async () => {
+    mockedGet.mockResolvedValue({
+      data: {
+        success: true,
+        message: "ok",
+        data: [
+          {
+            _id: "adjuster-1",
+            name: "Aya",
+            employeeCode: "FT-001",
+            role: "FIELD_ADJUSTER",
+            organizationId: "org-1",
+            organizationName: "InsurFlow",
+            status: "ACTIVE",
+            availability: "AVAILABLE",
+            activeTasksCount: 1,
+          },
+        ],
+      },
+    });
+
+    await expect(getFieldAdjusterById("adjuster-1")).resolves.toMatchObject({
+      id: "adjuster-1",
+      name: "Aya",
+    });
+
+    await expect(getFieldAdjusterById("missing-id")).resolves.toBeNull();
   });
 });
 
@@ -215,21 +280,5 @@ describe("resetUserPassword", () => {
     expect(mockedPatch).toHaveBeenCalledWith("/users/user-1/reset-password", {
       newPassword: "NewPassword123",
     });
-  });
-});
-
-describe("deleteUser", () => {
-  beforeEach(() => {
-    mockedDelete.mockReset();
-  });
-
-  it("DELETEs /users/:id so the backend removes the account", async () => {
-    mockedDelete.mockResolvedValue({
-      data: { success: true, message: "ok", data: {} },
-    });
-
-    await deleteUser("user-1");
-
-    expect(mockedDelete).toHaveBeenCalledWith("/users/user-1");
   });
 });

@@ -5,7 +5,6 @@ import {
   createUser,
   updateUserStatus,
   resetUserPassword,
-  deleteUser as deleteUserRequest,
 } from "../api/users.service";
 import { getApiErrorMessage } from "../api/client";
 
@@ -104,44 +103,6 @@ export function useUsers() {
     }
   }
 
-  // DELETE /users/:id. Optimistically removes the row and restores it (at its
-  // original position) if the backend rejects, so a failed delete never leaves
-  // a user silently missing from the registry.
-  async function deleteUser(id: string) {
-    if (!id) {
-      setActionError("Missing user id — cannot delete this user.");
-      return false;
-    }
-
-    const index = users.findIndex((user) => user.id === id);
-    const previous = index >= 0 ? users[index] : null;
-
-    setActionError(null);
-    setIsActionPending(true);
-    setUsers((prev) => prev.filter((user) => user.id !== id));
-
-    try {
-      await deleteUserRequest(id);
-      await loadUsers();
-      return true;
-    } catch (deleteError) {
-      setActionError(getApiErrorMessage(deleteError));
-
-      if (previous) {
-        setUsers((prev) => {
-          if (prev.some((user) => user.id === id)) return prev;
-          const next = [...prev];
-          next.splice(Math.min(index, next.length), 0, previous);
-          return next;
-        });
-      }
-
-      return false;
-    } finally {
-      setIsActionPending(false);
-    }
-  }
-
   // TEMPORARY frontend-only mutation (no API call).
   // Replaced by PATCH /users/:id when the backend supports editing/status changes.
   function updateUserLocal(
@@ -168,7 +129,6 @@ export function useUsers() {
     addUserSuccess,
     setUserStatus,
     resetPassword,
-    deleteUser,
     actionError,
     clearActionError,
     isActionPending,

@@ -101,9 +101,10 @@ describe("validateDescription", () => {
 });
 
 describe("validateCoordinate", () => {
-  it("treats empty values as valid (optional field)", () => {
-    expect(validateCoordinate("", "latitude")).toBeNull();
-    expect(validateCoordinate("", "longitude")).toBeNull();
+  it("rejects empty values (coordinates are required)", () => {
+    expect(validateCoordinate("", "latitude")).toBe("This field is required");
+    expect(validateCoordinate("", "longitude")).toBe("This field is required");
+    expect(validateCoordinate("   ", "latitude")).toBe("This field is required");
   });
 
   it("rejects non-numeric values", () => {
