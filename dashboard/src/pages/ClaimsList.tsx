@@ -243,7 +243,7 @@ export default function ClaimsList() {
       <PolicyVerificationModal
         isOpen={isPolicyVerificationOpen}
         onClose={() => setIsPolicyVerificationOpen(false)}
-        onContinue={handlePolicyVerified}
+        onVerified={handlePolicyVerified}
       />
 
       <AddClaimModal

@@ -39,13 +39,30 @@ import { getClaims, createClaim, assignClaim } from "../api/claims.service";
 import { verifyPolicy } from "../api/policy.service";
 import { getFieldAdjusters } from "../api/users.service";
 import ClaimsList from "./ClaimsList";
-import type { ClaimSummary, PolicyInfo } from "../types";
+import type { ClaimSummary, PolicyVerificationResponse } from "../types";
 
-const VERIFIED_POLICY: PolicyInfo = {
-  policyNumber: "POL-1000203",
-  status: "ACTIVE",
-  startDate: "2026-01-01T00:00:00.000Z",
-  expiryDate: "2026-12-31T23:59:59.000Z",
+const VERIFIED_POLICY: PolicyVerificationResponse = {
+  isEligible: true,
+  policy: {
+    id: "policy-uuid-123",
+    policyNumber: "POL-1000203",
+    status: "ACTIVE",
+    startDate: "2026-01-01T00:00:00.000Z",
+    expiryDate: "2026-12-31T23:59:59.000Z",
+  },
+  vehicle: {
+    id: "vehicle-uuid-456",
+    plateNumber: "ABC-1234",
+    make: "Toyota",
+    model: "Camry",
+    year: 2022,
+    color: "White",
+  },
+  customer: {
+    id: "customer-uuid-789",
+    name: "Ahmed Ibrahim",
+    phone: "0512345678",
+  },
 };
 
 const FULL_ROW: ClaimSummary = {
@@ -102,12 +119,16 @@ async function renderPage() {
 
 // The claim intake flow is gated by policy verification: Add Claim → verify a
 // policy → only then does the existing intake form open.
-async function openCreateModal(policyNumber = "POL-1000203") {
+async function openCreateModal(policyNumber = "POL-1000203", plateNumber = "ABC-1234") {
   const user = setupUserEvent();
   await user.click(await screen.findByRole("button", { name: "Add Claim" }));
 
-  const input = await screen.findByRole("textbox", { name: "Policy Number" });
-  await user.type(input, policyNumber);
+  const policyInput = await screen.findByRole("textbox", { name: "Policy Number" });
+  await user.type(policyInput, policyNumber);
+  
+  const plateInput = await screen.findByRole("textbox", { name: "Plate Number" });
+  await user.type(plateInput, plateNumber);
+  
   await user.click(screen.getByRole("button", { name: /تحقق من الوثيقة/i }));
 
   await user.click(
@@ -146,22 +167,25 @@ describe("ClaimsList", () => {
     await fillClaimForm(container);
 
     // The intake flow is gated: the policy was verified before the form opened.
-    expect(verifyPolicy).toHaveBeenCalledWith("POL-1000203");
+    expect(verifyPolicy).toHaveBeenCalledWith({
+      policyNumber: "POL-1000203",
+      plateNumber: expect.any(String),
+      incidentDate: expect.any(String),
+    });
 
     const user = setupUserEvent();
     await user.click(screen.getByRole("button", { name: /Create Claim/i }));
 
     expect(await screen.findByText("CLM-2026-0099")).toBeTruthy();
 
-    // POST payload contains ONLY the verified contract fields — no
-    // accidentDate/accidentTime/description/damageDescription ever reach the API.
-    // Coordinates are required (location is mandatory), sent top-level as numbers.
+    // POST payload contains ONLY the verified contract fields from policy verification
+    // plus incident details. Coordinates are required (location is mandatory), sent top-level as numbers.
     expect(createClaim).toHaveBeenCalledWith({
-      customerName: "Ahmed Ibrahim",
-      customerPhone: "0512345678",
-      initialPlateNumber: "ABC-1234",
+      policyId: "policy-uuid-123",
+      plateNumber: "ABC-1234",
       incidentType: "COLLISION",
       incidentLocation: "Riyadh - King Fahd Road",
+      incidentDate: expect.any(String),
       latitude: 24.7136,
       longitude: 46.6753,
     });

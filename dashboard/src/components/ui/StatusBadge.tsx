@@ -40,9 +40,6 @@ const statusConfig: Record<Status, StatusConfig> = {
   APPROVED:     { label: "Approved",      classes: "bg-emerald-50 text-emerald-600 border-emerald-200" },
   REJECTED:     { label: "Rejected",      classes: "bg-red-50 text-red-700 border-red-200" },
   CLOSED:       { label: "Closed",        classes: "bg-gray-100 text-gray-500 border-gray-200" },
-  // Inspection Task
-  ASSIGNED:     { label: "Assigned",      classes: "bg-purple-50 text-purple-700 border-purple-200" },
-  IN_PROGRESS:  { label: "In Progress",   classes: "bg-yellow-50 text-yellow-700 border-yellow-200" },
   // Availability
   AVAILABLE: {
     label: "Available",
