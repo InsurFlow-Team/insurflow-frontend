@@ -9,7 +9,10 @@ import {
 
 import {
   getClaimById,
+  requestClaimCorrection,
   startClaimReview,
+  submitClaimDecision,
+  type ClaimDecision,
 } from "../api/claims.service";
 import { getApiErrorMessage } from "../api/client";
 import type { ClaimDetails as ClaimDetailsType } from "../types";
@@ -49,7 +52,7 @@ function InfoRow({
     </div>
   );
 }
-
+type ReviewAction = ClaimDecision | "CORRECTION";
 export default function ClaimDetails() {
   const { claimId } = useParams<{ claimId: string }>();
     const { user } = useAuth();
@@ -63,6 +66,10 @@ export default function ClaimDetails() {
   url: string;
   name: string;
 } | null>(null);
+const [reviewAction, setReviewAction] = useState<ReviewAction | null>(null);
+const [decisionNotes, setDecisionNotes] = useState("");
+const [decisionError, setDecisionError] = useState("");
+const [decisionSubmitting, setDecisionSubmitting] = useState(false);
 
   const loadClaim = useCallback(async () => {
     if (!claimId) return;
@@ -104,6 +111,54 @@ export default function ClaimDetails() {
       setShowReviewDialog(false);
     }
   }
+
+  async function handleReviewDecision() {
+  if (!claimId || !reviewAction || decisionSubmitting) return;
+
+  const trimmedNotes = decisionNotes.trim();
+  const notesRequired =
+    reviewAction === "REJECTED" || reviewAction === "CORRECTION";
+
+  if (notesRequired && !trimmedNotes) {
+    setDecisionError(
+      reviewAction === "REJECTED"
+        ? "Rejection reason is required."
+        : "Correction notes are required.",
+    );
+    return;
+  }
+
+  setDecisionSubmitting(true);
+  setDecisionError("");
+
+  try {
+    if (reviewAction === "CORRECTION") {
+      await requestClaimCorrection(claimId, trimmedNotes);
+      toast("success", "Correction requested successfully.");
+    } else {
+      await submitClaimDecision(
+        claimId,
+        reviewAction,
+        trimmedNotes,
+      );
+
+      toast(
+        "success",
+        reviewAction === "APPROVED"
+          ? "Claim approved successfully."
+          : "Claim rejected successfully.",
+      );
+    }
+
+    await loadClaim();
+    setReviewAction(null);
+    setDecisionNotes("");
+  } catch (requestError) {
+    setDecisionError(getApiErrorMessage(requestError));
+  } finally {
+    setDecisionSubmitting(false);
+  }
+}
 
   if (loading) {
     return <LoadingState message="Loading claim details..." />;
@@ -155,6 +210,14 @@ const correctionNotes = claim.correctionNotes ?? [];
 const canStartReview =
   user?.role === "CLAIMS_OFFICER" &&
   claim.status === "SUBMITTED";
+
+  const canSubmitDecision =
+  (user?.role === "CLAIMS_OFFICER" || user?.role === "ADMIN") &&
+  claim.status === "UNDER_REVIEW";
+
+const canRequestCorrection =
+  user?.role === "CLAIMS_OFFICER" &&
+  claim.status === "UNDER_REVIEW";
   
   return (
     <div className="space-y-6">
@@ -188,6 +251,48 @@ const canStartReview =
             Start Review
           </Button>
         )}
+
+        {canSubmitDecision && (
+  <div className="flex flex-wrap gap-2">
+    <button
+      type="button"
+      onClick={() => {
+        setDecisionNotes("");
+        setDecisionError("");
+        setReviewAction("APPROVED");
+      }}
+      className="rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-700"
+    >
+      Approve
+    </button>
+
+    <button
+      type="button"
+      onClick={() => {
+        setDecisionNotes("");
+        setDecisionError("");
+        setReviewAction("REJECTED");
+      }}
+      className="rounded-lg bg-danger px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+    >
+      Reject
+    </button>
+
+    {canRequestCorrection && (
+      <button
+        type="button"
+        onClick={() => {
+          setDecisionNotes("");
+          setDecisionError("");
+          setReviewAction("CORRECTION");
+        }}
+        className="rounded-lg border border-primary px-4 py-2.5 text-sm font-semibold text-primary hover:bg-primary-light"
+      >
+        Request Correction
+      </button>
+    )}
+  </div>
+)}
       </div>
 
       <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
@@ -584,6 +689,85 @@ const canStartReview =
           </div>
         )}
       </section>
+  <Modal
+  isOpen={reviewAction !== null}
+  onClose={() => {
+    if (!decisionSubmitting) {
+      setReviewAction(null);
+      setDecisionNotes("");
+      setDecisionError("");
+    }
+  }}
+  title={
+    reviewAction === "APPROVED"
+      ? "Approve Claim"
+      : reviewAction === "REJECTED"
+        ? "Reject Claim"
+        : "Request Correction"
+  }
+  size="md"
+>
+  <form
+    onSubmit={(event) => {
+      event.preventDefault();
+      void handleReviewDecision();
+    }}
+    className="space-y-4"
+  >
+    <div>
+      <label
+        htmlFor="decision-notes"
+        className="text-sm font-semibold text-text"
+      >
+        {reviewAction === "REJECTED"
+          ? "Rejection Reason"
+          : reviewAction === "CORRECTION"
+            ? "Correction Notes"
+            : "Decision Notes (Optional)"}
+      </label>
+
+      <textarea
+        id="decision-notes"
+        value={decisionNotes}
+        onChange={(event) => {
+          setDecisionNotes(event.target.value);
+          setDecisionError("");
+        }}
+        rows={5}
+        disabled={decisionSubmitting}
+        placeholder="Enter notes..."
+        className="mt-2 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:border-primary"
+      />
+    </div>
+
+    {decisionError && (
+      <p className="text-sm text-danger">{decisionError}</p>
+    )}
+
+    <div className="flex justify-end gap-3">
+      <button
+        type="button"
+        onClick={() => {
+          setReviewAction(null);
+          setDecisionNotes("");
+          setDecisionError("");
+        }}
+        disabled={decisionSubmitting}
+        className="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-text"
+      >
+        Cancel
+      </button>
+
+      <button
+        type="submit"
+        disabled={decisionSubmitting}
+        className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+      >
+        {decisionSubmitting ? "Submitting..." : "Confirm Decision"}
+      </button>
+    </div>
+  </form>
+</Modal>
       <Modal
   isOpen={Boolean(previewImage)}
   onClose={() => setPreviewImage(null)}
