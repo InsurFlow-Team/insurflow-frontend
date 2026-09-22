@@ -1,10 +1,16 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { AlertCircle, CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
+import { Loader2, ShieldCheck } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { login } from "../api/auth.service";
 import { getApiErrorMessage } from "../api/client";
+import FormField from "../components/ui/FormField";
+import InlineError from "../components/ui/InlineError";
+import SuccessBanner from "../components/ui/SuccessBanner";
+
+const INPUT_CLASS =
+  "w-full px-4 py-2.5 rounded-lg border border-border bg-background text-text text-sm placeholder:text-text-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition disabled:opacity-60";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -80,24 +86,9 @@ export default function Login() {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {successMessage && (
-            <div
-              role="status"
-              className="flex items-start gap-2 rounded-lg border border-success/30 bg-success/10 px-3 py-2.5 text-sm text-success"
-            >
-              <CheckCircle2 size={17} className="mt-0.5 shrink-0" />
-              <span>{successMessage}</span>
-            </div>
-          )}
+          {successMessage && <SuccessBanner message={successMessage} />}
 
-          <div>
-            <label
-              htmlFor="organizationCode"
-              className="block text-sm font-medium text-text mb-1.5"
-            >
-              Organization Code
-            </label>
-
+          <FormField label="Organization Code" required>
             <input
               id="organizationCode"
               type="text"
@@ -106,18 +97,11 @@ export default function Login() {
               placeholder="DEMO-INS"
               autoComplete="organization"
               disabled={isLoading}
-              className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-text text-sm placeholder:text-text-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition disabled:opacity-60"
+              className={INPUT_CLASS}
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label
-              htmlFor="employeeCode"
-              className="block text-sm font-medium text-text mb-1.5"
-            >
-              Employee Code
-            </label>
-
+          <FormField label="Employee Code" required>
             <input
               id="employeeCode"
               type="text"
@@ -126,18 +110,11 @@ export default function Login() {
               placeholder="CO-001"
               autoComplete="username"
               disabled={isLoading}
-              className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-text text-sm placeholder:text-text-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition disabled:opacity-60"
+              className={INPUT_CLASS}
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-text mb-1.5"
-            >
-              Password
-            </label>
-
+          <FormField label="Password" required>
             <input
               id="password"
               type="password"
@@ -146,19 +123,11 @@ export default function Login() {
               placeholder="••••••••"
               autoComplete="current-password"
               disabled={isLoading}
-              className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-text text-sm placeholder:text-text-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition disabled:opacity-60"
+              className={INPUT_CLASS}
             />
-          </div>
+          </FormField>
 
-          {error && (
-            <div
-              role="alert"
-              className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2.5 text-sm text-danger"
-            >
-              <AlertCircle size={17} className="mt-0.5 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
+          {error && <InlineError message={error} />}
 
           <button
             type="submit"

@@ -27,7 +27,7 @@ describe("createClaim", () => {
     mockedPost.mockReset();
   });
 
-  it("POSTs exactly the verified contract fields to /claims", async () => {
+  it("POSTs exactly the verified contract fields to /claims and returns the normalized summary", async () => {
     mockedPost.mockResolvedValue({
       data: {
         success: true,
@@ -48,7 +48,44 @@ describe("createClaim", () => {
       id: "claim-uuid",
       claimNumber: "CLM-0001",
       status: "NEW",
+      customerName: "",
+      initialPlateNumber: "",
+      incidentCoordinates: null,
       createdAt: "2026-08-26T15:00:00.000Z",
+    });
+  });
+
+  it("carries the backend's incidentCoordinates echo from the create response into the summary (map marker source)", async () => {
+    mockedPost.mockResolvedValue({
+      data: {
+        success: true,
+        message: "Claim created successfully",
+        data: {
+          id: "claim-uuid",
+          claimNumber: "CLM-0001",
+          status: "NEW",
+          incidentCoordinates: {
+            latitude: 24.7136,
+            longitude: 46.6753,
+            capturedAt: "2026-09-20T09:00:00.000Z",
+          },
+          createdAt: "2026-08-26T15:00:00.000Z",
+        },
+      },
+    });
+
+    const result = await createClaim({
+      ...VALID_PAYLOAD,
+      latitude: 24.7136,
+      longitude: 46.6753,
+    });
+
+    // The marker's coordinates come from the backend echo — never from what
+    // the frontend happened to echo back locally.
+    expect(result.incidentCoordinates).toEqual({
+      latitude: 24.7136,
+      longitude: 46.6753,
+      capturedAt: "2026-09-20T09:00:00.000Z",
     });
   });
 

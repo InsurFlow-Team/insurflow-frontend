@@ -126,7 +126,8 @@ export function validateDescription(value: string, minLength = 10): string | nul
 }
 
 export function validateCoordinate(value: string, type: "latitude" | "longitude"): string | null {
-  if (!value.trim()) return null; // Optional field
+  const required = validateRequired(value);
+  if (required) return required;
 
   const num = Number(value);
   if (isNaN(num)) {

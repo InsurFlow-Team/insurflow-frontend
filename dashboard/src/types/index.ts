@@ -4,6 +4,7 @@ export type UserStatus = "ACTIVE" | "INACTIVE";
 
 export type ClaimStatus =
   | "NEW"
+  | "PENDING_ACCEPTANCE"
   | "ASSIGNED"
   | "IN_PROGRESS"
   | "SUBMITTED"
@@ -19,9 +20,13 @@ export type InspectionTaskStatus = "ASSIGNED" | "IN_PROGRESS" | "SUBMITTED";
 
 export type Availability = "AVAILABLE" | "UNAVAILABLE";
 
-// The backend POST /users contract: only these four fields. It rejects `status`
-// ("status is not allowed") and ADMIN as a role value. New users start ACTIVE
-// by default server-side.
+export interface GeoPoint {
+  latitude?: number | null;
+  longitude?: number | null;
+  capturedAt?: string | null;
+}
+
+
 export type CreateUserRequest = {
   name: string;
   employeeCode: string;
@@ -43,6 +48,15 @@ export interface FieldAdjuster extends User {
   status: UserStatus;
   activeTasksCount: number;
   availability: Availability;
+  capacityLimit?: number | null;
+  location?: GeoPoint | null;
+  distanceKm?: number | null;
+}
+
+export interface LastDeclineInfo {
+  reason?: string;
+  adjusterName?: string;
+  declinedAt?: string;
 }
 
 export interface ClaimSummary {
@@ -53,13 +67,11 @@ export interface ClaimSummary {
   initialPlateNumber: string;
   createdAt: string;
   updatedAt?: string;
+  incidentCoordinates?: GeoPoint | null;
+  lastDecline?: LastDeclineInfo | null;
 }
 
-// The full claim model collected by the Create New Claim form. Only the five
-// backend-verified fields reach POST /claims (see toCreateClaimRequest);
-// accident/damage/coordinates stay frontend-only until the backend supports
-// them, and the optional assignment group is only used when an adjuster is
-// selected.
+
 export interface CreateClaimDraft {
   customerName: string;
   customerPhone: string;

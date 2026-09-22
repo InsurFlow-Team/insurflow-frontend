@@ -66,11 +66,6 @@ export const INITIAL_FORM_STATE: NewClaimData = {
   address: "",
   latitude: "",
   longitude: "",
-  adjusterId: "",
-  // Backend treats priority as optional and defaults it to MEDIUM. Preselect
-  // MEDIUM so creation with an adjuster never blocks on an empty priority.
-  priority: "MEDIUM",
-  assignmentNotes: "",
 };
 
 export const FORM_VALIDATORS: Partial<

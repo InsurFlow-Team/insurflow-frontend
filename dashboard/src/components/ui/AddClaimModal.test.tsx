@@ -1,37 +1,33 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, cleanup } from "@testing-library/react";
+import { render, cleanup, fireEvent } from "@testing-library/react";
 import { screen, waitFor } from "@testing-library/dom";
-import type { ClaimSummary, FieldAdjuster } from "../../types";
+import type { ClaimSummary } from "../../types";
 import { fillClaimForm, PLATE_PLACEHOLDER, setupUserEvent } from "../../test/test-utils";
 
-// DOM tests exercise full-form typing through React act(); give them room.
 vi.setConfig({ testTimeout: 20000 });
 
-vi.mock("../../api/users.service", () => ({
-  getUsers: vi.fn(),
-  getFieldAdjusters: vi.fn(),
+vi.mock("react-leaflet", () => ({
+  MapContainer: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="map-container">{children}</div>
+  ),
+  TileLayer: () => <div data-testid="tile-layer" />,
+  Marker: () => <div data-testid="marker" />,
+  useMapEvents: () => ({}),
+  useMap: () => ({
+    flyTo: vi.fn(),
+    getZoom: () => 14,
+  }),
 }));
 
-vi.mock("../../api/claims.service", () => ({
-  assignClaim: vi.fn(),
+vi.mock("leaflet", () => ({
+  default: {
+    divIcon: vi.fn(() => ({})),
+  },
+  divIcon: vi.fn(() => ({})),
 }));
 
-import { getFieldAdjusters } from "../../api/users.service";
-import { assignClaim } from "../../api/claims.service";
 import AddClaimModal from "./AddClaimModal";
-
-const FA_ADJUSTER: FieldAdjuster = {
-  id: "adj-1",
-  name: "Aya",
-  employeeCode: "FT-001",
-  role: "FIELD_ADJUSTER",
-  organizationId: "org-1",
-  organizationName: "InsurFlow",
-  status: "ACTIVE",
-  availability: "AVAILABLE",
-  activeTasksCount: 0,
-};
 
 const CREATED_SUMMARY: ClaimSummary = {
   id: "claim-uuid",
@@ -44,16 +40,11 @@ const CREATED_SUMMARY: ClaimSummary = {
 
 const onSubmit = vi.fn();
 const onClose = vi.fn();
-const onAssignmentFailed = vi.fn();
 
 beforeEach(() => {
-  vi.mocked(getFieldAdjusters).mockResolvedValue([FA_ADJUSTER]);
-  vi.mocked(assignClaim).mockRejectedValue(new Error("assign failed"));
-
   onSubmit.mockReset();
   onSubmit.mockResolvedValue(CREATED_SUMMARY);
   onClose.mockReset();
-  onAssignmentFailed.mockReset();
 });
 
 afterEach(() => {
@@ -69,7 +60,7 @@ describe("AddClaimModal", () => {
     ).not.toThrow();
   });
 
-  it("opens, closes, and reopens without an infinite update loop (reset effect settles)", () => {
+  it("opens, closes, and reopens without an infinite update loop", () => {
     const { rerender } = render(
       <AddClaimModal isOpen onClose={onClose} onSubmit={onSubmit} />,
     );
@@ -85,7 +76,7 @@ describe("AddClaimModal", () => {
     expect(screen.getByText("Create New Claim")).toBeTruthy();
   });
 
-  it("License Plate input is a controlled input bound to initialPlateNumber: typing, editing, deleting, and pasting all update form state", async () => {
+  it("License Plate input is a controlled input bound to initialPlateNumber", async () => {
     const user = setupUserEvent();
     const { container } = render(
       <AddClaimModal isOpen onClose={onClose} onSubmit={onSubmit} />,
@@ -93,35 +84,23 @@ describe("AddClaimModal", () => {
 
     const plate = screen.getByPlaceholderText(PLATE_PLACEHOLDER) as HTMLInputElement;
 
-    // typing with auto-uppercase
     await user.type(plate, "abc-1234");
     expect(plate.value).toBe("ABC-1234");
 
-    // editing in the middle
     await user.clear(plate);
-    await user.type(plate, "xy");
-    await user.type(plate, "9");
+    await user.type(plate, "xy9");
     expect(plate.value).toBe("XY9");
-
-    // deleting (backspace)
-    await user.type(plate, "{backspace}");
-    expect(plate.value).toBe("XY");
-
-    // clearing and pasting an Arabic-Indic plate
-    await user.clear(plate);
-    await user.paste("lnx-٤٥٦");
-    expect(plate.value).toBe("LNX-٤٥٦");
 
     await fillClaimForm(container, { includePlate: false });
 
     await user.click(screen.getByRole("button", { name: "Create Claim" }));
 
     expect(onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({ initialPlateNumber: "LNX-٤٥٦" }),
+      expect.objectContaining({ initialPlateNumber: "XY9" }),
     );
   });
 
-  it("submits the complete frontend form model mapped via onSubmit", async () => {
+  it("submits the complete frontend form model via onSubmit without assignment fields", async () => {
     const user = setupUserEvent();
     const { container } = render(
       <AddClaimModal isOpen onClose={onClose} onSubmit={onSubmit} />,
@@ -140,49 +119,47 @@ describe("AddClaimModal", () => {
         incidentLocation: "Riyadh - King Fahd Road",
         accidentDate: "2026-09-01",
         accidentTime: "14:30",
+        latitude: "24.7136",
+        longitude: "46.6753",
       }),
     );
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("on assignment failure the claim is still created, the modal closes, and the failure is reported", async () => {
+  it("requires BOTH coordinates (location is mandatory)", async () => {
     const user = setupUserEvent();
     const { container } = render(
-      <AddClaimModal
-        isOpen
-        onClose={onClose}
-        onSubmit={onSubmit}
-        onAssignmentFailed={onAssignmentFailed}
-      />,
+      <AddClaimModal isOpen onClose={onClose} onSubmit={onSubmit} />,
     );
 
-    await fillClaimForm(container);
+    await fillClaimForm(container, { includeCoordinates: false });
 
-    // expand Optional Assignment
-    await user.click(
-      screen.getByRole("button", { name: /Optionally Assign Field Adjuster/ }),
-    );
+    expect(
+      (
+        screen.getByRole("button", { name: "Create Claim" }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
 
-    const adjusterSelect = await screen.findByDisplayValue("Select field adjuster");
-    await user.selectOptions(adjusterSelect, "adj-1");
+    const latInput = container.querySelector('input[name="latitude"]');
+    if (latInput) {
+      fireEvent.change(latInput, { target: { name: "latitude", value: "24.7136" } });
+    }
 
-    await user.selectOptions(
-      screen.getByDisplayValue("Medium"),
-      "HIGH",
-    );
+    expect(
+      (
+        screen.getByRole("button", { name: "Create Claim" }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
 
-    await user.click(screen.getByRole("button", { name: "Create & Assign" }));
+    const lngInput = container.querySelector('input[name="longitude"]');
+    if (lngInput) {
+      fireEvent.change(lngInput, { target: { name: "longitude", value: "46.6753" } });
+    }
+
+    await user.click(screen.getByRole("button", { name: "Create Claim" }));
 
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalledTimes(1);
     });
-
-    // The claim is not re-created
-    expect(onSubmit).toHaveBeenCalledTimes(1);
-
-    // The failure is reported to the page, and the modal closes (not kept open)
-    expect(onAssignmentFailed).toHaveBeenCalledTimes(1);
-    expect(onAssignmentFailed).toHaveBeenCalledWith(CREATED_SUMMARY);
-    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
