@@ -103,8 +103,7 @@ export default function ClaimDetails() {
   return (
     <div className="space-y-6">
       <ClaimDetailHeader
-        claimNumber={claim.claimNumber}
-        status={claim.status}
+        claim={claim}
         canStartReview={canStartReview}
         reviewing={reviewing}
         onStartReview={() => setShowReviewDialog(true)}

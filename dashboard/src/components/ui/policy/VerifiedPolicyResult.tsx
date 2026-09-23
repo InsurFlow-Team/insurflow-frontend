@@ -1,108 +1,101 @@
 import { CheckCircle2 } from "lucide-react";
 import Button from "../Button";
-import PolicyStatusBadge from "../PolicyStatusBadge";
-import type { PolicyInfo, PolicyStatus } from "../../../types";
-
-const POLICY_STATUSES = new Set<PolicyStatus>([
-  "ACTIVE",
-  "EXPIRED",
-  "CANCELLED",
-  "SUSPENDED",
-]);
-
-function toPolicyStatus(value?: PolicyStatus | null): PolicyStatus | null {
-  return value && POLICY_STATUSES.has(value) ? value : null;
-}
-
-function formatDate(value?: string | null): string {
-  return value
-    ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(
-        new Date(value),
-      )
-    : "—";
-}
+import type { PolicyVerificationResponse } from "../../../types";
 
 interface VerifiedPolicyResultProps {
-  policy: PolicyInfo;
-  onReset: () => void;
+  verifiedPolicy: PolicyVerificationResponse;
   onContinue: () => void;
+  onCancel: () => void;
+}
+
+function FieldRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between">
+      <span className="text-text-muted">{label}</span>
+      <span className="text-text font-medium">{value}</span>
+    </div>
+  );
+}
+
+function FieldGroup({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-text mb-3">{title}</h3>
+      <div className="space-y-2 text-sm">{children}</div>
+    </div>
+  );
 }
 
 export default function VerifiedPolicyResult({
-  policy,
-  onReset,
+  verifiedPolicy,
   onContinue,
+  onCancel,
 }: VerifiedPolicyResultProps) {
-  const status = toPolicyStatus(policy.status);
-
   return (
-    <>
-      <div
-        role="status"
-        className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
-      >
-        <CheckCircle2 size={16} className="mt-0.5 flex-shrink-0" />
-        <span>Policy verified successfully.</span>
-      </div>
-
-      <div className="space-y-3 p-4 rounded-lg bg-surface-soft border border-border">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
-              Policy Number
-            </p>
-            <p className="mt-1 text-sm font-medium text-text">
-              {policy.policyNumber ?? "—"}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
-              Policy Status
-            </p>
-            <div className="mt-1">
-              {status ? (
-                <PolicyStatusBadge status={status} />
-              ) : (
-                <p className="text-sm text-text">{policy.status ?? "—"}</p>
-              )}
-            </div>
-          </div>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
-              Start Date
-            </p>
-            <p className="mt-1 text-sm text-text">
-              {formatDate(policy.startDate)}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
-              Expiry Date
-            </p>
-            <p className="mt-1 text-sm text-text">
-              {formatDate(policy.expiryDate)}
-            </p>
-          </div>
+    <div className="space-y-5">
+      {/* Success banner */}
+      <div className="flex items-start gap-3 p-4 rounded-lg bg-emerald-50 border border-emerald-200">
+        <CheckCircle2 size={18} className="text-emerald-600 mt-0.5 flex-shrink-0" />
+        <div className="text-sm">
+          <p className="font-medium text-emerald-700 mb-1">تم التحقق بنجاح</p>
+          <p className="text-emerald-600">
+            البوليصة صالحة ويمكن المتابعة لإنشاء المطالبة.
+          </p>
         </div>
       </div>
 
-      <p className="text-xs text-text-muted">
-        Insured name, insurance company, and vehicle details appear here once
-        the backend policy-verification contract is connected.
-      </p>
+      {/* Verified data */}
+      <div className="space-y-4">
+        <FieldGroup title="معلومات البوليصة">
+          <FieldRow
+            label="رقم البوليصة:"
+            value={verifiedPolicy.policy.policyNumber}
+          />
+          <FieldRow
+            label="الحالة:"
+            value={
+              verifiedPolicy.policy.status === "ACTIVE"
+                ? "فعّالة"
+                : verifiedPolicy.policy.status
+            }
+          />
+        </FieldGroup>
 
-      <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-1 text-[11px] font-medium text-amber-700">
-        Development mock data
-      </span>
+        <FieldGroup title="معلومات المركبة">
+          <FieldRow label="رقم اللوحة:" value={verifiedPolicy.vehicle.plateNumber} />
+          {(verifiedPolicy.vehicle.make || verifiedPolicy.vehicle.model) && (
+            <div className="flex justify-between">
+              <span className="text-text-muted">الصانع:</span>
+              <span className="text-text">
+                {verifiedPolicy.vehicle.make} {verifiedPolicy.vehicle.model}
+              </span>
+            </div>
+          )}
+        </FieldGroup>
 
-      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
-        <Button type="button" variant="secondary" onClick={onReset}>
-          تحقق من وثيقة أخرى
+        <FieldGroup title="معلومات العميل">
+          <FieldRow label="الاسم:" value={verifiedPolicy.customer.fullName} />
+          <div className="flex justify-between">
+            <span className="text-text-muted">الهاتف:</span>
+            <span className="text-text">{verifiedPolicy.customer.phone}</span>
+          </div>
+        </FieldGroup>
+      </div>
+
+      <div className="flex gap-3 pt-2">
+        <Button type="button" variant="secondary" className="flex-1" onClick={onCancel}>
+          إلغاء
         </Button>
-        <Button type="button" variant="primary" onClick={onContinue}>
-          متابعة تسجيل الحادث
+        <Button type="button" variant="primary" className="flex-1" onClick={onContinue}>
+          المتابعة لإنشاء المطالبة
         </Button>
       </div>
-    </>
+    </div>
   );
 }

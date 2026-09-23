@@ -50,20 +50,19 @@ function describeEvent(event: Record<string, unknown>): string {
     .join(" ");
 }
 
-export function getTimelineEventView(
-  event: Record<string, unknown>,
-): TimelineEventView {
-  const action = textValue(event, "action") || "Unknown action";
+export function getTimelineEventView(event: object): TimelineEventView {
+  const source = event as Record<string, unknown>;
+  const action = textValue(source, "action") || "Unknown action";
 
-  const details = DETAIL_KEYS.filter((key) => textValue(event, key) !== "").map(
+  const details = DETAIL_KEYS.filter((key) => textValue(source, key) !== "").map(
     (key) => ({
       label: DETAIL_LABELS[key],
-      value: textValue(event, key),
+      value: textValue(source, key),
     }),
   );
 
   const isDecline = DECLINE_HINTS.some((hint) =>
-    hint.test(describeEvent(event)),
+    hint.test(describeEvent(source)),
   );
 
   return { action, isDecline, details };

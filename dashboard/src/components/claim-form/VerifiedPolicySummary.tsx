@@ -29,10 +29,10 @@ export default function VerifiedPolicySummary({
         />
         <div className="text-sm">
           <p className="font-medium text-emerald-700">
-            تم التحقق من البوليصة بنجاح
+            تم التحقق من بيانات العميل والمركبة من وثيقة التأمين
           </p>
           <p className="text-emerald-600 text-xs mt-1">
-            البيانات التالية محققة من النظام
+            البيانات التالية موثقة من نظام البوليصات ولا يمكن تعديلها هنا.
           </p>
         </div>
       </div>
@@ -91,7 +91,7 @@ export default function VerifiedPolicySummary({
         />
         <div className="mt-3 rounded-lg border border-border bg-surface-soft p-4">
           <InfoGrid columns="2">
-            <InfoRow label="الاسم الكامل" value={customer.name} />
+            <InfoRow label="الاسم الكامل" value={customer.fullName} />
             <InfoRow label="رقم الهاتف" value={customer.phone} />
           </InfoGrid>
         </div>

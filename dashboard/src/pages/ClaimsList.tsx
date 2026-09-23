@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createClaim, getClaims, toCreateClaimRequest } from "../api/claims.service";
+import { getClaims } from "../api/claims.service";
 import { getApiErrorMessage } from "../api/client";
 import type { ClaimStatus, ClaimSummary } from "../types";
 import { useAuth } from "../contexts/AuthContext";
+import { useClaimIntake } from "../hooks/useClaimIntake";
 import LoadingState from "../components/ui/LoadingState";
 import ErrorState from "../components/ui/ErrorState";
 import DataTable from "../components/ui/DataTable";
@@ -19,11 +20,9 @@ import ClaimsStats, {
 } from "../components/claims/ClaimsStats";
 import {
   getDateCutoff,
+  ROWS_PER_PAGE_OPTIONS,
   type DateRangeFilter,
 } from "../components/claims/filterOptions";
-import type { NewClaimData } from "../components/claim-form/claimFormConstants";
-
-const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
 
 export default function ClaimsList() {
   const { user } = useAuth();
@@ -34,9 +33,6 @@ export default function ClaimsList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [isPolicyVerificationOpen, setIsPolicyVerificationOpen] =
-    useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [assignTarget, setAssignTarget] = useState<ClaimSummary | null>(null);
   const [successBanner, setSuccessBanner] = useState("");
   const [errorBanner, setErrorBanner] = useState("");
@@ -49,6 +45,10 @@ export default function ClaimsList() {
   const [rowsPerPage, setRowsPerPage] = useState(25);
 
   const claimsRef = useRef<ClaimSummary[]>([]);
+
+  const intake = useClaimIntake({
+    onCreated: () => void loadClaims(),
+  });
 
   const loadClaims = useCallback(async () => {
     setLoading(true);
@@ -83,33 +83,12 @@ export default function ClaimsList() {
     return () => window.clearTimeout(timerId);
   }, [successBanner]);
 
-  async function handleCreate(claimData: NewClaimData): Promise<ClaimSummary> {
-    const created = await createClaim(toCreateClaimRequest(claimData));
-    setSuccessBanner(`${created.claimNumber} created successfully`);
-    await loadClaims();
-    return created;
-  }
-
   function openAssign(claim: ClaimSummary) {
     setAssignTarget(claim);
   }
 
   function closeAssign() {
     setAssignTarget(null);
-  }
-
-  // Claim intake is gated by policy verification: "Add Claim" opens the
-  // verification step first, and the intake form is reachable only after a
-  // successful check (PolicyVerificationModal → onContinue).
-  function openPolicyVerification() {
-    setSuccessBanner("");
-    setErrorBanner("");
-    setIsPolicyVerificationOpen(true);
-  }
-
-  function handlePolicyVerified() {
-    setIsPolicyVerificationOpen(false);
-    setIsCreateModalOpen(true);
   }
 
   async function handleAssigned() {
@@ -206,7 +185,11 @@ export default function ClaimsList() {
 
       <ClaimsPageHeader
         organizationName={user?.organizationName}
-        onAddClaim={openPolicyVerification}
+        onAddClaim={() => {
+          setSuccessBanner("");
+          setErrorBanner("");
+          intake.openPolicyVerification();
+        }}
       />
 
       <ClaimsStats stats={stats} />
@@ -241,15 +224,16 @@ export default function ClaimsList() {
       />
 
       <PolicyVerificationModal
-        isOpen={isPolicyVerificationOpen}
-        onClose={() => setIsPolicyVerificationOpen(false)}
-        onVerified={handlePolicyVerified}
+        isOpen={intake.isPolicyVerificationOpen}
+        onClose={intake.closeVerification}
+        onVerified={intake.handlePolicyVerified}
       />
 
       <AddClaimModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSubmit={handleCreate}
+        isOpen={intake.isCreateModalOpen}
+        onClose={intake.closeCreate}
+        onSubmit={intake.handleCreate}
+        verifiedPolicy={intake.verifiedPolicy}
       />
 
       {assignTarget && (

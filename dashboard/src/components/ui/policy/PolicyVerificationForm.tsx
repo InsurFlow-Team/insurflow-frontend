@@ -1,77 +1,121 @@
-import { FileText, Search } from "lucide-react";
-import type { ChangeEvent, FormEvent, KeyboardEvent } from "react";
+import { AlertCircle, Shield } from "lucide-react";
 import Button from "../Button";
 import FormField from "../FormField";
-import Input from "../Input";
-import InlineError from "../InlineError";
 
-const POLICY_NUMBER_PLACEHOLDER = "e.g., POL-1000203";
+const FIELD_CLASS =
+  "w-full rounded-lg border border-border bg-background px-4 py-2.5 text-sm text-text outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50";
 
 interface PolicyVerificationFormProps {
   policyNumber: string;
-  isVerifying: boolean;
+  plateNumber: string;
+  incidentDate: string;
+  verifying: boolean;
+  /** Non-empty only when the verification request failed (already mapped from the error code). */
   error: string;
-  onPolicyNumberChange: (e: ChangeEvent<HTMLInputElement>) => void;
-  onVerify: () => void;
-  onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void;
-  onClose: () => void;
+  canSubmit: boolean;
+  onPolicyNumberChange: (value: string) => void;
+  onPlateNumberChange: (value: string) => void;
+  onIncidentDateChange: (value: string) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
 }
 
 export default function PolicyVerificationForm({
   policyNumber,
-  isVerifying,
+  plateNumber,
+  incidentDate,
+  verifying,
   error,
+  canSubmit,
   onPolicyNumberChange,
-  onVerify,
-  onKeyDown,
-  onClose,
+  onPlateNumberChange,
+  onIncidentDateChange,
+  onSubmit,
+  onCancel,
 }: PolicyVerificationFormProps) {
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    onVerify();
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <FormField label="Policy Number" required>
-        <Input
-          name="policyNumber"
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit();
+      }}
+      className="space-y-5"
+    >
+      {/* Info banner */}
+      <div className="flex items-start gap-3 p-4 rounded-lg bg-primary-light border border-primary/10">
+        <Shield size={18} className="text-primary mt-0.5 flex-shrink-0" />
+        <div className="text-sm">
+          <p className="font-medium text-primary mb-1">التحقق من الأهلية</p>
+          <p className="text-text-muted">
+            يجب إدخال رقم البوليصة أو رقم اللوحة (أو كلاهما) للتحقق من أهلية
+            المطالبة.
+          </p>
+        </div>
+      </div>
+
+      <FormField label="رقم بوليصة التأمين">
+        <input
           type="text"
-          placeholder={POLICY_NUMBER_PLACEHOLDER}
           value={policyNumber}
-          onChange={onPolicyNumberChange}
-          onKeyDown={onKeyDown}
-          disabled={isVerifying}
-          icon={<FileText size={16} />}
-          aria-label="Policy Number"
+          onChange={(e) => onPolicyNumberChange(e.target.value)}
+          placeholder="POL-1234567"
+          disabled={verifying}
+          className={FIELD_CLASS}
         />
       </FormField>
 
-      <p className="text-xs text-text-muted">
-        Development mock: any policy number verifies successfully, except{" "}
-        <span className="font-mono text-text">00000000</span> (simulated failure
-        for testing the error state).
-      </p>
+      <FormField label="رقم اللوحة">
+        <input
+          type="text"
+          value={plateNumber}
+          onChange={(e) => onPlateNumberChange(e.target.value)}
+          placeholder="ABC-1234"
+          disabled={verifying}
+          className={FIELD_CLASS}
+        />
+      </FormField>
 
-      {error && <InlineError message={error} />}
+      <FormField label="تاريخ الحادث (اختياري)">
+        <input
+          type="date"
+          value={incidentDate}
+          onChange={(e) => onIncidentDateChange(e.target.value)}
+          disabled={verifying}
+          className={FIELD_CLASS}
+        />
+        <p className="mt-1.5 text-xs text-text-muted">
+          اختياري: للتحقق من صلاحية البوليصة في تاريخ الحادث
+        </p>
+      </FormField>
 
-      <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
+      {error && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-lg border border-danger/20 bg-red-50 px-4 py-3 text-sm text-danger"
+        >
+          <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      <div className="flex gap-3 pt-2">
         <Button
           type="button"
           variant="secondary"
-          onClick={onClose}
-          disabled={isVerifying}
+          className="flex-1"
+          onClick={onCancel}
+          disabled={verifying}
         >
-          Cancel
+          إلغاء
         </Button>
         <Button
           type="submit"
           variant="primary"
-          icon={<Search size={15} />}
-          loading={isVerifying}
-          disabled={isVerifying || policyNumber.trim() === ""}
+          className="flex-1"
+          loading={verifying}
+          disabled={!canSubmit}
         >
-          تحقق من الوثيقة
+          التحقق من البوليصة
         </Button>
       </div>
     </form>

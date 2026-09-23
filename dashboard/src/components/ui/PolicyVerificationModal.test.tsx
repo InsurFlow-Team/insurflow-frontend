@@ -31,7 +31,7 @@ const VERIFIED_POLICY: PolicyVerificationResponse = {
   },
   customer: {
     id: "customer-uuid-789",
-    name: "Ahmed Ibrahim",
+    fullName: "Ahmed Ibrahim",
     phone: "0512345678",
   },
 };
@@ -66,17 +66,17 @@ describe("PolicyVerificationModal", () => {
     );
 
     expect(
-      screen.getByRole("textbox", { name: "Policy Number" }),
+      screen.getByPlaceholderText("POL-1234567"),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: /تحقق من الوثيقة/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /التحقق من البوليصة/i })).toBeTruthy();
     expect(
       (
         screen.getByRole("button", {
-          name: /تحقق من الوثيقة/i,
+          name: /التحقق من البوليصة/i,
         }) as HTMLButtonElement
       ).disabled,
     ).toBe(true);
-    expect(screen.queryByRole("button", { name: /متابعة تسجيل الحادث/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /المتابعة لإنشاء المطالبة/i })).toBeNull();
   });
 
   it("verifies a policy and unlocks the claim-intake continue button only after success", async () => {
@@ -87,25 +87,25 @@ describe("PolicyVerificationModal", () => {
       <PolicyVerificationModal isOpen onClose={onClose} onVerified={onVerified} />,
     );
 
-    const policyInput = screen.getByRole("textbox", { name: "Policy Number" });
+    const policyInput = screen.getByPlaceholderText("POL-1234567");
     await user.type(policyInput, "POL-1000203");
-    
-    const plateInput = screen.getByRole("textbox", { name: "Plate Number" });
+
+    const plateInput = screen.getByPlaceholderText("ABC-1234");
     await user.type(plateInput, "ABC-1234");
-    
-    await user.click(screen.getByRole("button", { name: /تحقق من الوثيقة/i }));
+
+    await user.click(screen.getByRole("button", { name: /التحقق من البوليصة/i }));
 
     expect(verifyPolicy).toHaveBeenCalledWith({
       policyNumber: "POL-1000203",
       plateNumber: "ABC-1234",
-      incidentDate: expect.any(String),
+      incidentDate: undefined,
     });
 
-    expect(await screen.findByText(/تم التحقق من الوثيقة بنجاح/i)).toBeTruthy();
+    expect(await screen.findByText(/تم التحقق بنجاح/i)).toBeTruthy();
     expect(screen.getByText("POL-1000203")).toBeTruthy();
 
     await user.click(
-      screen.getByRole("button", { name: /متابعة تسجيل الحادث/i }),
+      screen.getByRole("button", { name: /المتابعة لإنشاء المطالبة/i }),
     );
     expect(onVerified).toHaveBeenCalledTimes(1);
     expect(onVerified).toHaveBeenCalledWith(VERIFIED_POLICY);
@@ -124,18 +124,18 @@ describe("PolicyVerificationModal", () => {
     );
 
     await user.type(
-      screen.getByRole("textbox", { name: "Policy Number" }),
+      screen.getByPlaceholderText("POL-1234567"),
       "00000000",
     );
     await user.type(
-      screen.getByRole("textbox", { name: "Plate Number" }),
+      screen.getByPlaceholderText("ABC-1234"),
       "ABC-1234",
     );
-    await user.click(screen.getByRole("button", { name: /تحقق من الوثيقة/i }));
+    await user.click(screen.getByRole("button", { name: /التحقق من البوليصة/i }));
 
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toMatch(/was not found/);
-    expect(screen.queryByRole("button", { name: /متابعة تسجيل الحادث/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /المتابعة لإنشاء المطالبة/i })).toBeNull();
     expect(onVerified).not.toHaveBeenCalled();
   });
 
@@ -154,16 +154,16 @@ describe("PolicyVerificationModal", () => {
     );
 
     await user.type(
-      screen.getByRole("textbox", { name: "Policy Number" }),
+      screen.getByPlaceholderText("POL-1234567"),
       "POL-1000203",
     );
     await user.type(
-      screen.getByRole("textbox", { name: "Plate Number" }),
+      screen.getByPlaceholderText("ABC-1234"),
       "ABC-1234",
     );
 
     const verifyButton = screen.getByRole("button", {
-      name: /تحقق من الوثيقة/i,
+      name: /التحقق من البوليصة/i,
     }) as HTMLButtonElement;
 
     await user.click(verifyButton);
@@ -171,7 +171,7 @@ describe("PolicyVerificationModal", () => {
 
     resolveVerify(VERIFIED_POLICY);
     expect(
-      await screen.findByText(/تم التحقق من الوثيقة بنجاح/i),
+      await screen.findByText(/تم التحقق بنجاح/i),
     ).toBeTruthy();
   });
 
@@ -184,15 +184,15 @@ describe("PolicyVerificationModal", () => {
     );
 
     await user.type(
-      screen.getByRole("textbox", { name: "Policy Number" }),
+      screen.getByPlaceholderText("POL-1234567"),
       "POL-1000203",
     );
     await user.type(
-      screen.getByRole("textbox", { name: "Plate Number" }),
+      screen.getByPlaceholderText("ABC-1234"),
       "ABC-1234",
     );
-    await user.click(screen.getByRole("button", { name: /تحقق من الوثيقة/i }));
-    expect(await screen.findByText(/تم التحقق من الوثيقة بنجاح/i)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: /التحقق من البوليصة/i }));
+    expect(await screen.findByText(/تم التحقق بنجاح/i)).toBeTruthy();
 
     rerender(
       <PolicyVerificationModal isOpen={false} onClose={onClose} onVerified={onVerified} />,
@@ -205,12 +205,10 @@ describe("PolicyVerificationModal", () => {
     await waitFor(() => {
       expect(
         (
-          screen.getByRole("textbox", {
-            name: "Policy Number",
-          }) as HTMLInputElement
+          screen.getByPlaceholderText("POL-1234567") as HTMLInputElement
         ).value,
       ).toBe("");
     });
-    expect(screen.queryByText(/تم التحقق من الوثيقة بنجاح/i)).toBeNull();
+    expect(screen.queryByText(/تم التحقق بنجاح/i)).toBeNull();
   });
 });

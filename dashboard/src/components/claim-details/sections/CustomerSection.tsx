@@ -13,10 +13,6 @@ export default function CustomerSection({ claim }: CustomerSectionProps) {
       <InfoGrid columns="2">
         <InfoRow label="Customer Name" value={claim.customer.name} />
         <InfoRow label="Phone Number" value={claim.customer.phone} />
-        <InfoRow
-          label="Customer Policy Number"
-          value={claim.vehicle.policyId}
-        />
       </InfoGrid>
     </DetailSection>
   );

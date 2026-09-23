@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import type { Role, User, UserStatus } from "../types";
 import { getUserStatus } from "../utils/user";
+import { ROWS_PER_PAGE_OPTIONS } from "../utils/claims";
 
-export const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
+export { ROWS_PER_PAGE_OPTIONS };
 
 interface FilterState {
   search: string;

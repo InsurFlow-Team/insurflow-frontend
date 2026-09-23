@@ -2,19 +2,18 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, PlayCircle } from "lucide-react";
 import StatusBadge from "../ui/StatusBadge";
 import Button from "../ui/Button";
+import { formatDateTime } from "../../utils/claims";
 import type { ClaimDetails as ClaimDetailsType } from "../../types";
 
 interface ClaimDetailHeaderProps {
-  claimNumber: string;
-  status: ClaimDetailsType["status"];
+  claim: ClaimDetailsType;
   canStartReview: boolean;
   reviewing: boolean;
   onStartReview: () => void;
 }
 
 export default function ClaimDetailHeader({
-  claimNumber,
-  status,
+  claim,
   canStartReview,
   reviewing,
   onStartReview,
@@ -33,10 +32,20 @@ export default function ClaimDetailHeader({
         <div>
           <p className="text-sm text-text-muted">Claim number</p>
 
-          <h1 className="mt-1 text-2xl font-bold text-text">{claimNumber}</h1>
+          <h1 className="mt-1 text-2xl font-bold text-text">
+            {claim.claimNumber}
+          </h1>
 
-          <div className="mt-3">
-            <StatusBadge status={status} />
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <StatusBadge status={claim.status} />
+            <span className="text-sm text-text-muted">
+              {claim.incidentType || "—"}
+            </span>
+          </div>
+
+          <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-xs text-text-muted">
+            <span>Created: {formatDateTime(claim.createdAt)}</span>
+            <span>Updated: {formatDateTime(claim.updatedAt)}</span>
           </div>
         </div>
 

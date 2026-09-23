@@ -4,7 +4,11 @@ import VehicleSection from "./sections/VehicleSection";
 import CustomerSection from "./sections/CustomerSection";
 import PolicySection from "./sections/PolicySection";
 import AccidentSection from "./sections/AccidentSection";
-import LocationSection from "./sections/LocationSection";
+import IncidentLocationSection from "./sections/IncidentLocationSection";
+import InspectionLocationSection from "./sections/InspectionLocationSection";
+import EvidenceSection from "./sections/EvidenceSection";
+import SignatureSection from "./sections/SignatureSection";
+import DecisionSection from "./sections/DecisionSection";
 import type { ClaimDetails } from "../../types";
 
 interface ClaimInfoSectionsProps {
@@ -28,15 +32,20 @@ export default function ClaimInfoSections({
         onAssign={onAssign}
       />
 
-      <VehicleSection claim={claim} />
-
       <div className="grid gap-6 lg:grid-cols-2">
         <CustomerSection claim={claim} />
         <PolicySection claim={claim} />
       </div>
 
+      <VehicleSection claim={claim} />
       <AccidentSection claim={claim} />
-      <LocationSection claim={claim} />
+
+      <IncidentLocationSection claim={claim} />
+      <InspectionLocationSection claim={claim} />
+
+      <EvidenceSection claim={claim} />
+      <SignatureSection claim={claim} />
+      <DecisionSection claim={claim} />
     </div>
   );
 }
