@@ -16,7 +16,7 @@ export default function AssignmentSection({
   canAssign,
   onAssign,
 }: AssignmentSectionProps) {
-  const assignedTo = claim.assignment.assignedTo as { name?: string } | null;
+  const { assignedTo, assignedBy } = claim.assignment;
 
   return (
     <DetailSection
@@ -34,18 +34,26 @@ export default function AssignmentSection({
         ) : undefined
       }
     >
-      <InfoGrid columns="4">
-        <InfoRow label="Field Adjuster" value={assignedTo?.name} />
-        <InfoRow label="Priority" value={claim.assignment.priority} />
-        <InfoRow
-          label="Assigned At"
-          value={formatDateTime(claim.assignment.assignedAt)}
-        />
-        <InfoRow
-          label="Assignment Notes"
-          value={claim.assignment.assignmentNotes}
-        />
-      </InfoGrid>
+      {assignedTo ? (
+        <InfoGrid columns="4">
+          <InfoRow label="Field Adjuster" value={assignedTo.name} />
+          <InfoRow
+            label="Assigned By"
+            value={assignedBy ? `${assignedBy.name}` : null}
+          />
+          <InfoRow
+            label="Assigned At"
+            value={formatDateTime(claim.assignment.assignedAt)}
+          />
+          <InfoRow label="Priority" value={claim.assignment.priority} />
+          <InfoRow
+            label="Assignment Notes"
+            value={claim.assignment.assignmentNotes}
+          />
+        </InfoGrid>
+      ) : (
+        <p className="text-sm text-text-muted">لم يتم تعيين معاين بعد</p>
+      )}
     </DetailSection>
   );
 }

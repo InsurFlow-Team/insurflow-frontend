@@ -10,6 +10,7 @@ const CLAIM_STATUSES: readonly string[] = [
   "UNDER_REVIEW",
   "CORRECTION_REQUIRED",
   "APPROVED",
+  "REJECTED",
   "CLOSED",
 ];
 

@@ -3,18 +3,16 @@ import { AlertCircle } from "lucide-react";
 import Modal from "./Modal";
 import AddClaimModalFooter from "./AddClaimModalFooter";
 import ClaimIntakeBanner from "../claim-form/ClaimIntakeBanner";
+import VerifiedPolicySummary from "../claim-form/VerifiedPolicySummary";
+import ClaimIncidentSection from "../claim-form/ClaimIncidentSection";
+import PreciseLocationSection from "../claim-form/PreciseLocationSection";
 import { getApiErrorMessage } from "../../api/client";
 import { useForm } from "../../hooks/useForm";
 import {
   INITIAL_FORM_STATE,
   FORM_VALIDATORS,
 } from "../claim-form/claimFormConstants";
-import CustomerInfoSection from "../claim-form/CustomerInfoSection";
-import VehicleInfoSection from "../claim-form/VehicleInfoSection";
-import IncidentInfoSection from "../claim-form/IncidentInfoSection";
-import AccidentDescriptionSection from "../claim-form/AccidentDescriptionSection";
-import PreciseLocationSection from "../claim-form/PreciseLocationSection";
-import type { ClaimSummary } from "../../types";
+import type { ClaimSummary, PolicyVerificationResponse } from "../../types";
 import type { NewClaimData } from "../claim-form/claimFormConstants";
 
 export type { NewClaimData };
@@ -23,12 +21,18 @@ interface AddClaimModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (claimData: NewClaimData) => Promise<ClaimSummary>;
+  // The verified-policy data carried from the Policy Verification gate. It is
+  // the source of truth for the read-only customer/vehicle summary AND for the
+  // policyId/plateNumber that are merged into the create request at submit
+  // time — never collected as editable form state.
+  verifiedPolicy: PolicyVerificationResponse | null;
 }
 
 export default function AddClaimModal({
   isOpen,
   onClose,
   onSubmit,
+  verifiedPolicy,
 }: AddClaimModalProps) {
   const { values, errors, handleChange, isValid, reset } = useForm(
     INITIAL_FORM_STATE,
@@ -55,12 +59,31 @@ export default function AddClaimModal({
       return;
     }
 
+    // Hard gate: creation is impossible without a verified policy id. Never
+    // falls back to an empty policyId on the wire.
+    if (!verifiedPolicy?.policy.id) {
+      setSubmitError(
+        "لم يتم التحقق من بوليصة التأمين. أعد التحقق قبل إنشاء المطالبة.",
+      );
+      return;
+    }
+
     setSubmitError("");
     setIsSubmitting(true);
 
     try {
+      // Only incident details come from the form; policyId/plateNumber are
+      // merged in from the verified policy by the caller (ClaimsList).
+      const payload: NewClaimData = {
+        incidentType: values.incidentType,
+        incidentLocation: values.incidentLocation,
+        incidentDate: values.incidentDate,
+        latitude: values.latitude,
+        longitude: values.longitude,
+      };
+
       // Create claim only - no assignment
-      await onSubmit(values);
+      await onSubmit(payload);
 
       // Success: close modal and reset
       reset();
@@ -99,28 +122,11 @@ export default function AddClaimModal({
       <form onSubmit={handleSubmit} className="space-y-6">
         <ClaimIntakeBanner />
 
-        <CustomerInfoSection
-          values={values}
-          errors={errors}
-          onChange={handleChange}
-          disabled={isSubmitting}
-        />
+        {verifiedPolicy && (
+          <VerifiedPolicySummary verifiedPolicy={verifiedPolicy} />
+        )}
 
-        <VehicleInfoSection
-          values={values}
-          errors={errors}
-          onChange={handleChange}
-          disabled={isSubmitting}
-        />
-
-        <IncidentInfoSection
-          values={values}
-          errors={errors}
-          onChange={handleChange}
-          disabled={isSubmitting}
-        />
-
-        <AccidentDescriptionSection
+        <ClaimIncidentSection
           values={values}
           errors={errors}
           onChange={handleChange}
