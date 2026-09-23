@@ -1,28 +1,28 @@
 import type { ChangeEvent } from "react";
 import {
   validateRequired,
-  validatePlateNumber,
   validateIncidentType,
   validateCoordinate,
 } from "../../utils/validation";
-import type { ClaimPriority, CreateClaimDraft } from "../../types";
 
-// Full claim domain. Backend-supported fields are sent to POST /claims; the
-// remaining (frontend-only) fields stay in the model until the backend supports
-// them (see toCreateClaimRequest in claims.service.ts).
-export type NewClaimData = CreateClaimDraft;
+// Model of exactly what the Create Claim intake form collects. Customer and
+// vehicle identity are NOT part of the model: they are verified-policy data and
+// are never edited in the intake (see VerifiedPolicySummary). policyId and
+// plateNumber are merged into the request at submit time from the verified
+// policy (ClaimsList), not from the form.
+export interface NewClaimData {
+  incidentType: string;
+  incidentLocation: string;
+  incidentDate: string; // YYYY-MM-DD
+  latitude: string; // Form value (string), converted to number in service
+  longitude: string;
+}
 
 export type FormErrors = Partial<Record<keyof NewClaimData, string>>;
 
 export type FieldChangeHandler = (
   e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
 ) => void;
-
-export const PRIORITY_OPTIONS: Array<{ value: ClaimPriority; label: string }> = [
-  { value: "LOW", label: "Low" },
-  { value: "MEDIUM", label: "Medium" },
-  { value: "HIGH", label: "High" },
-];
 
 export const INCIDENT_TYPE_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "COLLISION", label: "Collision" },
@@ -32,21 +32,10 @@ export const INCIDENT_TYPE_OPTIONS: Array<{ value: string; label: string }> = [
   { value: "OTHER", label: "Other" },
 ];
 
-export const MAX_DESCRIPTION_LENGTH = 500;
-export const MAX_DAMAGE_LENGTH = 300;
-export const MAX_ASSIGNMENT_NOTES_LENGTH = 300;
-
-const VALID_PRIORITIES = ["LOW", "MEDIUM", "HIGH"] as const;
-
-export function isPrioritySelected(priority: ClaimPriority | undefined) {
-  return Boolean(priority) && VALID_PRIORITIES.includes(priority as ClaimPriority);
-}
-
-// Initial form state for new claim intake flow.
-// After policy verification, policyId and plateNumber are set from verified data.
+// Module-level constant so useForm receives referentially stable initial
+// values; keeping it inline used to recreate it every render and loop the
+// resetEffect ("Maximum update depth exceeded").
 export const INITIAL_FORM_STATE: NewClaimData = {
-  policyId: "",
-  plateNumber: "",
   incidentType: "",
   incidentLocation: "",
   incidentDate: "",
@@ -54,12 +43,9 @@ export const INITIAL_FORM_STATE: NewClaimData = {
   longitude: "",
 };
 
-// Validators for required fields in new claim intake flow
 export const FORM_VALIDATORS: Partial<
   Record<keyof NewClaimData, (value: string) => string | null>
 > = {
-  policyId: validateRequired,
-  plateNumber: validatePlateNumber,
   incidentType: validateIncidentType,
   incidentLocation: validateRequired,
   incidentDate: validateRequired,

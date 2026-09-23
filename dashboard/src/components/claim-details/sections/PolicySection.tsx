@@ -1,7 +1,7 @@
 import DetailSection from "../DetailSection";
 import InfoGrid from "../InfoGrid";
 import InfoRow from "../InfoRow";
-import { formatDateTime } from "../../../utils/claims";
+import { formatDate } from "../../../utils/claims";
 import type { ClaimDetails } from "../../../types";
 
 interface PolicySectionProps {
@@ -16,11 +16,11 @@ export default function PolicySection({ claim }: PolicySectionProps) {
         <InfoRow label="Policy Status" value={claim.policy?.status} />
         <InfoRow
           label="Policy Start Date"
-          value={formatDateTime(claim.policy?.startDate)}
+          value={formatDate(claim.policy?.startDate)}
         />
         <InfoRow
           label="Policy Expiry Date"
-          value={formatDateTime(claim.policy?.expiryDate)}
+          value={formatDate(claim.policy?.expiryDate)}
         />
       </InfoGrid>
     </DetailSection>

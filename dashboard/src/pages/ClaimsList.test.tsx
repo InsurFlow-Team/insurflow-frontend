@@ -2,7 +2,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, cleanup } from "@testing-library/react";
 import { screen } from "@testing-library/dom";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Routes, Route, useParams } from "react-router-dom";
 import { fillClaimForm, setupUserEvent } from "../test/test-utils";
 
 // DOM tests exercise full-form typing through React act(); give them room.
@@ -14,6 +14,10 @@ const { authRole } = vi.hoisted(() => ({
 
 vi.mock("../contexts/AuthContext", () => ({
   useAuth: () => ({ user: { role: authRole.value } }),
+}));
+
+vi.mock("../contexts/ToastContext", () => ({
+  toast: vi.fn(),
 }));
 
 vi.mock("../api/users.service", () => ({
@@ -60,7 +64,7 @@ const VERIFIED_POLICY: PolicyVerificationResponse = {
   },
   customer: {
     id: "customer-uuid-789",
-    name: "Ahmed Ibrahim",
+    fullName: "Ahmed Ibrahim",
     phone: "0512345678",
   },
 };
@@ -99,6 +103,7 @@ const ADJUSTER = {
 } as const;
 
 beforeEach(() => {
+  vi.mocked(getClaims).mockReset();
   vi.mocked(getFieldAdjusters).mockResolvedValue([]);
   vi.mocked(verifyPolicy).mockReset();
   vi.mocked(verifyPolicy).mockResolvedValue(VERIFIED_POLICY);
@@ -108,10 +113,18 @@ afterEach(() => {
   cleanup();
 });
 
+function DetailsStub() {
+  const { claimId } = useParams<{ claimId: string }>();
+  return <div>Details for {claimId}</div>;
+}
+
 async function renderPage() {
   const utils = render(
-    <MemoryRouter>
-      <ClaimsList />
+    <MemoryRouter initialEntries={["/claims"]}>
+      <Routes>
+        <Route path="/claims" element={<ClaimsList />} />
+        <Route path="/claims/:claimId" element={<DetailsStub />} />
+      </Routes>
     </MemoryRouter>,
   );
   return utils;
@@ -123,16 +136,16 @@ async function openCreateModal(policyNumber = "POL-1000203", plateNumber = "ABC-
   const user = setupUserEvent();
   await user.click(await screen.findByRole("button", { name: "Add Claim" }));
 
-  const policyInput = await screen.findByRole("textbox", { name: "Policy Number" });
+  const policyInput = await screen.findByPlaceholderText("POL-1234567");
   await user.type(policyInput, policyNumber);
-  
-  const plateInput = await screen.findByRole("textbox", { name: "Plate Number" });
+
+  const plateInput = await screen.findByPlaceholderText("ABC-1234");
   await user.type(plateInput, plateNumber);
-  
-  await user.click(screen.getByRole("button", { name: /تحقق من الوثيقة/i }));
+
+  await user.click(screen.getByRole("button", { name: /التحقق من البوليصة/i }));
 
   await user.click(
-    await screen.findByRole("button", { name: /متابعة تسجيل الحادث/i }),
+    await screen.findByRole("button", { name: /المتابعة لإنشاء المطالبة/i }),
   );
   await screen.findByText("Create New Claim");
 }
@@ -149,10 +162,8 @@ describe("ClaimsList", () => {
     expect(screen.getAllByRole("link", { name: /View Details/i }).length).toBe(1);
   });
 
-  it("after creating a claim, refetches the list and shows exactly one row with no duplicate", async () => {
-    vi.mocked(getClaims)
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([CREATED_ROW]);
+  it("after creating a claim, navigates directly to its details page using the created id", async () => {
+    vi.mocked(getClaims).mockResolvedValue([]);
     vi.mocked(createClaim).mockResolvedValue({
       id: "clm-new",
       claimNumber: "CLM-2026-0099",
@@ -170,13 +181,14 @@ describe("ClaimsList", () => {
     expect(verifyPolicy).toHaveBeenCalledWith({
       policyNumber: "POL-1000203",
       plateNumber: expect.any(String),
-      incidentDate: expect.any(String),
+      incidentDate: undefined,
     });
 
     const user = setupUserEvent();
     await user.click(screen.getByRole("button", { name: /Create Claim/i }));
 
-    expect(await screen.findByText("CLM-2026-0099")).toBeTruthy();
+    // The user lands directly on the Claim Details page for the created claim.
+    expect(await screen.findByText("Details for clm-new")).toBeTruthy();
 
     // POST payload contains ONLY the verified contract fields from policy verification
     // plus incident details. Coordinates are required (location is mandatory), sent top-level as numbers.
@@ -190,14 +202,102 @@ describe("ClaimsList", () => {
       longitude: 46.6753,
     });
 
-    // The list was refreshed from GET /claims (initial + post-create refresh).
-    expect(getClaims).toHaveBeenCalledTimes(2);
+    // Exactly one create request — no duplicate submission.
+    expect(createClaim).toHaveBeenCalledTimes(1);
+  });
 
-    // Exactly one row for the created claim — no fabricated duplicate.
-    expect(screen.getAllByText("CLM-2026-0099")).toHaveLength(1);
+  it("does not return to policy verification once the intake form is open, and verifies exactly once", async () => {
+    vi.mocked(getClaims).mockResolvedValue([]);
 
-    // Success feedback is shown with the real claimNumber from the backend.
-    expect(screen.getByText(/CLM-2026-0099 created successfully/)).toBeTruthy();
+    await renderPage();
+    await openCreateModal();
+
+    expect(screen.getByText("Create New Claim")).toBeTruthy();
+
+    // The verification step is gone while the intake form is open — the fixed
+    // regression: Continue must never bounce the user back to the verification
+    // modal.
+    expect(
+      screen.queryByRole("button", { name: /التحقق من البوليصة/i }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /المتابعة لإنشاء المطالبة/i }),
+    ).toBeNull();
+
+    // Verification ran exactly once in the whole flow.
+    expect(verifyPolicy).toHaveBeenCalledTimes(1);
+
+    // Verified customer/vehicle data is carried into the intake (read-only).
+    expect(screen.getAllByText("Ahmed Ibrahim").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("ABC-1234").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("builds the create payload only from the verified policy and incident fields (never customer/vehicle form input)", async () => {
+    vi.mocked(getClaims).mockResolvedValue([]);
+    vi.mocked(createClaim).mockResolvedValue(CREATED_ROW);
+
+    const { container } = await renderPage();
+    await openCreateModal();
+    await fillClaimForm(container);
+
+    const user = setupUserEvent();
+    await user.click(screen.getByRole("button", { name: /Create Claim/i }));
+
+    // Success navigates straight to the claim details (id from the response).
+    await screen.findByText("Details for clm-new");
+
+    expect(createClaim).toHaveBeenCalledTimes(1);
+    expect(createClaim).toHaveBeenCalledWith(
+      expect.not.objectContaining({ customerName: expect.anything() }),
+    );
+    expect(createClaim).toHaveBeenCalledWith(
+      expect.not.objectContaining({ customerPhone: expect.anything() }),
+    );
+    expect(createClaim).toHaveBeenCalledWith(
+      expect.not.objectContaining({ initialPlateNumber: expect.anything() }),
+    );
+    expect(createClaim).toHaveBeenCalledWith(
+      expect.not.objectContaining({ vehicleMake: expect.anything() }),
+    );
+    expect(createClaim).toHaveBeenCalledWith(
+      expect.not.objectContaining({ vehicleModel: expect.anything() }),
+    );
+    expect(createClaim).toHaveBeenCalledWith(
+      expect.not.objectContaining({ vehicleYear: expect.anything() }),
+    );
+    expect(createClaim).toHaveBeenCalledWith(
+      expect.not.objectContaining({ vehicleColor: expect.anything() }),
+    );
+  });
+
+  it("keeps a successful create a success when the post-create list refresh fails", async () => {
+    vi.mocked(getClaims)
+      .mockResolvedValueOnce([FULL_ROW])
+      .mockRejectedValueOnce(
+        Object.assign(new Error("Request failed with status code 500"), {
+          isAxiosError: true,
+          response: {
+            status: 500,
+            data: { success: false, message: "Server exploded" },
+          },
+        }),
+      );
+    vi.mocked(createClaim).mockResolvedValue(CREATED_ROW);
+
+    const { container } = await renderPage();
+    await openCreateModal();
+    await fillClaimForm(container);
+
+    const user = setupUserEvent();
+    await user.click(screen.getByRole("button", { name: /Create Claim/i }));
+
+    // Creation is committed: the user is taken straight to the claim details
+    // even though the background list refresh failed.
+    expect(await screen.findByText("Details for clm-new")).toBeTruthy();
+    // …exactly one create request was made (no duplicate-creating retry)…
+    expect(createClaim).toHaveBeenCalledTimes(1);
+    // …and no "creation failed" message ever appears.
+    expect(screen.queryByText("Create New Claim")).toBeNull();
   });
 
   it("shows the backend error and keeps the modal open when POST /claims returns 400 (unsupported fields)", async () => {
@@ -259,6 +359,12 @@ describe("ClaimsList", () => {
           data: {
             success: false,
             message: "Policy not found. Check the number and try again.",
+            errors: [
+              {
+                code: "POLICY_NOT_FOUND",
+                details: "Policy not found. Check the number and try again.",
+              },
+            ],
           },
         },
       }),
@@ -269,17 +375,17 @@ describe("ClaimsList", () => {
 
     await user.click(await screen.findByRole("button", { name: "Add Claim" }));
     await user.type(
-      await screen.findByRole("textbox", { name: "Policy Number" }),
+      await screen.findByPlaceholderText("POL-1234567"),
       "00000000",
     );
-    await user.click(screen.getByRole("button", { name: /تحقق من الوثيقة/i }));
+    await user.click(screen.getByRole("button", { name: /التحقق من البوليصة/i }));
 
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toMatch(/not found/);
+    expect(alert.textContent).toMatch(/غير موجودة/);
 
     // The gate holds: no continue action, no intake form, and no claim API call.
     expect(
-      screen.queryByRole("button", { name: /متابعة تسجيل الحادث/i }),
+      screen.queryByRole("button", { name: /المتابعة لإنشاء المطالبة/i }),
     ).toBeNull();
     expect(screen.queryByText("Create New Claim")).toBeNull();
     expect(createClaim).not.toHaveBeenCalled();

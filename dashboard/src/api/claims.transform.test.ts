@@ -217,6 +217,7 @@ describe("toClaimSummary", () => {
     "ASSIGNED",
     "UNDER_REVIEW",
     "APPROVED",
+    "REJECTED",
     "CLOSED",
   ])("passes the live lifecycle status %s through unchanged", (status) => {
     const result = toClaimSummary({

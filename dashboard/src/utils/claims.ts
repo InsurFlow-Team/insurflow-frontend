@@ -17,6 +17,7 @@ export const STATUS_OPTIONS: Array<{
   { label: "Correction Required", value: "CORRECTION_REQUIRED" },
   { label: "Approved", value: "APPROVED" },
   { label: "Closed", value: "CLOSED" },
+  { label: "Rejected", value: "REJECTED" },
 ];
 
 export const DATE_RANGE_OPTIONS: Array<{
