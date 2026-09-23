@@ -107,7 +107,7 @@ describe("adjustersWithCoordinates (null-safe)", () => {
 
 describe("pin coloring", () => {
   it("covers every claim status with a color", () => {
-    expect(Object.keys(CLAIM_STATUS_COLORS)).toHaveLength(9);
+    expect(Object.keys(CLAIM_STATUS_COLORS)).toHaveLength(10);
   });
 
   it("colors by backend availability, never a hardcoded capacity", () => {

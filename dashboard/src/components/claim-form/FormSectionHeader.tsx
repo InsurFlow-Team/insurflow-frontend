@@ -1,16 +1,26 @@
 import type { LucideIcon } from "lucide-react";
 
 interface FormSectionHeaderProps {
-  icon: LucideIcon;
+  icon?: LucideIcon;
   title: string;
+  subtitle?: string;
 }
 
-export default function FormSectionHeader({ icon: Icon, title }: FormSectionHeaderProps) {
+export default function FormSectionHeader({
+  icon: Icon,
+  title,
+  subtitle,
+}: FormSectionHeaderProps) {
   return (
-    <div className="flex items-center gap-2 pb-2 border-b border-border">
-      <Icon size={18} className="text-primary" />
-      <h3 className="text-sm font-semibold text-text">{title}</h3>
-      <span className="ml-auto text-xs text-danger">* Required</span>
+    <div className="pb-2 border-b border-border">
+      <div className="flex items-center gap-2">
+        {Icon && <Icon size={18} className="text-primary" />}
+        <h3 className="text-sm font-semibold text-text">{title}</h3>
+        {!subtitle && <span className="ml-auto text-xs text-danger">* Required</span>}
+      </div>
+      {subtitle && (
+        <p className="text-xs text-text-muted mt-1">{subtitle}</p>
+      )}
     </div>
   );
 }

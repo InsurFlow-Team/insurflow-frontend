@@ -15,11 +15,13 @@ import type { CreateClaimDraft } from "../types";
 const mockedPost = vi.mocked(apiClient.post);
 
 const VALID_PAYLOAD: CreateClaimRequest = {
-  customerName: "Ahmed Ibrahim",
-  customerPhone: "0512345678",
-  initialPlateNumber: "ABC-1234",
+  policyId: "policy-uuid-123",
+  plateNumber: "ABC-1234",
   incidentType: "COLLISION",
   incidentLocation: "Riyadh - King Fahd Road",
+  incidentDate: "2026-09-20",
+  latitude: 24.7136,
+  longitude: 46.6753,
 };
 
 describe("createClaim", () => {
@@ -110,23 +112,26 @@ describe("createClaim", () => {
     });
 
     const draft: CreateClaimDraft = {
+      policyId: "policy-uuid-123",
+      plateNumber: "ABC-1234",
+      incidentType: "COLLISION",
+      incidentLocation: "Riyadh - King Fahd Road",
+      incidentDate: "2026-09-01",
+      latitude: "24.7136",
+      longitude: "46.6753",
+      // Legacy fields - should be excluded from the request
       customerName: "Ahmed Ibrahim",
       customerPhone: "0512345678",
       insurancePolicyNumber: "POL-123456",
-      initialPlateNumber: "ABC-1234",
       vehicleMake: "Toyota",
       vehicleModel: "Camry",
       vehicleYear: "2022",
       vehicleColor: "White",
-      incidentType: "COLLISION",
-      incidentLocation: "Riyadh - King Fahd Road",
       accidentDate: "2026-09-01",
       accidentTime: "14:30",
       description: "Rear collision while waiting at a red light on the highway.",
       damageDescription: "Bumper cracked and trunk lid is misaligned.",
       address: "",
-      latitude: "",
-      longitude: "",
       adjusterId: "adj-1",
       priority: "HIGH",
       assignmentNotes: "Please inspect as soon as possible",
@@ -135,11 +140,13 @@ describe("createClaim", () => {
     await createClaim(toCreateClaimRequest(draft));
 
     expect(mockedPost).toHaveBeenCalledWith("/claims", {
-      customerName: "Ahmed Ibrahim",
-      customerPhone: "0512345678",
-      initialPlateNumber: "ABC-1234",
+      policyId: "policy-uuid-123",
+      plateNumber: "ABC-1234",
       incidentType: "COLLISION",
       incidentLocation: "Riyadh - King Fahd Road",
+      incidentDate: "2026-09-01",
+      latitude: 24.7136,
+      longitude: 46.6753,
     });
   });
 });

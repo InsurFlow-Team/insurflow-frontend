@@ -5,14 +5,11 @@ import type { CreateClaimDraft } from "../types";
 import { toClaimSummary } from "./claims.transform";
 
 export interface CreateClaimRequest {
-  customerName: string;
-  customerPhone: string;
-  initialPlateNumber: string;
+  policyId: string; // Required: from policy verification
+  plateNumber: string; // Required: verified plate
   incidentType: string;
   incidentLocation: string;
-  // Backend contract (confirmed): coordinates are top-level fields, NOT nested
-  // inside incidentCoordinates. They are optional but must be sent as a pair —
-  // a partial coordinate is a frontend validation error, never a request.
+  incidentDate: string; // YYYY-MM-DD
   latitude?: number;
   longitude?: number;
 }
@@ -20,33 +17,43 @@ export interface CreateClaimRequest {
 export function toCreateClaimRequest(
   draft: CreateClaimDraft,
 ): CreateClaimRequest {
-  const request: CreateClaimRequest = {
-    customerName: draft.customerName,
-    customerPhone: draft.customerPhone,
-    initialPlateNumber: draft.initialPlateNumber,
-    incidentType: draft.incidentType,
-    incidentLocation: draft.incidentLocation,
-  };
+  const rawLatitude = typeof draft.latitude === "string" ? draft.latitude.trim() : "";
+  const rawLongitude =
+    typeof draft.longitude === "string" ? draft.longitude.trim() : "";
 
-  // Both-or-neither: a single coordinate would be an incomplete request. Only
-  // a fully valid pair is ever attached (top-level, per the backend contract).
-  const latitude = Number(draft.latitude);
-  const longitude = Number(draft.longitude);
-  const hasLatitude =
-    draft.latitude.trim() !== "" &&
-    Number.isFinite(latitude) &&
-    Math.abs(latitude) <= 90;
-  const hasLongitude =
-    draft.longitude.trim() !== "" &&
-    Number.isFinite(longitude) &&
-    Math.abs(longitude) <= 180;
+  // Coordinates are only sent when BOTH are present — a partial/empty pair is
+  // never put on the wire (the form requires both before submit).
+  if (rawLatitude !== "" && rawLongitude !== "") {
+    const latitude = Number(rawLatitude);
+    const longitude = Number(rawLongitude);
 
-  if (hasLatitude && hasLongitude) {
-    request.latitude = latitude;
-    request.longitude = longitude;
+    if (
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      Math.abs(latitude) > 90 ||
+      Math.abs(longitude) > 180
+    ) {
+      throw new Error("Valid incident coordinates are required");
+    }
+
+    return {
+      policyId: draft.policyId,
+      plateNumber: draft.plateNumber,
+      incidentType: draft.incidentType,
+      incidentLocation: draft.incidentLocation,
+      incidentDate: draft.incidentDate,
+      latitude,
+      longitude,
+    };
   }
 
-  return request;
+  return {
+    policyId: draft.policyId,
+    plateNumber: draft.plateNumber,
+    incidentType: draft.incidentType,
+    incidentLocation: draft.incidentLocation,
+    incidentDate: draft.incidentDate,
+  };
 }
 
 export async function createClaim(

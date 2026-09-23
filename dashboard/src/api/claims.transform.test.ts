@@ -4,52 +4,51 @@ import { toCreateClaimRequest, toClaimSummary } from "./claims.service";
 import type { CreateClaimDraft } from "../types";
 
 describe("toCreateClaimRequest", () => {
-  it("sends the core contract fields plus top-level latitude/longitude when both coordinates are provided", () => {
+  it("sends the verified contract fields (policyId, plateNumber, incidentDate) plus coordinates when provided", () => {
     const draft: CreateClaimDraft = {
-      customerName: "Ahmed Ibrahim",
-      customerPhone: "0512345678",
-      initialPlateNumber: "ABC-1234",
+      policyId: "policy-uuid-123",
+      plateNumber: "ABC-1234",
       incidentType: "COLLISION",
       incidentLocation: "Riyadh - King Fahd Road",
-      // Backend-unsupported domain fields that stay on the frontend and are
-      // never included in the POST /claims payload:
-      accidentDate: "2026-09-01",
-      accidentTime: "14:30",
-      description: "Rear collision while waiting at a red light.",
-      damageDescription: "Bumper cracked and trunk lid is misaligned.",
-      address: "King Fahd Road, Riyadh",
+      incidentDate: "2026-09-01",
+      latitude: "24.7136",
+      longitude: "46.6753",
+      // Legacy fields - should NOT be sent to backend
+      customerName: "Ahmed Ibrahim",
+      customerPhone: "0512345678",
       insurancePolicyNumber: "POL-123456",
       vehicleMake: "Toyota",
       vehicleModel: "Camry",
       vehicleYear: "2022",
       vehicleColor: "White",
+      accidentDate: "2026-09-01",
+      accidentTime: "14:30",
+      description: "Rear collision while waiting at a red light.",
+      damageDescription: "Bumper cracked and trunk lid is misaligned.",
+      address: "King Fahd Road, Riyadh",
       adjusterId: "adj-1",
       priority: "HIGH",
       assignmentNotes: "Please inspect as soon as possible",
-      latitude: "24.7136",
-      longitude: "46.6753",
     };
 
     const request = toCreateClaimRequest(draft);
 
     expect(request).toEqual({
-      customerName: "Ahmed Ibrahim",
-      customerPhone: "0512345678",
-      initialPlateNumber: "ABC-1234",
+      policyId: "policy-uuid-123",
+      plateNumber: "ABC-1234",
       incidentType: "COLLISION",
       incidentLocation: "Riyadh - King Fahd Road",
-      // Confirmed contract: coordinates are TOP-LEVEL fields, never nested
-      // inside incidentCoordinates.
+      incidentDate: "2026-09-01",
       latitude: 24.7136,
       longitude: 46.6753,
     });
 
     expect(Object.keys(request)).toEqual([
-      "customerName",
-      "customerPhone",
-      "initialPlateNumber",
+      "policyId",
+      "plateNumber",
       "incidentType",
       "incidentLocation",
+      "incidentDate",
       "latitude",
       "longitude",
     ]);
@@ -57,16 +56,11 @@ describe("toCreateClaimRequest", () => {
 
   it("never sends a partial coordinate — one without the other stays off the wire", () => {
     const onlyLatitude: CreateClaimDraft = {
-      customerName: "Ahmed Ibrahim",
-      customerPhone: "0512345678",
-      initialPlateNumber: "ABC-1234",
+      policyId: "policy-uuid-123",
+      plateNumber: "ABC-1234",
       incidentType: "COLLISION",
       incidentLocation: "Riyadh - King Fahd Road",
-      accidentDate: "",
-      accidentTime: "",
-      description: "",
-      damageDescription: "",
-      address: "",
+      incidentDate: "2026-09-01",
       latitude: "24.7136",
       longitude: "",
     };
@@ -86,37 +80,43 @@ describe("toCreateClaimRequest", () => {
     expect(toCreateClaimRequest(onlyLongitude)).not.toHaveProperty("longitude");
   });
 
-  it("never serializes unsupported fields even as empty strings", () => {
+  it("never serializes legacy/unsupported fields even if provided", () => {
     const draft: CreateClaimDraft = {
-      customerName: "Ahmed Ibrahim",
-      customerPhone: "0512345678",
-      initialPlateNumber: "ABC-1234",
+      policyId: "policy-uuid-123",
+      plateNumber: "ABC-1234",
       incidentType: "COLLISION",
       incidentLocation: "Riyadh - King Fahd Road",
+      incidentDate: "2026-09-01",
+      latitude: "",
+      longitude: "",
+      // Legacy fields
+      customerName: "Ahmed",
+      customerPhone: "0512345678",
       accidentDate: "",
       accidentTime: "",
       description: "",
       damageDescription: "",
       address: "",
-      latitude: "",
-      longitude: "",
     };
 
     const request = toCreateClaimRequest(draft);
 
+    // Legacy fields should not be in request
+    expect(request).not.toHaveProperty("customerName");
+    expect(request).not.toHaveProperty("customerPhone");
+    expect(request).not.toHaveProperty("initialPlateNumber");
     expect(request).not.toHaveProperty("address");
-    expect(request).not.toHaveProperty("latitude");
-    expect(request).not.toHaveProperty("longitude");
     expect(request).not.toHaveProperty("accidentDate");
     expect(request).not.toHaveProperty("accidentTime");
     expect(request).not.toHaveProperty("description");
     expect(request).not.toHaveProperty("damageDescription");
-    expect(request).not.toHaveProperty("organizationId");
-    expect(request).not.toHaveProperty("createdBy");
-    expect(request).not.toHaveProperty("createdAt");
-    expect(request).not.toHaveProperty("status");
     expect(request).not.toHaveProperty("adjusterId");
     expect(request).not.toHaveProperty("priority");
+    expect(request).not.toHaveProperty("assignmentNotes");
+    
+    // Empty coordinates should not be in request
+    expect(request).not.toHaveProperty("latitude");
+    expect(request).not.toHaveProperty("longitude");
   });
 });
 
@@ -217,6 +217,7 @@ describe("toClaimSummary", () => {
     "ASSIGNED",
     "UNDER_REVIEW",
     "APPROVED",
+    "REJECTED",
     "CLOSED",
   ])("passes the live lifecycle status %s through unchanged", (status) => {
     const result = toClaimSummary({
