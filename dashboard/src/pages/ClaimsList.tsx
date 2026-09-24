@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getClaims } from "../api/claims.service";
 import { getApiErrorMessage } from "../api/client";
 import type { ClaimStatus, ClaimSummary } from "../types";
@@ -9,7 +10,6 @@ import ErrorState from "../components/ui/ErrorState";
 import DataTable from "../components/ui/DataTable";
 import Pagination from "../components/ui/Pagination";
 import AddClaimModal from "../components/ui/AddClaimModal";
-import AssignClaimModal from "../components/ui/AssignClaimModal";
 import PolicyVerificationModal from "../components/ui/PolicyVerificationModal";
 import { buildClaimColumns } from "../components/claims/claimsColumns";
 import ClaimsBanners from "../components/claims/ClaimsBanners";
@@ -28,13 +28,12 @@ export default function ClaimsList() {
   const { user } = useAuth();
   const canAssign =
     user?.role === "ADMIN" || user?.role === "CLAIMS_OFFICER";
+  const navigate = useNavigate();
 
   const [claims, setClaims] = useState<ClaimSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [assignTarget, setAssignTarget] = useState<ClaimSummary | null>(null);
-  const [successBanner, setSuccessBanner] = useState("");
   const [errorBanner, setErrorBanner] = useState("");
 
   const [search, setSearch] = useState("");
@@ -76,28 +75,11 @@ export default function ClaimsList() {
     void loadClaims();
   }, [loadClaims]);
 
-  // Auto-dismiss the success banner after a few seconds.
-  useEffect(() => {
-    if (!successBanner) return;
-    const timerId = window.setTimeout(() => setSuccessBanner(""), 6000);
-    return () => window.clearTimeout(timerId);
-  }, [successBanner]);
-
+  // Assigning happens on the Dispatch Map (same-backed dataset, nearest adjuster
+  // + distances there) — deep-link the claim so it is selected and the assign
+  // modal opens immediately.
   function openAssign(claim: ClaimSummary) {
-    setAssignTarget(claim);
-  }
-
-  function closeAssign() {
-    setAssignTarget(null);
-  }
-
-  async function handleAssigned() {
-    setErrorBanner("");
-    if (assignTarget) {
-      setSuccessBanner(`${assignTarget.claimNumber} assigned successfully`);
-    }
-    await loadClaims();
-    closeAssign();
+    navigate(`/map?claim=${encodeURIComponent(claim.id)}`);
   }
 
   const columns = buildClaimColumns({ canAssign, onAssign: openAssign });
@@ -181,12 +163,11 @@ export default function ClaimsList() {
 
   return (
     <div className="space-y-6">
-      <ClaimsBanners success={successBanner} error={errorBanner} />
+      <ClaimsBanners error={errorBanner} />
 
       <ClaimsPageHeader
         organizationName={user?.organizationName}
         onAddClaim={() => {
-          setSuccessBanner("");
           setErrorBanner("");
           intake.openPolicyVerification();
         }}
@@ -235,15 +216,6 @@ export default function ClaimsList() {
         onSubmit={intake.handleCreate}
         verifiedPolicy={intake.verifiedPolicy}
       />
-
-      {assignTarget && (
-        <AssignClaimModal
-          isOpen
-          onClose={closeAssign}
-          claimId={assignTarget.id}
-          onAssigned={() => void handleAssigned()}
-        />
-      )}
     </div>
   );
 }

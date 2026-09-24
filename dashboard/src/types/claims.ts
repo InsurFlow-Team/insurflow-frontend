@@ -25,8 +25,6 @@ export interface CreateClaimDraft {
   incidentType: string;
   incidentLocation: string;
   incidentDate: string; // YYYY-MM-DD
-  latitude: string; // Form value (string), converted to number in service
-  longitude: string; // Form value (string), converted to number in service
   // Legacy fields - kept for backward compatibility but not used in new flow
   customerName?: string;
   customerPhone?: string;

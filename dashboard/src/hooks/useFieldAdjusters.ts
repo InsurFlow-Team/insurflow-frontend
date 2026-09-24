@@ -5,43 +5,53 @@ import { getApiErrorMessage } from "../api/client";
 
 const POLL_INTERVAL_MS = 30_000;
 
-export function useFieldAdjusters(claimId?: string) {
+export function useFieldAdjusters(claimId?: string, enabled = true) {
   const [adjusters, setAdjusters] = useState<FieldAdjuster[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pollingPaused, setPollingPaused] = useState(false);
 
-  const fetchAdjusters = useCallback(async (silent: boolean) => {
-    if (!silent) {
-      setLoading(true);
-      setError(null);
-    }
+  const fetchAdjusters = useCallback(
+    async (silent: boolean) => {
+      // Disabled when the caller supplies preloaded adjusters (Map Dispatch
+      // already fetched the claim-scoped dataset for the pins — never a second
+      // GET /users/adjusters just for the assignment modal).
+      if (!enabled) return;
 
-    try {
-      setAdjusters(await getFieldAdjusters(claimId));
-      setError(null);
-    } catch (requestError) {
-      setError(getApiErrorMessage(requestError));
-    } finally {
       if (!silent) {
-        setLoading(false);
+        setLoading(true);
+        setError(null);
       }
+
+      try {
+        setAdjusters(await getFieldAdjusters(claimId));
+        setError(null);
+      } catch (requestError) {
+        setError(getApiErrorMessage(requestError));
+      } finally {
+        if (!silent) {
+          setLoading(false);
+        }
+      }
+    },
+    [claimId, enabled],
+  );
+
+  useEffect(() => {
+    if (enabled) {
+      void fetchAdjusters(false);
     }
-  }, [claimId]);
+  }, [fetchAdjusters, enabled]);
 
   useEffect(() => {
-    void fetchAdjusters(false);
-  }, [fetchAdjusters]);
-
-  useEffect(() => {
-    if (pollingPaused) return;
+    if (pollingPaused || !enabled) return;
 
     const timer = window.setInterval(() => {
       void fetchAdjusters(true);
     }, POLL_INTERVAL_MS);
 
     return () => window.clearInterval(timer);
-  }, [pollingPaused, fetchAdjusters]);
+  }, [pollingPaused, fetchAdjusters, enabled]);
 
   const reload = useCallback(() => fetchAdjusters(false), [fetchAdjusters]);
 

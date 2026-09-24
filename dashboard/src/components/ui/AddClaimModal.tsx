@@ -5,7 +5,6 @@ import AddClaimModalFooter from "./AddClaimModalFooter";
 import ClaimIntakeBanner from "../claim-form/ClaimIntakeBanner";
 import VerifiedPolicySummary from "../claim-form/VerifiedPolicySummary";
 import ClaimIncidentSection from "../claim-form/ClaimIncidentSection";
-import PreciseLocationSection from "../claim-form/PreciseLocationSection";
 import { getApiErrorMessage } from "../../api/client";
 import { useForm } from "../../hooks/useForm";
 import {
@@ -40,14 +39,12 @@ export default function AddClaimModal({
   );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showPreciseLocation, setShowPreciseLocation] = useState(true);
   const [submitError, setSubmitError] = useState("");
 
   // Reset form when modal closes
   useEffect(() => {
     if (!isOpen) {
       reset();
-      setShowPreciseLocation(true);
       setSubmitError("");
     }
   }, [isOpen, reset]);
@@ -73,13 +70,12 @@ export default function AddClaimModal({
 
     try {
       // Only incident details come from the form; policyId/plateNumber are
-      // merged in from the verified policy by the caller (ClaimsList).
+      // merged in from the verified policy by the caller (ClaimsList). The
+      // create payload is text-only — no coordinates (ruling 2026-09-24).
       const payload: NewClaimData = {
         incidentType: values.incidentType,
         incidentLocation: values.incidentLocation,
         incidentDate: values.incidentDate,
-        latitude: values.latitude,
-        longitude: values.longitude,
       };
 
       // Create claim only - no assignment
@@ -87,7 +83,6 @@ export default function AddClaimModal({
 
       // Success: close modal and reset
       reset();
-      setShowPreciseLocation(true);
       setSubmitError("");
       onClose();
     } catch (createError) {
@@ -100,21 +95,9 @@ export default function AddClaimModal({
   const handleClose = () => {
     if (!isSubmitting) {
       reset();
-      setShowPreciseLocation(true);
       setSubmitError("");
       onClose();
     }
-  };
-
-  // The form only accepts ChangeEvents one field at a time; "Use My Current
-  // Location" fills both coordinates, so fabricate a change for each.
-  const handleSetPreciseLocation = (latitude: number, longitude: number) => {
-    handleChange({
-      target: { name: "latitude", value: String(latitude) },
-    } as React.ChangeEvent<HTMLInputElement>);
-    handleChange({
-      target: { name: "longitude", value: String(longitude) },
-    } as React.ChangeEvent<HTMLInputElement>);
   };
 
   return (
@@ -131,16 +114,6 @@ export default function AddClaimModal({
           errors={errors}
           onChange={handleChange}
           disabled={isSubmitting}
-        />
-
-        <PreciseLocationSection
-          values={values}
-          errors={errors}
-          onChange={handleChange}
-          disabled={isSubmitting}
-          open={showPreciseLocation}
-          onToggle={() => setShowPreciseLocation((open) => !open)}
-          onSetLocation={handleSetPreciseLocation}
         />
 
         {/* Create error */}

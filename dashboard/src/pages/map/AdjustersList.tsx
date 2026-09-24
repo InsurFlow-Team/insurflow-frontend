@@ -5,9 +5,17 @@ import type { FieldAdjuster } from "../../types";
 interface AdjustersListProps {
   adjusters: FieldAdjuster[];
   loading: boolean;
+  // DEMO mode: distances/ordering come from simulated data.
+  demo?: boolean;
 }
 
-function AdjusterRow({ adjuster }: { adjuster: FieldAdjuster }) {
+function AdjusterRow({
+  adjuster,
+  demo,
+}: {
+  adjuster: FieldAdjuster;
+  demo?: boolean;
+}) {
   const busy = adjuster.availability === "UNAVAILABLE";
 
   return (
@@ -32,9 +40,12 @@ function AdjusterRow({ adjuster }: { adjuster: FieldAdjuster }) {
         {typeof adjuster.distanceKm === "number" ? (
           <span className="font-medium text-primary">
             {adjuster.distanceKm.toFixed(2)} km
+            {demo ? " · DEMO" : ""}
           </span>
         ) : (
-          <span className="text-text-muted">Distance unavailable</span>
+          // No live coordinates yet (backend location null) → the adjuster has
+          // no map marker; the list still shows them with an explicit note.
+          <span className="text-text-muted">الموقع غير متوفر</span>
         )}
       </div>
     </div>
@@ -44,28 +55,43 @@ function AdjusterRow({ adjuster }: { adjuster: FieldAdjuster }) {
 export default function AdjustersList({
   adjusters,
   loading,
+  demo,
 }: AdjustersListProps) {
+  // Nearest first where a distance exists (real or DEMO); adjusters without a
+  // distance are kept after them, in their original order.
+  const sortedAdjusters = [...adjusters].sort((a, b) => {
+    const distanceA = typeof a.distanceKm === "number" ? a.distanceKm : Infinity;
+    const distanceB = typeof b.distanceKm === "number" ? b.distanceKm : Infinity;
+    return distanceA - distanceB;
+  });
+
   return (
     <div className="pt-2 border-t border-border">
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs font-semibold text-text flex items-center gap-1">
           <Users size={14} className="text-primary" />
-          Available Adjusters ({adjusters.length})
+          Active Adjusters ({adjusters.length})
         </p>
-        {loading && (
+        {loading ? (
           <span className="text-[10px] text-text-muted animate-pulse">
             Sorting by proximity...
           </span>
-        )}
+        ) : demo ? (
+          <span className="rounded border border-amber-200 bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
+            DEMO
+          </span>
+        ) : null}
       </div>
 
       <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
-        {adjusters.length === 0 ? (
+        {sortedAdjusters.length === 0 ? (
           <p className="text-xs text-text-muted italic">
             No active adjusters available.
           </p>
         ) : (
-          adjusters.map((adj) => <AdjusterRow key={adj.id} adjuster={adj} />)
+          sortedAdjusters.map((adj) => (
+            <AdjusterRow key={adj.id} adjuster={adj} demo={demo} />
+          ))
         )}
       </div>
     </div>

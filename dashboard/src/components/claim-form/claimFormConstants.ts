@@ -1,21 +1,17 @@
 import type { ChangeEvent } from "react";
-import {
-  validateRequired,
-  validateIncidentType,
-  validateCoordinate,
-} from "../../utils/validation";
+import { validateRequired, validateIncidentType } from "../../utils/validation";
 
 // Model of exactly what the Create Claim intake form collects. Customer and
 // vehicle identity are NOT part of the model: they are verified-policy data and
 // are never edited in the intake (see VerifiedPolicySummary). policyId and
 // plateNumber are merged into the request at submit time from the verified
-// policy (ClaimsList), not from the form.
+// policy (ClaimsList), not from the form. Incident location is descriptive
+// TEXT only — no coordinates are collected in the intake (ruling 2026-09-24);
+// the dispatch map renders text-only incidents from incidentLocation.
 export interface NewClaimData {
   incidentType: string;
   incidentLocation: string;
   incidentDate: string; // YYYY-MM-DD
-  latitude: string; // Form value (string), converted to number in service
-  longitude: string;
 }
 
 export type FormErrors = Partial<Record<keyof NewClaimData, string>>;
@@ -39,8 +35,6 @@ export const INITIAL_FORM_STATE: NewClaimData = {
   incidentType: "",
   incidentLocation: "",
   incidentDate: "",
-  latitude: "",
-  longitude: "",
 };
 
 export const FORM_VALIDATORS: Partial<
@@ -49,8 +43,6 @@ export const FORM_VALIDATORS: Partial<
   incidentType: validateIncidentType,
   incidentLocation: validateRequired,
   incidentDate: validateRequired,
-  latitude: (value) => validateCoordinate(value, "latitude"),
-  longitude: (value) => validateCoordinate(value, "longitude"),
 };
 
 export interface ClaimFormSectionProps {

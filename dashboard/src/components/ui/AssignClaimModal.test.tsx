@@ -255,4 +255,35 @@ describe("AssignClaimModal capacity override", () => {
     expect(screen.getByRole("option", { name: /Aya/ })).toBeTruthy();
     expect(screen.queryByRole("option", { name: /Mona/ })).toBeNull();
   });
+
+  it("uses preloaded adjusters (Map Dispatch dataset) and the preselected adaptor id WITHOUT a second GET /users/adjusters", async () => {
+    const user = setupUserEvent();
+
+    render(
+      <MemoryRouter>
+        <AssignClaimModal
+          isOpen
+          onClose={vi.fn()}
+          claimId="clm-1"
+          onAssigned={vi.fn()}
+          adjusters={[ADJUSTER]}
+          initialAdjusterId={ADJUSTER.id}
+        />
+      </MemoryRouter>,
+    );
+
+    // The same adjuster chosen on the map is already selected — no placeholder.
+    expect(await screen.findByDisplayValue(/Aya.*FA-001/)).toBeTruthy();
+
+    // Single dataset: the map already fetched this claim's adjusters.
+    expect(getFieldAdjusters).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Save Assignment" }));
+
+    expect(assignClaim).toHaveBeenCalledWith("clm-1", {
+      adjusterId: ADJUSTER.id,
+      priority: "MEDIUM",
+      notes: "",
+    });
+  });
 });
