@@ -1,6 +1,6 @@
 import Modal from "./Modal";
 import AssignClaimForm from "./assign/AssignClaimForm";
-import type { ClaimPriority } from "../../types";
+import type { ClaimPriority, FieldAdjuster } from "../../types";
 
 interface AssignClaimModalProps {
   isOpen: boolean;
@@ -11,6 +11,12 @@ interface AssignClaimModalProps {
     notes?: string;
   };
   onAssigned: () => void;
+  // Map Dispatch shares its already-fetched claim-scoped adjusters (markers +
+  // dropdown = one dataset) so the modal never duplicates GET /users/adjusters.
+  adjusters?: FieldAdjuster[];
+  adjustersLoading?: boolean;
+  initialAdjusterId?: string;
+  onRefetchAdjusters?: () => void;
 }
 
 export default function AssignClaimModal({
@@ -19,6 +25,10 @@ export default function AssignClaimModal({
   claimId,
   current,
   onAssigned,
+  adjusters,
+  adjustersLoading,
+  initialAdjusterId,
+  onRefetchAdjusters,
 }: AssignClaimModalProps) {
   return (
     <Modal
@@ -32,6 +42,10 @@ export default function AssignClaimModal({
         claimId={claimId}
         initialPriority={current?.priority}
         initialNotes={current?.notes}
+        initialAdjusterId={initialAdjusterId}
+        adjusters={adjusters}
+        adjustersLoading={adjustersLoading}
+        onRefetchAdjusters={onRefetchAdjusters}
         onAssigned={onAssigned}
         onClose={onClose}
       />

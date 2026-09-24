@@ -1,4 +1,5 @@
 import { Marker, Popup } from "react-leaflet";
+import { MapPin } from "lucide-react";
 import { claimIcon } from "../../utils/leafletIcons";
 import type { MapCoordinates } from "../../utils/map";
 import type { ClaimSummary } from "../../types";
@@ -7,6 +8,9 @@ import StatusChip from "./StatusChip";
 interface ClaimPinProps {
   claim: ClaimSummary;
   coordinates: MapCoordinates;
+  // The descriptive incident location text — not in the list endpoint, so the
+  // dispatch map fetches it from GET /claims/:id when the claim is selected.
+  incidentLocation?: string;
   isSelected: boolean;
   canAssign: boolean;
   onSelect: (claim: ClaimSummary) => void;
@@ -16,6 +20,7 @@ interface ClaimPinProps {
 export default function ClaimPin({
   claim,
   coordinates,
+  incidentLocation,
   isSelected,
   canAssign,
   onSelect,
@@ -40,6 +45,15 @@ export default function ClaimPin({
             {claim.customerName} · {claim.initialPlateNumber || "No plate"}
           </p>
           <StatusChip status={claim.status} />
+
+          {incidentLocation && (
+            <p className="text-xs text-text flex items-start gap-1">
+              <MapPin size={13} className="mt-0.5 flex-shrink-0 text-primary" />
+              <span>
+                موقع الحادث المُبلغ عنه (Incident Location): {incidentLocation}
+              </span>
+            </p>
+          )}
 
           {canAssign && claim.status === "NEW" && (
             <button

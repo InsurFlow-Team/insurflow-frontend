@@ -19,7 +19,8 @@
 | Allow ADMIN in `POST /users` | Ready to send — waiting for محمد | §3 |
 | `DELETE /users/:id` + `PATCH /users/:id` (edit) | Ready to send — waiting for محمد | §4 |
 | Coordinates mandatory on `POST /claims` (server-side) | Frontend enforces NOW (2026-09-20); hardening request → محمد | §5 |
-| Policy verification contract (claim intake gate) | Frontend gate built (2026-09-21) with dev mock — **waiting for contract from محمد** | §6 |
+| Policy verification contract (claim intake gate) | **Delivered LIVE (2026-09-24) — `POST /policies/verify` wired, dev mock removed** | §6 |
+| **Geocoding: `incidentLocation` (نص) → `incidentCoordinates`** | **Ready to send — awaiting محمد's reply/choice of provider** | §7 |
 
 ---
 
@@ -243,11 +244,9 @@ GET /users/adjusters?claimId ترتيب الأقرب، سقف 3 + 409 + override
 
 ## 5. Coordinates mandatory on POST /claims (server-side)
 
-> **STATUS: FRONTEND ALREADY DELIVERED (2026-09-20).** قـرار المستخدم: الموقع
-> إلزامي عند إنشاء مطالبة. الداشبورد يرفض الآن أي إنشاء بلا زوج إحداثيات صالح.
-> الباك اليوم يقبل الطلب بدونهما — كل مطالبات النظام الحية incidentCoordinates
-> فاضية فلا تظهر على خريطة الإرسال. هذا القسم طلب **تقوية سيرفرية** لمحمد (ليست
-> حاجبة): حتى لا يُنشأ في أي عميل آخر (موبايل/Postman) أي مطالبة بلا موقع.
+> **STATUS: REVERSED (2026-09-24, user ruling).** Coordinate-mandatory is dead: the
+> intake is now **text-only** (`incidentLocation` free text, NO map/geolocation).
+> Server-side coordinate enforcement is replaced by **backend geocoding** — see §7.
 
 العَرَض:
   الداشبورد يفرض الموقع إلزامياً، لكن POST /claims عند الباك يقبل الطلب بدون
@@ -274,15 +273,12 @@ GET /users/adjusters?claimId ترتيب الأقرب، سقف 3 + 409 + override
 
 ---
 
-## 6. Policy verification contract — claim intake Step 1 (awaiting from الباك)
+## 6. Policy verification contract — claim intake Step 1 (LIVE since 2026-09-24)
 
-> **STATUS: FRONTEND GATE BUILT (2026-09-21).** user ruling: claim intake now
-> starts with policy verification; a claim is created ONLY after a successful
-> check. The dashboard implements the full UI (input + checking + loading/error
-> states + verified-policy result + "متابعة تسجيل الحادث") behind the single
-> seam `verifyPolicy(policyNumber)` in `src/api/policy.service.ts`, using a
-> clearly-marked DEVELOPMENT MOCK (not shipped as data). **We deliberately did
-> NOT invent any endpoint, request/response shape, or validation rules.**
+> **STATUS: DELIVERED LIVE (2026-09-24).** `verifyPolicy` now calls the real
+> `POST /policies/verify` (no mock). Verified live with CO-001: unknown policy →
+> `404 POLICY_NOT_FOUND`; eligible policy → `{ isEligible, policy, vehicle,
+> customer }` matching frontend types exactly. Nothing frontend-side pending.
 
 العَرَض / الجهة:
   الداشبورد يفتح الآن كل إنشاء مطالبة بخطوة "التحقق من الوثيقة" (إدخال رقم
@@ -307,7 +303,67 @@ GET /users/adjusters?claimId ترتيب الأقرب، سقف 3 + 409 + override
 
 ---
 
-## Notes for the frontend when implemented
+## 7. Backend Geocoding: `incidentLocation` (نص) → `incidentCoordinates` (awaiting from الباك)
+
+> **CONTEXT (2026-09-24, user ruling):** the intake is TEXT-ONLY — no map, no
+> geolocation, no lat/lng from the officer. Geocoding must happen server-side so
+> coordinates are a trusted source system-wide. Frontend reads the `echo` of
+> `incidentCoordinates` on GET /claims + GET /claims/:id today → **no frontend
+> work required for the happy path**; distanceKm keeps coming from
+> `GET /users/adjusters?claimId=`. Verified live: `POST /claims` without
+> coordinates already returns 201 — no contract break intended.
+
+العَرَض / الجهة:
+  الموظف بعد نجاح Policy Verification يدخل موقع الحادث يدوياً كنص فقط (مثال:
+  "شارع الإرسال، رام الله" أو "شارع الملك فهد، نابلس"). نحتاج الباكند يحوّل
+  هذا النص إلى إحداثيات موثوقة ليظهر دبوس الحادث على Dispatch Map وتحسب
+  المسافات للمعاينين.
+
+الـ Flow المستهدف:
+  Claims Officer → incidentLocation نص → (Backend) Geocoding →
+  incidentCoordinates { latitude, longitude, capturedAt } → Create Claim →
+  Dispatch Map → دبوس الحادث ← `GET /users/adjusters?claimId` يحسب distanceKm.
+
+المطلوب (منك يا محمد):
+  1) آلية Geocoding معتمدة في الباكند تحوّل نص incidentLocation إلى إحداثيات.
+  2) المزوّد: **Google** (الأدق للعربي، مدفوع) أو **Nominatim/OSM** (مجاني بلا
+     مفتاح، مناسب MVP) — أو أي خدمة معتمدة لديكم حالياً. لا نربط معايير "تم"
+     باسم مزوّد محدد.
+  3) **إلزامي — تقييد البحث بفلسطين**: country=PS أو بوكس حدود الضفة
+     (lat 31.15–32.68، lng 34.83–35.96) + عتبة ثقة دنيا، حتى لا يطابق
+     "شارع الملك فهد" الشارع نفسه في دولة أخرى.
+  4) **سياسة الفشل (مقترحة نعتمدها ما لم تعترض):** إن فشل الجيوكودينغ أو كان
+     العنوان غامضاً → `incidentCoordinates: null` + `incidentCoordinatesStatus:
+     "NOT_GEOCODED"`. **لا تُخزَّن إحداثيات خاطئة أبداً، ولا تُرفض المطالبة.**
+     (بديل صارم على استشواركم: 400 — قولوا ونتفق.)
+  5) الـ Response على إنشاء/جلب المطالبة:
+     { incidentLocation: النص كما دخله الموظف،
+       incidentCoordinates: { latitude, longitude, capturedAt } | null,
+       incidentCoordinatesStatus: "GEOCODED" | "NOT_GEOCODED" }
+  6) بعدها `GET /users/adjusters?claimId=` يحسب distanceKm نسبةً لهذه الإحداثيات.
+
+ما لا نريده (ثابت):
+  - لا خريطة داخل Create Claim. لا navigator.geolocation. لا إدخال lat/lng اليدوي.
+  - لا frontend يخمّن coordinates. لا ثوابت/fake coordinates.
+
+معايير "تم" (بالأدلة، AD-001/CO-001):
+  1) POST /claims { incidentLocation: "شارع الإرسال، رام الله" } → 201 مع
+     incidentCoordinates داخل حدود الضفة + capturedAt + status GEOCODED.
+  2) نص عربي آخر (مثال "شارع الملك فهد، نابلس") → إحداثيات صحيحة داخل الضفة.
+  3) نص عشوائي/غامض غير موجود → 201 مع incidentCoordinates:null و status
+     NOT_GEOCODED (وليس إحداثيات خاطئة).
+  4) نص يحمل اسم شارع/مدينة بنفس الاسم خارج فلسطين (مثال "شارع الملك فهد،
+     الرياض") → لا مطابقة خارج حدود الضفة؛ النتيجة قرب الضفة أو null.
+  5) GET /claims و GET /claims/:id تعيد الحقلين (coordinates + status).
+  6) GET /users/adjusters?claimId= بعد التسجيل → distanceKm محسوبة من الإحداثيات.
+
+ملاحظات:
+  - لا تغيير في الفرونت المطلوب؛ الواجهة تقرأ الـ echo وتُظهر "الإحداثيات غير
+    متاحة" عند null (السلوك مبني مسبقاً).
+  - `capturedAt` = لحظة التحويل/الإبلاغ. `incidentLocation` يُحفظ نصاً كما دخله
+    الموظف مهما كانت نتيجة الجيوكودينغ.
+
+---
 - Notifications: types in `src/types`, service `src/api/notifications.service.ts`,
   bell in `Header.tsx` (currently decorative), dropdown panel with unread badge,
   navigation to `/claims/:claimId`, Loading/Empty/Error via `LoadingState`/`ErrorState`/`EmptyState`.
