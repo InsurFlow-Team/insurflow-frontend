@@ -2,7 +2,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, cleanup } from "@testing-library/react";
 import { screen } from "@testing-library/dom";
-import { MemoryRouter, Routes, Route, useParams } from "react-router-dom";
+import { MemoryRouter, Routes, Route, useParams, useLocation } from "react-router-dom";
 import { fillClaimForm, setupUserEvent } from "../test/test-utils";
 
 // DOM tests exercise full-form typing through React act(); give them room.
@@ -39,9 +39,8 @@ vi.mock("../api/policy.service", () => ({
   verifyPolicy: vi.fn(),
 }));
 
-import { getClaims, createClaim, assignClaim } from "../api/claims.service";
+import { getClaims, createClaim } from "../api/claims.service";
 import { verifyPolicy } from "../api/policy.service";
-import { getFieldAdjusters } from "../api/users.service";
 import ClaimsList from "./ClaimsList";
 import type { ClaimSummary, PolicyVerificationResponse } from "../types";
 
@@ -90,21 +89,8 @@ const CREATED_ROW: ClaimSummary = {
 
 const CLAIM_NUMBER_TEXT = "CLM-2026-0001";
 
-const ADJUSTER = {
-  id: "651a1f8b7f1d2c001f8d4e92",
-  name: "Aya",
-  employeeCode: "FA-001",
-  role: "FIELD_ADJUSTER",
-  organizationId: "org-1",
-  organizationName: "InsurFlow",
-  status: "ACTIVE",
-  availability: "AVAILABLE",
-  activeTasksCount: 0,
-} as const;
-
 beforeEach(() => {
   vi.mocked(getClaims).mockReset();
-  vi.mocked(getFieldAdjusters).mockResolvedValue([]);
   vi.mocked(verifyPolicy).mockReset();
   vi.mocked(verifyPolicy).mockResolvedValue(VERIFIED_POLICY);
 });
@@ -118,12 +104,20 @@ function DetailsStub() {
   return <div>Details for {claimId}</div>;
 }
 
+// The list's Assign action deep-links to the dispatch map with ?claim=<id>;
+// this stub records the target path+search instead of rendering the real map.
+function MapStub() {
+  const location = useLocation();
+  return <div>map-stub:{location.pathname}{location.search}</div>;
+}
+
 async function renderPage() {
   const utils = render(
     <MemoryRouter initialEntries={["/claims"]}>
       <Routes>
         <Route path="/claims" element={<ClaimsList />} />
         <Route path="/claims/:claimId" element={<DetailsStub />} />
+        <Route path="/map" element={<MapStub />} />
       </Routes>
     </MemoryRouter>,
   );
@@ -191,16 +185,21 @@ describe("ClaimsList", () => {
     expect(await screen.findByText("Details for clm-new")).toBeTruthy();
 
     // POST payload contains ONLY the verified contract fields from policy verification
-    // plus incident details. Coordinates are required (location is mandatory), sent top-level as numbers.
+    // plus incident details. Incident location is text-only — no coordinates
+    // (ruling 2026-09-24).
     expect(createClaim).toHaveBeenCalledWith({
       policyId: "policy-uuid-123",
       plateNumber: "ABC-1234",
       incidentType: "COLLISION",
       incidentLocation: "Riyadh - King Fahd Road",
       incidentDate: expect.any(String),
-      latitude: 24.7136,
-      longitude: 46.6753,
     });
+    expect(createClaim).not.toHaveBeenCalledWith(
+      expect.objectContaining({ latitude: expect.anything() }),
+    );
+    expect(createClaim).not.toHaveBeenCalledWith(
+      expect.objectContaining({ longitude: expect.anything() }),
+    );
 
     // Exactly one create request — no duplicate submission.
     expect(createClaim).toHaveBeenCalledTimes(1);
@@ -399,21 +398,9 @@ describe("ClaimsList", () => {
     expect(await screen.findByText("No claims found.")).toBeTruthy();
   });
 
-  it("lets a CLAIMS_OFFICER assign a NEW claim straight from the list row", async () => {
+  it("deep-links a CLAIMS_OFFICER to the dispatch map when Assign is pressed", async () => {
     authRole.value = "CLAIMS_OFFICER";
-    vi.mocked(getClaims)
-      .mockResolvedValueOnce([FULL_ROW])
-      .mockResolvedValueOnce([{ ...FULL_ROW, status: "ASSIGNED" }]);
-    vi.mocked(getFieldAdjusters).mockResolvedValue([ADJUSTER]);
-    vi.mocked(assignClaim).mockResolvedValue({
-      id: "clm-1",
-      claimNumber: "CLM-2026-0001",
-      status: "ASSIGNED",
-      priority: "MEDIUM",
-      assignedTo: ADJUSTER.id,
-      assignedBy: "co-1",
-      assignedAt: "2026-09-09T11:50:00.000Z",
-    });
+    vi.mocked(getClaims).mockResolvedValue([FULL_ROW]);
 
     const user = setupUserEvent();
     await renderPage();
@@ -421,68 +408,26 @@ describe("ClaimsList", () => {
     const assignButton = await screen.findByRole("button", { name: /Assign/i });
     await user.click(assignButton);
 
-    // Real backend adjuster (real ObjectId) is loaded, never a hardcoded one.
-    await user.selectOptions(
-      await screen.findByDisplayValue("Select field adjuster"),
-      ADJUSTER.id,
-    );
-    await user.click(screen.getByRole("button", { name: "Save Assignment" }));
-
-    expect(assignClaim).toHaveBeenCalledWith("clm-1", {
-      adjusterId: ADJUSTER.id,
-      priority: "MEDIUM",
-      notes: "",
-    });
-
+    // Assignment happens on the Dispatch Map, taking the claim with it.
     expect(
-      await screen.findByText(/CLM-2026-0001 assigned successfully/i),
+      await screen.findByText(/map-stub:\/map\?claim=clm-1/),
     ).toBeTruthy();
-
-    // List refreshed from GET /claims (initial + post-assign) so the row status
-    // comes from the backend, not from local patching.
-    expect(getClaims).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText("Assign Field Adjuster")).toBeNull();
   });
 
-  it("lets an ADMIN assign a NEW claim straight from the list row", async () => {
+  it("deep-links an ADMIN to the dispatch map when Assign is pressed", async () => {
     authRole.value = "ADMIN";
-    vi.mocked(getClaims)
-      .mockResolvedValueOnce([FULL_ROW])
-      .mockResolvedValueOnce([{ ...FULL_ROW, status: "ASSIGNED" }]);
-    vi.mocked(getFieldAdjusters).mockResolvedValue([ADJUSTER]);
-    vi.mocked(assignClaim).mockResolvedValue({
-      id: "clm-1",
-      claimNumber: "CLM-2026-0001",
-      status: "ASSIGNED",
-      priority: "MEDIUM",
-      assignedTo: ADJUSTER.id,
-      assignedBy: "ad-1",
-      assignedAt: "2026-09-09T11:50:00.000Z",
-    });
+    vi.mocked(getClaims).mockResolvedValue([FULL_ROW]);
 
     const user = setupUserEvent();
     await renderPage();
 
-    const assignButton = await screen.findByRole("button", {
-      name: /Assign/i,
-    });
+    const assignButton = await screen.findByRole("button", { name: /Assign/i });
     await user.click(assignButton);
 
-    await user.selectOptions(
-      await screen.findByDisplayValue("Select field adjuster"),
-      ADJUSTER.id,
-    );
-    await user.click(screen.getByRole("button", { name: "Save Assignment" }));
-
-    expect(assignClaim).toHaveBeenCalledWith("clm-1", {
-      adjusterId: ADJUSTER.id,
-      priority: "MEDIUM",
-      notes: "",
-    });
-
     expect(
-      await screen.findByText(/CLM-2026-0001 assigned successfully/i),
+      await screen.findByText(/map-stub:\/map\?claim=clm-1/),
     ).toBeTruthy();
-
-    expect(getClaims).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText("Assign Field Adjuster")).toBeNull();
   });
 });

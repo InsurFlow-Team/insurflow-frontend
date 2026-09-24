@@ -13,12 +13,20 @@ import {
 import { useForm } from "../../../hooks/useForm";
 import { useFieldAdjusters } from "../../../hooks/useFieldAdjusters";
 import { validateRequired } from "../../../utils/validation";
-import type { ClaimPriority } from "../../../types";
+import type { ClaimPriority, FieldAdjuster } from "../../../types";
 
 interface AssignClaimFormProps {
   claimId: string;
   initialPriority?: ClaimPriority;
   initialNotes?: string;
+  // Map Dispatch passes the claim-scoped adjusters it already fetched for the
+  // pins, so the modal shares ONE dataset (markers + dropdown) and never
+  // starts a duplicate GET /users/adjusters. Undefined keeps the normal
+  // self-fetch path used by the Claims pages.
+  adjusters?: FieldAdjuster[];
+  adjustersLoading?: boolean;
+  initialAdjusterId?: string;
+  onRefetchAdjusters?: () => void;
   onAssigned: () => void;
   onClose: () => void;
 }
@@ -27,12 +35,18 @@ export default function AssignClaimForm({
   claimId,
   initialPriority,
   initialNotes,
+  adjusters: preloadedAdjusters,
+  adjustersLoading: preloadedAdjustersLoading,
+  initialAdjusterId,
+  onRefetchAdjusters,
   onAssigned,
   onClose,
 }: AssignClaimFormProps) {
+  const hasPreloaded = preloadedAdjusters !== undefined;
+
   const { values, errors, handleChange, isValid, reset } = useForm(
     {
-      adjusterId: "",
+      adjusterId: initialAdjusterId ?? "",
       priority: initialPriority ?? DEFAULT_PRIORITY,
       notes: initialNotes ?? "",
     },
@@ -51,11 +65,20 @@ export default function AssignClaimForm({
   const [overriding, setOverriding] = useState(false);
 
   const {
-    adjusters,
-    loading: adjustersLoading,
-    error: adjustersError,
-    reload,
-  } = useFieldAdjusters(claimId);
+    adjusters: fetchedAdjusters,
+    loading: fetchedAdjustersLoading,
+    error: fetchedAdjustersError,
+    reload: fetchedReload,
+  } = useFieldAdjusters(claimId, !hasPreloaded);
+
+  const adjusters = hasPreloaded ? preloadedAdjusters : fetchedAdjusters;
+  const adjustersLoading = hasPreloaded
+    ? preloadedAdjustersLoading ?? false
+    : fetchedAdjustersLoading;
+  const adjustersError = hasPreloaded ? null : fetchedAdjustersError;
+  const reload = hasPreloaded
+    ? onRefetchAdjusters ?? fetchedReload
+    : fetchedReload;
 
   // The backend only ever assigns ACTIVE adjusters (INACTIVE → 404
   // ADJUSTER_NOT_FOUND). Never offer a deactivated user — they only remain

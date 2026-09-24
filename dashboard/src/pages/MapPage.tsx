@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { MapContainer, TileLayer } from "react-leaflet";
-import { ChevronRight, RefreshCw, UserCheck } from "lucide-react";
+import { ChevronRight, FlaskConical, RefreshCw, UserCheck } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 
-import { getClaims } from "../api/claims.service";
+import { getClaims, getClaimById } from "../api/claims.service";
 import { getFieldAdjusters } from "../api/users.service";
 import { getApiErrorMessage } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
-import type { ClaimSummary, FieldAdjuster } from "../types";
+import type { ClaimSummary, ClaimDetails, FieldAdjuster } from "../types";
+import { applyDemoLocations, DEMO_ANCHOR } from "../utils/demo";
 import {
   adjusterLegend,
   adjustersWithCoordinates,
@@ -16,6 +17,7 @@ import {
   claimLegend,
   claimsWithCoordinates,
 } from "../utils/map";
+import type { MapCoordinates } from "../utils/map";
 import AssignClaimModal from "../components/ui/AssignClaimModal";
 import Button from "../components/ui/Button";
 import ErrorState from "../components/ui/ErrorState";
@@ -26,7 +28,12 @@ import DispatchPanel from "./map/DispatchPanel";
 import FitBounds from "./map/FitBounds";
 import MapOverlays from "./map/MapOverlays";
 
-const DEFAULT_CENTER: [number, number] = [24.7136, 46.6753]; // Riyadh
+// West Bank / Palestine operational view (Ramallah-centred). The dispatch map
+// covers the whole zone; selecting a claim still flies to its marker.
+const DEFAULT_CENTER: [number, number] = [31.9, 35.3];
+
+// DEMO-mode preference (opt-in, off by default, never forced on users).
+const DEMO_STORAGE_KEY = "masar.map.demo";
 
 export default function MapPage() {
   const { user } = useAuth();
@@ -37,9 +44,34 @@ export default function MapPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedClaim, setSelectedClaim] = useState<ClaimSummary | null>(null);
+  const [selectedClaimDetails, setSelectedClaimDetails] =
+    useState<ClaimDetails | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
   const [claimAdjusters, setClaimAdjusters] = useState<FieldAdjuster[]>([]);
   const [claimAdjustersLoading, setClaimAdjustersLoading] = useState(false);
   const [assignTarget, setAssignTarget] = useState<ClaimSummary | null>(null);
+  const [selectedAdjusterId, setSelectedAdjusterId] = useState<string | null>(
+    null,
+  );
+  const [demoMode, setDemoMode] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem(DEMO_STORAGE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleDemoMode = () => {
+    setDemoMode((previous) => {
+      const next = !previous;
+      try {
+        window.localStorage.setItem(DEMO_STORAGE_KEY, next ? "1" : "0");
+      } catch {
+        // Storage unavailable (private mode etc.) — keep the in-memory toggle.
+      }
+      return next;
+    });
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -63,18 +95,68 @@ export default function MapPage() {
     void load();
   }, [load]);
 
-  // When a claim is selected, fetch proximity-sorted adjusters for that claim
+  // Deep link from the Claims list Assign action (/map?claim=<id>): select that
+  // claim and show its dispatch panel (nearest adjuster + distances). The
+  // officer reviews the options there and presses Assign to open the form —
+  // the modal is never auto-opened. The param is consumed once so a later
+  // Refresh never re-selects it.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const claimIdFromUrl = searchParams.get("claim");
+
+  useEffect(() => {
+    if (!claimIdFromUrl || claims.length === 0) return;
+
+    const target =
+      claims.find((claim) => claim.id === claimIdFromUrl) ?? null;
+    setSelectedClaim(target);
+    setSelectedAdjusterId(null);
+    setAssignTarget(null);
+    setSearchParams({}, { replace: true });
+  }, [claimIdFromUrl, claims, setSearchParams]);
+
+  // Claim-scoped adjusters: the SAME backend dataset (GET /users/adjusters?claimId=)
+  // feeds the map pins, the dispatch list AND the assignment modal — one source
+  // of truth, so choosing an adjuster on the map preselects the identical id.
+  const loadClaimAdjusters = useCallback(
+    async (claimId: string) => {
+      setClaimAdjustersLoading(true);
+      try {
+        setClaimAdjusters(await getFieldAdjusters(claimId));
+      } catch {
+        // Keep the previously known list on failure rather than emptying it.
+        setClaimAdjusters(adjusters);
+      } finally {
+        setClaimAdjustersLoading(false);
+      }
+    },
+    [adjusters],
+  );
+
   useEffect(() => {
     if (selectedClaim?.id) {
-      setClaimAdjustersLoading(true);
-      getFieldAdjusters(selectedClaim.id)
-        .then((data) => setClaimAdjusters(data))
-        .catch(() => setClaimAdjusters(adjusters))
-        .finally(() => setClaimAdjustersLoading(false));
+      setSelectedAdjusterId(null);
+      void loadClaimAdjusters(selectedClaim.id);
     } else {
       setClaimAdjusters(adjusters);
+      setSelectedAdjusterId(null);
     }
-  }, [selectedClaim, adjusters]);
+  }, [selectedClaim, adjusters, loadClaimAdjusters]);
+
+  // The claims list carries no incidentLocation text; GET /claims/:id is the
+  // single source of truth for the reported incident location shown on the
+  // dispatch map and panel. Text-only claims (no coordinates) rely on it.
+  useEffect(() => {
+    if (selectedClaim?.id) {
+      setDetailsLoading(true);
+      getClaimById(selectedClaim.id)
+        .then(setSelectedClaimDetails)
+        .catch(() => setSelectedClaimDetails(null))
+        .finally(() => setDetailsLoading(false));
+    } else {
+      setSelectedClaimDetails(null);
+      setDetailsLoading(false);
+    }
+  }, [selectedClaim]);
 
   // Filter to show only NEW claims for dispatch
   const newClaims = claims.filter((claim) => claim.status === "NEW");
@@ -82,7 +164,37 @@ export default function MapPage() {
 
   // Filter adjusters to ACTIVE only
   const activeAdjusters = adjusters.filter((adj) => adj.status === "ACTIVE");
-  const adjusterPins = adjustersWithCoordinates(activeAdjusters);
+
+  // DEMO MODE (off by default, clearly labelled): every adjuster the backend
+  // reports WITHOUT a GPS location gets a simulated West Bank position, and
+  // distances to the selected claim are computed client-side. Real locations
+  // (from the adjuster mobile app later) are NEVER overwritten, and nothing is
+  // sent to the backend.
+  const demoReference: MapCoordinates | null = selectedClaim
+    ? claimCoordinates(selectedClaim) ?? {
+        latitude: DEMO_ANCHOR.latitude,
+        longitude: DEMO_ANCHOR.longitude,
+      }
+    : null;
+
+  // Claim-scoped dataset when a claim is selected, else the full list — the
+  // SAME array feeds map pins, the dispatch list AND the assignment modal.
+  const displayAdjusters = selectedClaim ? claimAdjusters : adjusters;
+  const activeDisplayAdjusters = applyDemoLocations(
+    displayAdjusters.filter((adj) => adj.status === "ACTIVE"),
+    demoMode ? demoReference : null,
+    demoMode,
+  );
+
+  const adjusterPins = adjustersWithCoordinates(
+    selectedClaim
+      ? activeDisplayAdjusters
+      : applyDemoLocations(
+          activeAdjusters,
+          demoMode ? demoReference : null,
+          demoMode,
+        ),
+  );
 
   const hasPins = claimPins.length > 0 || adjusterPins.length > 0;
 
@@ -105,22 +217,34 @@ export default function MapPage() {
 
   const handleClaimSelect = (claim: ClaimSummary) => {
     setSelectedClaim(claim);
+    setSelectedAdjusterId(null);
   };
 
   const handleAssignClick = (claim: ClaimSummary) => {
     setAssignTarget(claim);
   };
 
+  // Choosing an adjuster on the map opens the assignment modal for the NEW
+  // claim with that exact adjuster preselected (same backend id as its pin).
+  const handleSelectAdjuster = (adjuster: FieldAdjuster) => {
+    if (!selectedClaim || !canAssign || selectedClaim.status !== "NEW") return;
+
+    setSelectedAdjusterId(adjuster.id);
+    setAssignTarget(selectedClaim);
+  };
+
+  const handleRefetchAdjusters = () => {
+    if (selectedClaim?.id) {
+      void loadClaimAdjusters(selectedClaim.id);
+    }
+  };
+
   const handleAssigned = () => {
     setAssignTarget(null);
+    setSelectedAdjusterId(null);
     setSelectedClaim(null);
     void load();
   };
-
-  const displayAdjusters = selectedClaim ? claimAdjusters : adjusters;
-  const activeDisplayAdjusters = displayAdjusters.filter(
-    (adj) => adj.status === "ACTIVE",
-  );
 
   return (
     <div className="space-y-4">
@@ -149,15 +273,39 @@ export default function MapPage() {
           </p>
         </div>
 
-        <Button
-          variant="secondary"
-          icon={<RefreshCw size={15} />}
-          onClick={() => void load()}
-          loading={loading}
-        >
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={demoMode ? "primary" : "secondary"}
+            icon={<FlaskConical size={15} />}
+            onClick={toggleDemoMode}
+            aria-pressed={demoMode}
+            title="Simulated adjuster locations + distances (never sent to the backend)"
+          >
+            {demoMode ? "DEMO On" : "DEMO Locations"}
+          </Button>
+
+          <Button
+            variant="secondary"
+            icon={<RefreshCw size={15} />}
+            onClick={() => void load()}
+            loading={loading}
+          >
+            Refresh
+          </Button>
+        </div>
       </div>
+
+      {demoMode && (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          <FlaskConical size={14} className="mt-0.5 shrink-0" />
+          <p>
+            <span className="font-bold">DEMO mode on</span> — adjuster
+            locations and distances are simulated ({" "}
+            <span className="italic">not real data</span>, never sent to the
+            backend). Real GPS will come from the adjuster mobile app.
+          </p>
+        </div>
+      )}
 
       {error ? (
         <ErrorState message={error} onRetry={() => void load()} />
@@ -178,6 +326,9 @@ export default function MapPage() {
                 adjustersLoading={claimAdjustersLoading}
                 canAssign={canAssign}
                 onAssign={handleAssignClick}
+                incidentLocation={selectedClaimDetails?.incidentLocation}
+                detailsLoading={detailsLoading}
+                demo={demoMode}
               />
             ) : (
               <div className="rounded-xl border border-dashed border-border bg-surface-soft p-6 text-center text-text-muted">
@@ -193,7 +344,7 @@ export default function MapPage() {
           <div className="relative z-0 h-[calc(100vh-11rem)] min-h-[480px] overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
             <MapContainer
               center={DEFAULT_CENTER}
-              zoom={11}
+              zoom={10}
               scrollWheelZoom
               className="h-full w-full"
             >
@@ -209,6 +360,11 @@ export default function MapPage() {
                   key={`claim-${claim.id}`}
                   claim={claim}
                   coordinates={coordinates}
+                  incidentLocation={
+                    selectedClaim?.id === claim.id
+                      ? selectedClaimDetails?.incidentLocation
+                      : undefined
+                  }
                   isSelected={selectedClaim?.id === claim.id}
                   canAssign={canAssign}
                   onSelect={handleClaimSelect}
@@ -221,6 +377,11 @@ export default function MapPage() {
                   key={`adjuster-${adjuster.id}`}
                   adjuster={adjuster}
                   coordinates={coordinates}
+                  onSelectAdjuster={
+                    canAssign && selectedClaim?.status === "NEW"
+                      ? handleSelectAdjuster
+                      : undefined
+                  }
                 />
               ))}
             </MapContainer>
@@ -238,8 +399,15 @@ export default function MapPage() {
       {assignTarget && (
         <AssignClaimModal
           isOpen
-          onClose={() => setAssignTarget(null)}
+          onClose={() => {
+            setAssignTarget(null);
+            setSelectedAdjusterId(null);
+          }}
           claimId={assignTarget.id}
+          initialAdjusterId={selectedAdjusterId ?? undefined}
+          adjusters={activeDisplayAdjusters}
+          adjustersLoading={claimAdjustersLoading}
+          onRefetchAdjusters={handleRefetchAdjusters}
           onAssigned={handleAssigned}
         />
       )}
