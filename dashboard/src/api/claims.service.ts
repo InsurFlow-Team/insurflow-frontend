@@ -1,3 +1,5 @@
+import apiClient from "./client";
+
 // Public claims API surface. Each operation lives in a focused module; this
 // barrel keeps the import site stable for pages, hooks, and tests.
 export type { AssignClaimResult } from "./claims.assign";
@@ -12,3 +14,13 @@ export {
 } from "./claims.review";
 export type { ClaimDecision, ClaimDecisionResult } from "./claims.review";
 export { toClaimSummary } from "./claims.transform";
+export async function getClaimReport(claimId: string): Promise<Blob> {
+  const response = await apiClient.get<Blob>(
+    `/claims/${claimId}/report`,
+    {
+      responseType: "blob",
+    },
+  );
+
+  return response.data;
+}

@@ -1,7 +1,13 @@
+import { useState } from "react";
+import { getClaimReport } from "../../api/claims.service";
+import { getApiErrorMessage } from "../../api/client";
+import { toast } from "../../contexts/ToastContext";
+
 import {
   ArrowLeft,
   CheckCircle2,
   FileText,
+  Download,
   PlayCircle,
   Printer,
   XCircle,
@@ -41,6 +47,32 @@ export default function ClaimDetailHeader({
   onReject,
   onRequestCorrection,
 }: ClaimDetailHeaderProps) {
+  const [downloadingReport, setDownloadingReport] = useState(false);
+
+async function handleDownloadReport() {
+  setDownloadingReport(true);
+
+  try {
+    const report = await getClaimReport(claimId);
+    const url = URL.createObjectURL(report);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `${claimNumber}-final-report.pdf`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
+    toast("success", "Claim report downloaded successfully.");
+  } catch (error) {
+    toast("error", getApiErrorMessage(error));
+  } finally {
+    setDownloadingReport(false);
+  }
+}
+
   return (
     <>
       <Link
@@ -77,13 +109,23 @@ export default function ClaimDetailHeader({
   </Button>
 ) : (
   ["APPROVED", "REJECTED", "CLOSED"].includes(status) && (
-    <Link
-      to={`/claims/${claimId}/report`}
-      className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary px-4 py-2.5 text-sm font-semibold text-primary hover:bg-primary-light"
-    >
-      <FileText size={17} />
-      View Final Report
-    </Link>
+   <>
+  <Link
+    to={`/claims/${claimId}/report`}
+    className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary px-4 py-2.5 text-sm font-semibold text-primary hover:bg-primary-light"
+  >
+    <FileText size={17} />
+    Preview Report
+  </Link>
+
+  <Button
+    onClick={() => void handleDownloadReport()}
+    disabled={downloadingReport}
+    icon={<Download size={17} />}
+  >
+    {downloadingReport ? "Downloading..." : "Download PDF"}
+  </Button>
+</>
   )
 )}
 
