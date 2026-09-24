@@ -1,31 +1,11 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, cleanup, fireEvent } from "@testing-library/react";
+import { render, cleanup } from "@testing-library/react";
 import { screen, waitFor } from "@testing-library/dom";
 import type { ClaimSummary, PolicyVerificationResponse } from "../../types";
 import { fillClaimForm, setupUserEvent } from "../../test/test-utils";
 
 vi.setConfig({ testTimeout: 20000 });
-
-vi.mock("react-leaflet", () => ({
-  MapContainer: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="map-container">{children}</div>
-  ),
-  TileLayer: () => <div data-testid="tile-layer" />,
-  Marker: () => <div data-testid="marker" />,
-  useMapEvents: () => ({}),
-  useMap: () => ({
-    flyTo: vi.fn(),
-    getZoom: () => 14,
-  }),
-}));
-
-vi.mock("leaflet", () => ({
-  default: {
-    divIcon: vi.fn(() => ({})),
-  },
-  divIcon: vi.fn(() => ({})),
-}));
 
 import AddClaimModal from "./AddClaimModal";
 
@@ -171,8 +151,6 @@ describe("AddClaimModal", () => {
       incidentType: "COLLISION",
       incidentLocation: "Riyadh - King Fahd Road",
       incidentDate: "2026-09-01",
-      latitude: "24.7136",
-      longitude: "46.6753",
     });
     expect(onSubmit).not.toHaveBeenCalledWith(
       expect.objectContaining({ customerName: expect.anything() }),
@@ -183,42 +161,69 @@ describe("AddClaimModal", () => {
     expect(onSubmit).not.toHaveBeenCalledWith(
       expect.objectContaining({ initialPlateNumber: expect.anything() }),
     );
+    expect(onSubmit).not.toHaveBeenCalledWith(
+      expect.objectContaining({ latitude: expect.anything() }),
+    );
+    expect(onSubmit).not.toHaveBeenCalledWith(
+      expect.objectContaining({ longitude: expect.anything() }),
+    );
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("requires BOTH coordinates (location is mandatory)", async () => {
+  it("submits a text-only incident location — no coordinates are ever sent from the intake", async () => {
     const user = setupUserEvent();
     const { container } = renderModal(VERIFIED_POLICY);
 
-    await fillClaimForm(container, { includeCoordinates: false });
+    await fillClaimForm(container);
 
     expect(
-      (
-        screen.getByRole("button", { name: "Create Claim" }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
-
-    const latInput = container.querySelector('input[name="latitude"]');
-    if (latInput) {
-      fireEvent.change(latInput, { target: { name: "latitude", value: "24.7136" } });
-    }
-
+      container.querySelector('input[name="latitude"]'),
+    ).toBeNull();
     expect(
-      (
-        screen.getByRole("button", { name: "Create Claim" }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
-
-    const lngInput = container.querySelector('input[name="longitude"]');
-    if (lngInput) {
-      fireEvent.change(lngInput, { target: { name: "longitude", value: "46.6753" } });
-    }
+      container.querySelector('input[name="longitude"]'),
+    ).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Create Claim" }));
 
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalledTimes(1);
     });
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        incidentLocation: "Riyadh - King Fahd Road",
+        incidentDate: "2026-09-01",
+        incidentType: "COLLISION",
+      }),
+    );
+  });
+
+  it("contains no map inside the create form — the dispatch map is the only map (single map system)", () => {
+    // No react-leaflet mocks here by design: if the intake still rendered a
+    // map, importing react-leaflet/leaflet would fail the jsdom render.
+    const { container } = renderModal(VERIFIED_POLICY);
+
+    expect(container.querySelector(".leaflet-container")).toBeNull();
+    expect(container.querySelector('[data-testid="map-container"]')).toBeNull();
+    expect(container.textContent).not.toMatch(/تحديد موقع الحادث على الخريطة/i);
+  });
+
+  it("never calls navigator.geolocation during the intake flow", async () => {
+    const getCurrentPosition = vi.fn();
+    Object.defineProperty(navigator, "geolocation", {
+      configurable: true,
+      value: { getCurrentPosition },
+    });
+
+    const user = setupUserEvent();
+    const { container } = renderModal(VERIFIED_POLICY);
+
+    await fillClaimForm(container);
+    await user.click(screen.getByRole("button", { name: "Create Claim" }));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+    expect(getCurrentPosition).not.toHaveBeenCalled();
   });
 
   it("blocks submission when no verified policy is present (never posts an empty policyId)", async () => {

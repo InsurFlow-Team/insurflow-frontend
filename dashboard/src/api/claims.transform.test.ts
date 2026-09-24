@@ -4,15 +4,13 @@ import { toCreateClaimRequest, toClaimSummary } from "./claims.service";
 import type { CreateClaimDraft } from "../types";
 
 describe("toCreateClaimRequest", () => {
-  it("sends the verified contract fields (policyId, plateNumber, incidentDate) plus coordinates when provided", () => {
+  it("sends the verified contract fields (policyId, plateNumber, incidentDate) as a text-only incident payload", () => {
     const draft: CreateClaimDraft = {
       policyId: "policy-uuid-123",
       plateNumber: "ABC-1234",
       incidentType: "COLLISION",
       incidentLocation: "Riyadh - King Fahd Road",
       incidentDate: "2026-09-01",
-      latitude: "24.7136",
-      longitude: "46.6753",
       // Legacy fields - should NOT be sent to backend
       customerName: "Ahmed Ibrahim",
       customerPhone: "0512345678",
@@ -39,8 +37,6 @@ describe("toCreateClaimRequest", () => {
       incidentType: "COLLISION",
       incidentLocation: "Riyadh - King Fahd Road",
       incidentDate: "2026-09-01",
-      latitude: 24.7136,
-      longitude: 46.6753,
     });
 
     expect(Object.keys(request)).toEqual([
@@ -49,35 +45,24 @@ describe("toCreateClaimRequest", () => {
       "incidentType",
       "incidentLocation",
       "incidentDate",
-      "latitude",
-      "longitude",
     ]);
   });
 
-  it("never sends a partial coordinate — one without the other stays off the wire", () => {
-    const onlyLatitude: CreateClaimDraft = {
+  it("never puts coordinates on the wire — even a legacy draft carrying them is ignored (text-only create, ruling 2026-09-24)", () => {
+    const legacyDraft = {
       policyId: "policy-uuid-123",
       plateNumber: "ABC-1234",
       incidentType: "COLLISION",
       incidentLocation: "Riyadh - King Fahd Road",
       incidentDate: "2026-09-01",
       latitude: "24.7136",
-      longitude: "",
-    };
+      longitude: "46.6753",
+    } as CreateClaimDraft;
 
-    const request = toCreateClaimRequest(onlyLatitude);
+    const request = toCreateClaimRequest(legacyDraft);
 
     expect(request).not.toHaveProperty("latitude");
     expect(request).not.toHaveProperty("longitude");
-
-    const onlyLongitude: CreateClaimDraft = {
-      ...onlyLatitude,
-      latitude: "",
-      longitude: "46.6753",
-    };
-
-    expect(toCreateClaimRequest(onlyLongitude)).not.toHaveProperty("latitude");
-    expect(toCreateClaimRequest(onlyLongitude)).not.toHaveProperty("longitude");
   });
 
   it("never serializes legacy/unsupported fields even if provided", () => {
@@ -87,8 +72,6 @@ describe("toCreateClaimRequest", () => {
       incidentType: "COLLISION",
       incidentLocation: "Riyadh - King Fahd Road",
       incidentDate: "2026-09-01",
-      latitude: "",
-      longitude: "",
       // Legacy fields
       customerName: "Ahmed",
       customerPhone: "0512345678",
@@ -113,8 +96,8 @@ describe("toCreateClaimRequest", () => {
     expect(request).not.toHaveProperty("adjusterId");
     expect(request).not.toHaveProperty("priority");
     expect(request).not.toHaveProperty("assignmentNotes");
-    
-    // Empty coordinates should not be in request
+
+    // Coordinates are never part of the request
     expect(request).not.toHaveProperty("latitude");
     expect(request).not.toHaveProperty("longitude");
   });

@@ -20,8 +20,6 @@ const VALID_PAYLOAD: CreateClaimRequest = {
   incidentType: "COLLISION",
   incidentLocation: "Riyadh - King Fahd Road",
   incidentDate: "2026-09-20",
-  latitude: 24.7136,
-  longitude: 46.6753,
 };
 
 describe("createClaim", () => {
@@ -76,14 +74,12 @@ describe("createClaim", () => {
       },
     });
 
-    const result = await createClaim({
-      ...VALID_PAYLOAD,
-      latitude: 24.7136,
-      longitude: 46.6753,
-    });
+    // Sent text-only (no coordinates in the payload); the marker's coordinates
+    // still come from the backend echo — never from what the frontend happened
+    // to send.
+    const result = await createClaim(VALID_PAYLOAD);
 
-    // The marker's coordinates come from the backend echo — never from what
-    // the frontend happened to echo back locally.
+    expect(mockedPost).toHaveBeenCalledWith("/claims", VALID_PAYLOAD);
     expect(result.incidentCoordinates).toEqual({
       latitude: 24.7136,
       longitude: 46.6753,
@@ -117,8 +113,6 @@ describe("createClaim", () => {
       incidentType: "COLLISION",
       incidentLocation: "Riyadh - King Fahd Road",
       incidentDate: "2026-09-01",
-      latitude: "24.7136",
-      longitude: "46.6753",
       // Legacy fields - should be excluded from the request
       customerName: "Ahmed Ibrahim",
       customerPhone: "0512345678",
@@ -145,8 +139,14 @@ describe("createClaim", () => {
       incidentType: "COLLISION",
       incidentLocation: "Riyadh - King Fahd Road",
       incidentDate: "2026-09-01",
-      latitude: 24.7136,
-      longitude: 46.6753,
     });
+    expect(mockedPost).not.toHaveBeenCalledWith(
+      "/claims",
+      expect.objectContaining({ latitude: expect.anything() }),
+    );
+    expect(mockedPost).not.toHaveBeenCalledWith(
+      "/claims",
+      expect.objectContaining({ longitude: expect.anything() }),
+    );
   });
 });
