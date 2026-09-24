@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, PlayCircle } from "lucide-react";
+import { ArrowLeft, FileDown, PlayCircle } from "lucide-react";
 import StatusBadge from "../ui/StatusBadge";
 import Button from "../ui/Button";
 import { formatDateTime } from "../../utils/claims";
@@ -10,6 +10,10 @@ interface ClaimDetailHeaderProps {
   canStartReview: boolean;
   reviewing: boolean;
   onStartReview: () => void;
+  canExportReport: boolean;
+  exportDisabledReason: string | null;
+  exporting: boolean;
+  onExportReport: () => void;
 }
 
 export default function ClaimDetailHeader({
@@ -17,6 +21,10 @@ export default function ClaimDetailHeader({
   canStartReview,
   reviewing,
   onStartReview,
+  canExportReport,
+  exportDisabledReason,
+  exporting,
+  onExportReport,
 }: ClaimDetailHeaderProps) {
   return (
     <>
@@ -49,15 +57,33 @@ export default function ClaimDetailHeader({
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3">
-          {canStartReview && (
+        <div className="flex flex-col items-start gap-2">
+          <div className="flex flex-wrap gap-3">
             <Button
-              onClick={onStartReview}
-              disabled={reviewing}
-              icon={<PlayCircle size={17} />}
+              onClick={onExportReport}
+              disabled={!canExportReport}
+              loading={exporting}
+              variant="secondary"
+              icon={<FileDown size={17} />}
             >
-              Start Review
+              تصدير التقرير (PDF)
             </Button>
+
+            {canStartReview && (
+              <Button
+                onClick={onStartReview}
+                disabled={reviewing}
+                icon={<PlayCircle size={17} />}
+              >
+                Start Review
+              </Button>
+            )}
+          </div>
+
+          {exportDisabledReason && (
+            <p className="max-w-sm text-xs text-text-muted">
+              {exportDisabledReason}
+            </p>
           )}
         </div>
       </div>

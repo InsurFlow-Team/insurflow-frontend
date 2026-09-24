@@ -1,7 +1,7 @@
 import DetailSection from "../DetailSection";
 import InfoGrid from "../InfoGrid";
 import InfoRow from "../InfoRow";
-import { formatDate } from "../../../utils/claims";
+import { accidentTypeLabel } from "../../../utils/claims";
 import type { ClaimDetails } from "../../../types";
 
 interface AccidentSectionProps {
@@ -23,22 +23,25 @@ export default function AccidentSection({ claim }: AccidentSectionProps) {
 
   if (!hasAccidentData) {
     return (
-      <DetailSection title="Accident information">
+      <DetailSection title="تفاصيل الحادث">
         <p className="text-sm text-text-muted">
-          لا توجد بيانات عن الحادث بعد.
+          لم يتم إدخال تفاصيل الحادث بعد.
         </p>
       </DetailSection>
     );
   }
 
   return (
-    <DetailSection title="Accident information">
+    <DetailSection title="تفاصيل الحادث">
       <InfoGrid columns="2">
-        <InfoRow label="Accident Type" value={accident.accidentType} />
-        <InfoRow label="Accident Date" value={formatDate(accident.accidentDate)} />
-        <InfoRow label="Accident Time" value={accident.accidentTime} />
-        <InfoRow label="Accident Description" value={accident.description} />
-        <InfoRow label="Damage Description" value={accident.damageDescription} />
+        <InfoRow
+          label="نوع الحادث"
+          value={accidentTypeLabel(accident.accidentType)}
+        />
+        <InfoRow label="تاريخ الحادث" value={accident.accidentDate} />
+        <InfoRow label="وقت الحادث" value={accident.accidentTime} />
+        <InfoRow label="وصف الحادث" value={accident.description} />
+        <InfoRow label="وصف الأضرار" value={accident.damageDescription} />
       </InfoGrid>
     </DetailSection>
   );
