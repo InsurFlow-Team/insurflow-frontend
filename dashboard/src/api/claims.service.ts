@@ -5,5 +5,10 @@ export { assignClaim } from "./claims.assign";
 export type { CreateClaimRequest } from "./claims.create";
 export { createClaim, toCreateClaimRequest } from "./claims.create";
 export { getClaims, getClaimById } from "./claims.read";
+export {
+  canExportClaimReport,
+  downloadClaimReport,
+  getClaimExportStatus,
+} from "./claims.report";
 export { startClaimReview } from "./claims.review";
 export { toClaimSummary } from "./claims.transform";

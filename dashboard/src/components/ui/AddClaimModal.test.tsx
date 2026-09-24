@@ -1,11 +1,31 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, cleanup } from "@testing-library/react";
+import { render, cleanup, fireEvent } from "@testing-library/react";
 import { screen, waitFor } from "@testing-library/dom";
 import type { ClaimSummary, PolicyVerificationResponse } from "../../types";
 import { fillClaimForm, setupUserEvent } from "../../test/test-utils";
 
 vi.setConfig({ testTimeout: 20000 });
+
+vi.mock("react-leaflet", () => ({
+  MapContainer: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="map-container">{children}</div>
+  ),
+  TileLayer: () => <div data-testid="tile-layer" />,
+  Marker: () => <div data-testid="marker" />,
+  useMapEvents: () => ({}),
+  useMap: () => ({
+    flyTo: vi.fn(),
+    getZoom: () => 14,
+  }),
+}));
+
+vi.mock("leaflet", () => ({
+  default: {
+    divIcon: vi.fn(() => ({})),
+  },
+  divIcon: vi.fn(() => ({})),
+}));
 
 import AddClaimModal from "./AddClaimModal";
 
@@ -139,7 +159,7 @@ describe("AddClaimModal", () => {
     expect(container.querySelector('input[name="vehicleColor"]')).toBeNull();
   });
 
-  it("submits only incident details — policy context comes from the verified policy, never customer/vehicle form data", async () => {
+  it("submits incident details plus the pinned coordinates — policy context comes from the verified policy, never customer/vehicle form data", async () => {
     const user = setupUserEvent();
     const { container } = renderModal(VERIFIED_POLICY);
 
@@ -151,6 +171,8 @@ describe("AddClaimModal", () => {
       incidentType: "COLLISION",
       incidentLocation: "Riyadh - King Fahd Road",
       incidentDate: "2026-09-01",
+      latitude: "24.7136",
+      longitude: "46.6753",
     });
     expect(onSubmit).not.toHaveBeenCalledWith(
       expect.objectContaining({ customerName: expect.anything() }),
@@ -161,27 +183,23 @@ describe("AddClaimModal", () => {
     expect(onSubmit).not.toHaveBeenCalledWith(
       expect.objectContaining({ initialPlateNumber: expect.anything() }),
     );
-    expect(onSubmit).not.toHaveBeenCalledWith(
-      expect.objectContaining({ latitude: expect.anything() }),
-    );
-    expect(onSubmit).not.toHaveBeenCalledWith(
-      expect.objectContaining({ longitude: expect.anything() }),
-    );
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("submits a text-only incident location — no coordinates are ever sent from the intake", async () => {
+  it("sends the pinned incident coordinates — the officer supplies them on the intake map", async () => {
     const user = setupUserEvent();
     const { container } = renderModal(VERIFIED_POLICY);
 
     await fillClaimForm(container);
 
     expect(
-      container.querySelector('input[name="latitude"]'),
-    ).toBeNull();
+      (container.querySelector('input[name="latitude"]') as HTMLInputElement)
+        .value,
+    ).toBe("24.7136");
     expect(
-      container.querySelector('input[name="longitude"]'),
-    ).toBeNull();
+      (container.querySelector('input[name="longitude"]') as HTMLInputElement)
+        .value,
+    ).toBe("46.6753");
 
     await user.click(screen.getByRole("button", { name: "Create Claim" }));
 
@@ -193,18 +211,52 @@ describe("AddClaimModal", () => {
         incidentLocation: "Riyadh - King Fahd Road",
         incidentDate: "2026-09-01",
         incidentType: "COLLISION",
+        latitude: "24.7136",
+        longitude: "46.6753",
       }),
     );
   });
 
-  it("contains no map inside the create form — the dispatch map is the only map (single map system)", () => {
-    // No react-leaflet mocks here by design: if the intake still rendered a
-    // map, importing react-leaflet/leaflet would fail the jsdom render.
+  it("renders the map picker inside the create form (officer pins the incident)", () => {
     const { container } = renderModal(VERIFIED_POLICY);
 
-    expect(container.querySelector(".leaflet-container")).toBeNull();
-    expect(container.querySelector('[data-testid="map-container"]')).toBeNull();
-    expect(container.textContent).not.toMatch(/تحديد موقع الحادث على الخريطة/i);
+    expect(container.querySelector('[data-testid="map-container"]')).toBeTruthy();
+    expect(container.textContent).toMatch(/انقر على الخريطة/);
+  });
+
+  it("requires BOTH coordinates (location is mandatory — the pin must be placed)", async () => {
+    const user = setupUserEvent();
+    const { container } = renderModal(VERIFIED_POLICY);
+
+    await fillClaimForm(container, { includeCoordinates: false });
+
+    expect(
+      (
+        screen.getByRole("button", { name: "Create Claim" }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+
+    const latInput = container.querySelector('input[name="latitude"]');
+    if (latInput) {
+      fireEvent.change(latInput, { target: { name: "latitude", value: "24.7136" } });
+    }
+
+    expect(
+      (
+        screen.getByRole("button", { name: "Create Claim" }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+
+    const lngInput = container.querySelector('input[name="longitude"]');
+    if (lngInput) {
+      fireEvent.change(lngInput, { target: { name: "longitude", value: "46.6753" } });
+    }
+
+    await user.click(screen.getByRole("button", { name: "Create Claim" }));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
   });
 
   it("never calls navigator.geolocation during the intake flow", async () => {

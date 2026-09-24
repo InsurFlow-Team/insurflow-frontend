@@ -30,10 +30,11 @@ vi.mock("../api/claims.service", async (importOriginal) => {
     ...actual,
     getClaimById: vi.fn(),
     startClaimReview: vi.fn(),
+    downloadClaimReport: vi.fn(),
   };
 });
 
-import { getClaimById } from "../api/claims.service";
+import { getClaimById, downloadClaimReport } from "../api/claims.service";
 import { getFieldAdjusters } from "../api/users.service";
 import ClaimDetails from "./ClaimDetails";
 
@@ -161,33 +162,87 @@ describe("ClaimDetails", () => {
     expect(screen.getByText("White")).toBeTruthy();
   });
 
-  it("renders the accident section and shows an empty state when accident is null", async () => {
+  it("renders accident details from backend data.accident with Arabic labels and translated accident type", async () => {
     authRole.value = "CLAIMS_OFFICER";
     await renderPage(
       makeClaimDetails({
-        status: "NEW",
+        status: "IN_PROGRESS",
         accident: {
-          accidentType: "Collision",
-          accidentDate: "2026-09-01",
-          accidentTime: "10:00",
-          description: "Rear bumper damage",
-          damageDescription: "Rear bumper cracked",
+          accidentType: "REAR_END_COLLISION",
+          accidentDate: "2026-09-08",
+          accidentTime: "14:30",
+          description: "Vehicle rear-ended at a red light by a third party.",
+          damageDescription: "Cracked rear bumper and shattered tail light.",
         },
       }),
     );
 
     await screen.findByRole("heading", { name: "CLM-2026-0001" });
-    expect(screen.getByText("Collision")).toBeTruthy();
-    expect(screen.getByText("Rear bumper damage")).toBeTruthy();
-    expect(screen.getByText("Rear bumper cracked")).toBeTruthy();
+    expect(screen.getByText("تفاصيل الحادث")).toBeTruthy();
+    expect(screen.getByText("نوع الحادث")).toBeTruthy();
+    expect(screen.getByText("تصادم خلفي")).toBeTruthy();
+    expect(screen.getByText("تاريخ الحادث")).toBeTruthy();
+    expect(screen.getByText("2026-09-08")).toBeTruthy();
+    expect(screen.getByText("وقت الحادث")).toBeTruthy();
+    expect(screen.getByText("14:30")).toBeTruthy();
+    expect(screen.getByText("وصف الحادث")).toBeTruthy();
+    expect(
+      screen.getByText("Vehicle rear-ended at a red light by a third party."),
+    ).toBeTruthy();
+    expect(screen.getByText("وصف الأضرار")).toBeTruthy();
+    expect(
+      screen.getByText("Cracked rear bumper and shattered tail light."),
+    ).toBeTruthy();
   });
 
-  it("shows a clear empty state when accident data is absent", async () => {
+  it("shows a clear empty state when accident is absent", async () => {
     authRole.value = "CLAIMS_OFFICER";
     await renderPage(makeClaimDetails({ status: "NEW", accident: null }));
 
     await screen.findByRole("heading", { name: "CLM-2026-0001" });
-    expect(screen.getByText(/لا توجد بيانات عن الحادث بعد/)).toBeTruthy();
+    expect(screen.getByText(/لم يتم إدخال تفاصيل الحادث بعد/)).toBeTruthy();
+    expect(screen.queryByText("نوع الحادث")).toBeNull();
+    expect(screen.queryByText(/undefined|null/)).toBeNull();
+  });
+
+  it("shows the empty state when the backend returns accident as an all-null object", async () => {
+    authRole.value = "CLAIMS_OFFICER";
+    await renderPage(
+      makeClaimDetails({
+        status: "IN_PROGRESS",
+        accident: {
+          accidentType: null,
+          accidentDate: null,
+          accidentTime: null,
+          description: null,
+          damageDescription: null,
+        },
+      }),
+    );
+
+    await screen.findByRole("heading", { name: "CLM-2026-0001" });
+    expect(screen.getByText(/لم يتم إدخال تفاصيل الحادث بعد/)).toBeTruthy();
+    expect(screen.queryByText("نوع الحادث")).toBeNull();
+  });
+
+  it("renders a partial accident without crashing and fills missing fields with —", async () => {
+    authRole.value = "CLAIMS_OFFICER";
+    await renderPage(
+      makeClaimDetails({
+        status: "IN_PROGRESS",
+        accident: {
+          accidentType: null,
+          accidentDate: null,
+          accidentTime: null,
+          description: "Body panel damage",
+          damageDescription: null,
+        },
+      }),
+    );
+
+    await screen.findByRole("heading", { name: "CLM-2026-0001" });
+    expect(screen.getByText("Body panel damage")).toBeTruthy();
+    expect(screen.getByText("نوع الحادث")).toBeTruthy();
   });
 
   it("renders the assignment section and shows the not-assigned state when assignedTo is null", async () => {
@@ -423,6 +478,88 @@ describe("ClaimDetails", () => {
       screen.getByRole("heading", { name: "Assign Field Adjuster" }),
     ).toBeTruthy();
     expect(getClaimById).toHaveBeenCalledWith("clm-1");
+  });
+
+  const COMPLETE_DETAILS: Partial<ClaimDetailsType> & {
+    status: ClaimDetailsType["status"];
+  } = {
+    status: "CLOSED",
+    accident: {
+      accidentType: "REAR_END_COLLISION",
+      accidentDate: "2026-09-08",
+      accidentTime: "14:30",
+      description: "Vehicle rear-ended at a red light by a third party.",
+      damageDescription: "Cracked rear bumper and shattered tail light.",
+    },
+    evidence: [
+      {
+        imageType: "car_damage_front",
+        url: "https://example.test/evidence-1.jpg",
+        uploadedBy: null,
+        uploadedAt: "2026-09-22T14:00:00.000Z",
+      },
+    ],
+    signature: {
+      url: "https://example.test/signature.png",
+      capturedBy: null,
+      capturedAt: "2026-09-22T15:00:00.000Z",
+    },
+    location: {
+      latitude: 21.4858,
+      longitude: 39.1925,
+      address: null,
+      capturedAt: "2026-09-22T13:00:00.000Z",
+    },
+  };
+
+  it("keeps the Export Report button visible but disabled until the details are complete", async () => {
+    authRole.value = "CLAIMS_OFFICER";
+    await renderPage(makeClaimDetails({ status: "IN_PROGRESS" }));
+
+    await screen.findByRole("heading", { name: "CLM-2026-0001" });
+    const exportButton = screen.getByRole("button", {
+      name: /تصدير التقرير/,
+    });
+    expect(exportButton.hasAttribute("disabled")).toBe(true);
+    expect(screen.getByText(/أكمل أولاً: تفاصيل الحادث/)).toBeTruthy();
+  });
+
+  it("keeps the button disabled and explains the final-decision rule once details are complete", async () => {
+    authRole.value = "CLAIMS_OFFICER";
+    await renderPage(
+      makeClaimDetails({ ...COMPLETE_DETAILS, status: "IN_PROGRESS" }),
+    );
+
+    await screen.findByRole("heading", { name: "CLM-2026-0001" });
+    const exportButton = screen.getByRole("button", {
+      name: /تصدير التقرير/,
+    });
+    expect(exportButton.hasAttribute("disabled")).toBe(true);
+    expect(screen.getByText(/بعد القرار النهائي/)).toBeTruthy();
+  });
+
+  it("enables the Export Report button for a complete claim with a final decision", async () => {
+    authRole.value = "CLAIMS_OFFICER";
+    await renderPage(makeClaimDetails(COMPLETE_DETAILS));
+
+    await screen.findByRole("heading", { name: "CLM-2026-0001" });
+    const exportButton = screen.getByRole("button", {
+      name: /تصدير التقرير/,
+    });
+    expect(exportButton.hasAttribute("disabled")).toBe(false);
+  });
+
+  it("exports the report with the claim id and number when clicked", async () => {
+    authRole.value = "CLAIMS_OFFICER";
+    const user = setupUserEvent();
+
+    await renderPage(makeClaimDetails(COMPLETE_DETAILS));
+
+    await user.click(
+      await screen.findByRole("button", { name: /تصدير التقرير/ }),
+    );
+
+    expect(downloadClaimReport).toHaveBeenCalledWith("clm-1", "CLM-2026-0001");
   });
 
   it("renders a declined-assignment event with its reason and performer on the timeline", async () => {

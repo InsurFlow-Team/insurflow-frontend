@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import {
+  downloadClaimReport,
   getClaimById,
+  getClaimExportStatus,
   startClaimReview,
 } from "../api/claims.service";
 import { getApiErrorMessage } from "../api/client";
@@ -26,6 +28,7 @@ export default function ClaimDetails() {
   const [claim, setClaim] = useState<ClaimDetailsType | null>(null);
   const [loading, setLoading] = useState(true);
   const [reviewing, setReviewing] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [error, setError] = useState("");
@@ -91,6 +94,23 @@ export default function ClaimDetails() {
 
   const canAssign = claim.status === "NEW" && canManageAssignment;
 
+  const exportStatus = getClaimExportStatus(claim);
+
+  async function handleExportReport() {
+    if (!claimId || !claim || !exportStatus.exportable || exporting) return;
+
+    setExporting(true);
+
+    try {
+      await downloadClaimReport(claimId, claim.claimNumber);
+      toast("success", "تم تنزيل التقرير بنجاح.");
+    } catch (requestError) {
+      toast("error", getApiErrorMessage(requestError));
+    } finally {
+      setExporting(false);
+    }
+  }
+
   function handleAssigned() {
     setShowAssignModal(false);
     void loadClaim();
@@ -107,6 +127,10 @@ export default function ClaimDetails() {
         canStartReview={canStartReview}
         reviewing={reviewing}
         onStartReview={() => setShowReviewDialog(true)}
+        canExportReport={exportStatus.exportable}
+        exportDisabledReason={exportStatus.disabledReason}
+        exporting={exporting}
+        onExportReport={() => void handleExportReport()}
       />
 
       {claim.status === "PENDING_ACCEPTANCE" && <PendingAcceptanceBanner />}

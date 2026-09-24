@@ -32,6 +32,19 @@ export const DATE_RANGE_OPTIONS: Array<{
 
 export const ROWS_PER_PAGE_OPTIONS = [10, 25, 50];
 
+export const ACCIDENT_TYPE_LABELS: Record<string, string> = {
+  COLLISION: "تصادم",
+  REAR_END_COLLISION: "تصادم خلفي",
+  SIDE_IMPACT: "اصطدام جانبي",
+  PARKING_DAMAGE: "أضرار أثناء الوقوف",
+  OTHER: "أخرى",
+};
+
+export function accidentTypeLabel(value?: string | null): string {
+  if (!value) return "—";
+  return ACCIDENT_TYPE_LABELS[value] ?? value;
+}
+
 export function formatDate(value?: string | null): string {
   if (!value) return "—";
 

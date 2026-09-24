@@ -8,6 +8,26 @@ import { fillClaimForm, setupUserEvent } from "../test/test-utils";
 // DOM tests exercise full-form typing through React act(); give them room.
 vi.setConfig({ testTimeout: 20000 });
 
+vi.mock("react-leaflet", () => ({
+  MapContainer: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="map-container">{children}</div>
+  ),
+  TileLayer: () => <div data-testid="tile-layer" />,
+  Marker: () => <div data-testid="marker" />,
+  useMapEvents: () => ({}),
+  useMap: () => ({
+    flyTo: vi.fn(),
+    getZoom: () => 14,
+  }),
+}));
+
+vi.mock("leaflet", () => ({
+  default: {
+    divIcon: vi.fn(() => ({})),
+  },
+  divIcon: vi.fn(() => ({})),
+}));
+
 const { authRole } = vi.hoisted(() => ({
   authRole: { value: "CLAIMS_OFFICER" as string },
 }));
@@ -184,22 +204,19 @@ describe("ClaimsList", () => {
     // The user lands directly on the Claim Details page for the created claim.
     expect(await screen.findByText("Details for clm-new")).toBeTruthy();
 
-    // POST payload contains ONLY the verified contract fields from policy verification
-    // plus incident details. Incident location is text-only — no coordinates
-    // (ruling 2026-09-24).
+    // POST payload contains ONLY the verified contract fields from policy
+    // verification plus incident details. The officer pins the incident on the
+    // intake map, so latitude/longitude travel as numbers (2026-09-24 ruling
+    // restore: coordinates MANDATORY).
     expect(createClaim).toHaveBeenCalledWith({
       policyId: "policy-uuid-123",
       plateNumber: "ABC-1234",
       incidentType: "COLLISION",
       incidentLocation: "Riyadh - King Fahd Road",
       incidentDate: expect.any(String),
+      latitude: 24.7136,
+      longitude: 46.6753,
     });
-    expect(createClaim).not.toHaveBeenCalledWith(
-      expect.objectContaining({ latitude: expect.anything() }),
-    );
-    expect(createClaim).not.toHaveBeenCalledWith(
-      expect.objectContaining({ longitude: expect.anything() }),
-    );
 
     // Exactly one create request — no duplicate submission.
     expect(createClaim).toHaveBeenCalledTimes(1);
