@@ -18,9 +18,10 @@
 | Map + capacity + accept/decline round-trip | **Delivered (FE18) — reply-loop message final, awaiting "تم"** | §2 |
 | Allow ADMIN in `POST /users` | Ready to send — waiting for محمد | §3 |
 | `DELETE /users/:id` + `PATCH /users/:id` (edit) | Ready to send — waiting for محمد | §4 |
-| Coordinates mandatory on `POST /claims` (server-side) | Frontend enforces NOW (2026-09-20); hardening request → محمد | §5 |
+| Coordinates mandatory on `POST /claims` (server-side) | Frontend enforces NOW (2026-09-20, **restored 2026-09-24** — intake map back); hardening request → محمد | §5 |
 | Policy verification contract (claim intake gate) | **Delivered LIVE (2026-09-24) — `POST /policies/verify` wired, dev mock removed** | §6 |
-| **Geocoding: `incidentLocation` (نص) → `incidentCoordinates`** | **Ready to send — awaiting محمد's reply/choice of provider** | §7 |
+| ~~Geocoding: `incidentLocation` (نص) → `incidentCoordinates`~~ | **SUPERSEDED (2026-09-24)** — intake map restored, the officer pins coordinates; server-side geocoding no longer needed for new claims | §7 |
+| PDF report export `GET /claims/:id/report` | **DELIVERED (2026-09-24)** — button in ClaimDetails header (APPROVED/REJECTED/CLOSED only); contract verified live (401/404/409); 200-PDF pending a decisioned claim to finalize | §8 |
 
 ---
 
@@ -244,13 +245,16 @@ GET /users/adjusters?claimId ترتيب الأقرب، سقف 3 + 409 + override
 
 ## 5. Coordinates mandatory on POST /claims (server-side)
 
-> **STATUS: REVERSED (2026-09-24, user ruling).** Coordinate-mandatory is dead: the
-> intake is now **text-only** (`incidentLocation` free text, NO map/geolocation).
-> Server-side coordinate enforcement is replaced by **backend geocoding** — see §7.
+> **STATUS: RESTORED (2026-09-24, user ruling).** The text-only ruling was
+> **reversed**: the intake map is BACK, and the officer places the incident pin
+> on the map — `latitude`/`longitude` are sent on every `POST /claims` (required
+> in the form, converted to numbers in `toCreateClaimRequest`). The server-side
+> hardening request below is ACTIVE again.
 
 العَرَض:
-  الداشبورد يفرض الموقع إلزامياً، لكن POST /claims عند الباك يقبل الطلب بدون
-  latitude/longitude — أي شاريع آخر يستطيع إنشاء مطالبة خارج الخريطة.
+  الداشبورد يفرض الموقع إلزامياً (يدج طباعة pin على الخريطة)، لكن POST /claims
+  عند الباك يقبل الطلب بدون latitude/longitude — أي شاريع آخر يستطيع إنشاء
+  مطالبة خارج الخريطة.
 
 المطلوب:
   - POST /claims: رفض الطلب اذا غاب الزوج أو كان خارج المدى الصحيح بقواعد:
@@ -268,7 +272,8 @@ GET /users/adjusters?claimId ترتيب الأقرب، سقف 3 + 409 + override
      الإحداثيات في GET /claims.
 
 ملاحظات:
-  - لا تغيير في الفرونت المطلوب — الفرونت بنى الميزة وفرضها منذ الآن.
+  - الفرونت أرسل الزوج منذ 2026-09-20 وأعاد إلزاميّته 2026-09-24 بعد رجعة
+    النص-فقط؛ النقص في الفرض على مستوى الباك فقط.
   - إنهاء فرض الإلزامية من الباك فقط، وليس لاحقاً في الفرونت.
 
 ---
@@ -303,28 +308,31 @@ GET /users/adjusters?claimId ترتيب الأقرب، سقف 3 + 409 + override
 
 ---
 
-## 7. Backend Geocoding: `incidentLocation` (نص) → `incidentCoordinates` (awaiting from الباك)
+## 7. Backend Geocoding: `incidentLocation` (نص) → `incidentCoordinates` — SUPERSEDED
 
-> **CONTEXT (2026-09-24, user ruling):** the intake is TEXT-ONLY — no map, no
-> geolocation, no lat/lng from the officer. Geocoding must happen server-side so
-> coordinates are a trusted source system-wide. Frontend reads the `echo` of
-> `incidentCoordinates` on GET /claims + GET /claims/:id today → **no frontend
-> work required for the happy path**; distanceKm keeps coming from
-> `GET /users/adjusters?claimId=`. Verified live: `POST /claims` without
-> coordinates already returns 201 — no contract break intended.
+> **STATUS: SUPERSEDED (2026-09-24, user ruling — REVERSES the text-only
+> intake).** The create-claim intake map is BACK: the officer places the
+> incident pin himself, so `POST /claims` now carries `latitude`/`longitude`
+> always → **server-side geocoding is no longer needed for new claims.** This
+> section stays only for potential legacy text-only claims (existing claims with
+> `incidentCoordinates: null`); the dispatch map already surfaces them by text
+> + an amber "coordinates unavailable" note, no invented pin. If محمد wants, the
+> geocoding below remains a nice-to-have for those legacy rows — otherwise we
+> consider §7 CLOSED. (Coincidentally this ALSO removes the need to pick a
+> geocoding provider/country-restrictions entirely.)
 
-العَرَض / الجهة:
+العَرَض / الجهة (مسجل للسياق فقط):
   الموظف بعد نجاح Policy Verification يدخل موقع الحادث يدوياً كنص فقط (مثال:
   "شارع الإرسال، رام الله" أو "شارع الملك فهد، نابلس"). نحتاج الباكند يحوّل
   هذا النص إلى إحداثيات موثوقة ليظهر دبوس الحادث على Dispatch Map وتحسب
   المسافات للمعاينين.
 
-الـ Flow المستهدف:
+الـ Flow المستهدف (سابق — لم يعد مطبقاً):
   Claims Officer → incidentLocation نص → (Backend) Geocoding →
   incidentCoordinates { latitude, longitude, capturedAt } → Create Claim →
   Dispatch Map → دبوس الحادث ← `GET /users/adjusters?claimId` يحسب distanceKm.
 
-المطلوب (منك يا محمد):
+المطلوب (سابق من عندك يا محمد):
   1) آلية Geocoding معتمدة في الباكند تحوّل نص incidentLocation إلى إحداثيات.
   2) المزوّد: **Google** (الأدق للعربي، مدفوع) أو **Nominatim/OSM** (مجاني بلا
      مفتاح، مناسب MVP) — أو أي خدمة معتمدة لديكم حالياً. لا نربط معايير "تم"
@@ -342,11 +350,14 @@ GET /users/adjusters?claimId ترتيب الأقرب، سقف 3 + 409 + override
        incidentCoordinatesStatus: "GEOCODED" | "NOT_GEOCODED" }
   6) بعدها `GET /users/adjusters?claimId=` يحسب distanceKm نسبةً لهذه الإحداثيات.
 
-ما لا نريده (ثابت):
+ما لم يعد سارياً (عكس بالكامل 2026-09-24):
   - لا خريطة داخل Create Claim. لا navigator.geolocation. لا إدخال lat/lng اليدوي.
   - لا frontend يخمّن coordinates. لا ثوابت/fake coordinates.
+  ← الآن: الخريطة Rجعت داخل Create Claim (النقر لتحديد الدبوس)، والإحداثيات إلزامية
+  وتملأ من pin، والنص يبقى وصفاً للمكان. لا تغيير على "لا frontend يخمّن
+  coordinates" ولا "لا navigator.geolocation".
 
-معايير "تم" (بالأدلة، AD-001/CO-001):
+معايير "تم" (لم تعد ملزمة لتطبيق الفرونت — ارجع لها فقط لو نوى محمد دعم النص القديم):
   1) POST /claims { incidentLocation: "شارع الإرسال، رام الله" } → 201 مع
      incidentCoordinates داخل حدود الضفة + capturedAt + status GEOCODED.
   2) نص عربي آخر (مثال "شارع الملك فهد، نابلس") → إحداثيات صحيحة داخل الضفة.
@@ -362,8 +373,49 @@ GET /users/adjusters?claimId ترتيب الأقرب، سقف 3 + 409 + override
     متاحة" عند null (السلوك مبني مسبقاً).
   - `capturedAt` = لحظة التحويل/الإبلاغ. `incidentLocation` يُحفظ نصاً كما دخله
     الموظف مهما كانت نتيجة الجيوكودينغ.
+---
+
+## 8. PDF Report Export: `GET /claims/:claimId/report` — DELIVERED (FR, 2026-09-24)
+
+> **STATUS: DELIVERED.** Frontend implemented and tested — the Export button lives
+> in the ClaimDetails header and is gated to final-decision claims
+> (`APPROVED`/`REJECTED`/`CLOSED`) so the known 409 never fires. Verified live below.
+
+العقد (من محمد):
+  - `GET /api/v1/claims/{claimId}/report` — **بلا Body وبلا Query Params**.
+  - Header: `Authorization: Bearer <TOKEN>` فقط.
+  - Precondition (فرونت): `claim.status ∈ { APPROVED, REJECTED, CLOSED }`.
+  - Success 200: `application/pdf` ثنائي جاهز (الباك يجمع الكل من قاعدة البيانات).
+
+التحقق الحي (2026-09-24، token CO-001 / DEMO-INS):
+
+| Case | HTTP | Body |
+|---|---|---|
+| Claim **IN_PROGRESS** (0042 `6ab505b466ac53c14dd40daa`) | **409** | `INVALID_STATUS_TRANSITION` — "Report is only available for claims with a final decision (APPROVED, REJECTED, or CLOSED)." |
+| Claim **NEW** (0044 `6ab50ae266ac53c14dd40db0`) | **409** | نفس الرسالة |
+| ObjectId غير موجود (`…83ff`) | **404** | `CLAIM_NOT_FOUND` |
+| بلا توكن | **401** | "Unauthorized: Missing token" |
+
+ملاحظات التنفيذ في الفرونت (لا يلزم الباك أي شيء):
+  - الأخطاء ترجع **JSON داخل Blob** عند `responseType: 'blob'` → الـ service يقرأ
+    نص الـ blob ليستخرج `message` ويعرضها عبر `getApiErrorMessage`.
+  - `window.open(url)` **مستحيل** (بلا header → 401) → التنزيل عبر
+    `apiClient.get(..., { responseType: "blob" })` + `URL.createObjectURL` + `<a download>`.
+  - اسم الملف: `<claimNumber>_report.pdf`.
+
+معيار استكمال التحقق (ما زال معلقاً):
+  - أول مطالبة بمستوى القرار النهائي (APPROVED/REJECTED/CLOSED) تتوفر في قاعدة
+    البيانات → GET /claims/:id/report ترجع **200 + Content-Type: application/pdf**
+    مع بداية `%PDF`. حالياً لا توجد أي مطالبة قرار (الموجود: NEW و IN_PROGRESS فقط).
+  - ملفات: `src/api/claims.report.ts`، `src/utils/download.ts`، زر في
+    `ClaimDetailHeader.tsx`، ويربطها `ClaimDetails.tsx`.
+
+ملاحظات:
+  - لا تغيير RBAC (ADMIN/CLAIMS_OFFICER يقرؤون صفحة المطالبة؛ الزر يظهر بمستوى الصفحة).
+  - لا Backend change: العقد شغّال كما وُصِف.
 
 ---
+
 - Notifications: types in `src/types`, service `src/api/notifications.service.ts`,
   bell in `Header.tsx` (currently decorative), dropdown panel with unread badge,
   navigation to `/claims/:claimId`, Loading/Empty/Error via `LoadingState`/`ErrorState`/`EmptyState`.

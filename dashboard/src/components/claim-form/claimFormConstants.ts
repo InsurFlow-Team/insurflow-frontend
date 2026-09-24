@@ -1,17 +1,25 @@
 import type { ChangeEvent } from "react";
-import { validateRequired, validateIncidentType } from "../../utils/validation";
+import {
+  validateRequired,
+  validateIncidentType,
+  validateCoordinate,
+} from "../../utils/validation";
 
 // Model of exactly what the Create Claim intake form collects. Customer and
 // vehicle identity are NOT part of the model: they are verified-policy data and
 // are never edited in the intake (see VerifiedPolicySummary). policyId and
 // plateNumber are merged into the request at submit time from the verified
-// policy (ClaimsList), not from the form. Incident location is descriptive
-// TEXT only — no coordinates are collected in the intake (ruling 2026-09-24);
-// the dispatch map renders text-only incidents from incidentLocation.
+// policy (ClaimsList), not from the form. The reported location is collected as
+// BOTH a place description (incidentLocation, e.g. "شارع الملك فهد") and a
+// mandatory map pin (latitude/longitude) the officer drops on the intake map —
+// no geocoding of the text is needed, and the pinned claim renders on the
+// dispatch map immediately (2026-09-20 ruling, restored 2026-09-24).
 export interface NewClaimData {
   incidentType: string;
-  incidentLocation: string;
+  incidentLocation: string; // Place description
   incidentDate: string; // YYYY-MM-DD
+  latitude: string; // Form value (string), converted to number in the service
+  longitude: string; // Form value (string), converted to number in the service
 }
 
 export type FormErrors = Partial<Record<keyof NewClaimData, string>>;
@@ -35,6 +43,8 @@ export const INITIAL_FORM_STATE: NewClaimData = {
   incidentType: "",
   incidentLocation: "",
   incidentDate: "",
+  latitude: "",
+  longitude: "",
 };
 
 export const FORM_VALIDATORS: Partial<
@@ -43,6 +53,8 @@ export const FORM_VALIDATORS: Partial<
   incidentType: validateIncidentType,
   incidentLocation: validateRequired,
   incidentDate: validateRequired,
+  latitude: (value) => validateCoordinate(value, "latitude"),
+  longitude: (value) => validateCoordinate(value, "longitude"),
 };
 
 export interface ClaimFormSectionProps {

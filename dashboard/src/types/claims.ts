@@ -23,8 +23,10 @@ export interface CreateClaimDraft {
   policyId: string; // Required: comes from policy verification
   plateNumber: string; // Required: verified plate number
   incidentType: string;
-  incidentLocation: string;
+  incidentLocation: string; // Place description, e.g. "شارع الملك فهد، بالقرب من..."
   incidentDate: string; // YYYY-MM-DD
+  latitude?: string; // Form value (string), converted to number in the service
+  longitude?: string; // Form value (string), converted to number in the service
   // Legacy fields - kept for backward compatibility but not used in new flow
   customerName?: string;
   customerPhone?: string;

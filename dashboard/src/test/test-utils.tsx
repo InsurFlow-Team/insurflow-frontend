@@ -14,9 +14,12 @@ export function setupUserEvent() {
 // Fills every required field of the Create New Claim form. Shared by
 // AddClaimModal and ClaimsList tests so both exercise identical input.
 // Customer/vehicle data is verified-policy read-only (never filled here).
-// Incident location is text-only since 2026-09-24 (no coordinates in the
-// intake form).
-export async function fillClaimForm(container: HTMLElement) {
+// Coordinates are required (the officer pins the incident on the intake map),
+// so they are filled by default since 2026-09-20 (restored 2026-09-24).
+export async function fillClaimForm(
+  container: HTMLElement,
+  options: { includeCoordinates?: boolean } = {},
+) {
   const user = setupUserEvent();
 
   const incidentType = container.querySelector(
@@ -34,4 +37,11 @@ export async function fillClaimForm(container: HTMLElement) {
   fireEvent.change(container.querySelector('input[type="date"]') as HTMLInputElement, {
     target: { value: "2026-09-01" },
   });
+
+  if (options.includeCoordinates !== false) {
+    const latInput = container.querySelector('input[name="latitude"]');
+    const lngInput = container.querySelector('input[name="longitude"]');
+    if (latInput) fireEvent.change(latInput, { target: { value: "24.7136" } });
+    if (lngInput) fireEvent.change(lngInput, { target: { value: "46.6753" } });
+  }
 }
