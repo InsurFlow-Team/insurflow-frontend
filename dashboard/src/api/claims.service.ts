@@ -4,6 +4,8 @@ export type { AssignClaimResult } from "./claims.assign";
 export { assignClaim } from "./claims.assign";
 export type { CreateClaimRequest } from "./claims.create";
 export { createClaim, toCreateClaimRequest } from "./claims.create";
+export type { ClaimDecision } from "./claims.decision";
+export { decideClaim } from "./claims.decision";
 export { getClaims, getClaimById } from "./claims.read";
 export {
   canExportClaimReport,

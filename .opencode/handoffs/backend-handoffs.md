@@ -22,6 +22,7 @@
 | Policy verification contract (claim intake gate) | **Delivered LIVE (2026-09-24) — `POST /policies/verify` wired, dev mock removed** | §6 |
 | ~~Geocoding: `incidentLocation` (نص) → `incidentCoordinates`~~ | **SUPERSEDED (2026-09-24)** — intake map restored, the officer pins coordinates; server-side geocoding no longer needed for new claims | §7 |
 | PDF report export `GET /claims/:id/report` | **DELIVERED (2026-09-24)** — button in ClaimDetails header (APPROVED/REJECTED/CLOSED only); contract verified live (401/404/409); 200-PDF pending a decisioned claim to finalize | §8 |
+| Claim decision `POST /claims/:id/decision` | **VERIFIED LIVE (2026-09-26)** — endpoint EXISTS, contract confirmed (field `decision`, NOT `status`); frontend Approve/Reject buttons built (UNDER_REVIEW → APPROVED/REJECTED); no backend action needed | §9 |
 
 ---
 
@@ -413,6 +414,58 @@ GET /users/adjusters?claimId ترتيب الأقرب، سقف 3 + 409 + override
 ملاحظات:
   - لا تغيير RBAC (ADMIN/CLAIMS_OFFICER يقرؤون صفحة المطالبة؛ الزر يظهر بمستوى الصفحة).
   - لا Backend change: العقد شغّال كما وُصِف.
+
+---
+
+## 9. Claim decision: `POST /claims/:id/decision` — VERIFIED LIVE, FRONTEND BUILT
+
+> **STATUS: NO backend action needed.** The endpoint already exists and the
+> contract was probed live 2026-09-26 (CO-001 / DEMO-INS token). Frontend
+> Approve/Reject buttons are implemented and tested — no "تم" required.
+
+العقد (المتحقق حياً):
+  - `POST /api/v1/claims/{claimId}/decision` — Auth: `Authorization: Bearer`.
+  - Body: `{ "decision": "APPROVED" | "REJECTED", "notes"?: string }`.
+  - **الحقل اسمه `decision`** — إرسال `status` يُرفض: 400 Validation Error
+    (`"Decision is required"` + `"\"status\" is not allowed"`).
+  - Precondition: المطالبة يجب أن تكون `UNDER_REVIEW` وإلا:
+    409 `INVALID_STATUS_TRANSITION` — "Claim is not in UNDER_REVIEW status".
+  - لا توجد مسارات `/approve` أو `/reject` أو `/decide` (كلها `404 Endpoint Not Found`).
+
+الدليل الحي (2026-09-26):
+
+| Body | Claim | HTTP | النتيجة |
+|---|---|---|---|
+| `{"status":"APPROVED","notes":""}` | 0042 IN_PROGRESS | 400 | `VALIDATION_ERROR` — "Decision is required" + `"status" is not allowed` |
+| `{"decision":"APPROVED","notes":"ok"}` | 0042 IN_PROGRESS | 409 | `INVALID_STATUS_TRANSITION` — "Claim is not in UNDER_REVIEW status" |
+| `{"decision":"REJECTED"}` | 0042 / 0044 | 409 | نفس الرسالة (القيمة REJECTED مقبولة Validation) |
+| `POST .../approve` / `reject` / `decide` | أي | 404 | `Endpoint Not Found` |
+
+الفرونت (مبني 2026-09-26):
+  - `src/api/claims.decision.ts` — `decideClaim(claimId, decision, notes?)`
+    يرسل `{ decision, notes? }` فقط عند وجود notes.
+  - `ClaimDetailHeader.tsx` — زرا **Approve** / **Reject** يظهران فقط عندما
+    `claim.status === "UNDER_REVIEW"` **والداخل هو ADMIN حصراً** (قرار المستخدم
+    2026-09-26: القرار النهائي من الأدمن؛ الكلايم أوفيسر يراجع بـ Start Review
+    ثم يصدّر الملف بعد قرار الأدمن ولا يقبل/يرفض أبداً). كل زر يفتح ConfirmDialog
+    ثم يرسل القرار ويحدّث الصفحة. وعند النجاح تُحدَّث الحالة إلى APPROVED/REJECTED
+    فَيُفتح زر Export Claim PDF (لم يعد موجوداً 409).
+  - زر التصدير أُعيدت تسميته إلى **Export Claim PDF** (طلب المستخدم).
+
+تحصين مطلوب من محمد (باكند — بعد قرار "الادمن هو مَن يقرر"):
+  - الباك حالياً يقبل قرار من CO-001 (أثبتنا ذلك حياً: تعدى 401/403 ووصل 409 للشرط
+    فقط). الفرونت يخفي الأزرار عن CO، لكن الفرض الحقيقي يجب أن يكون server-side:
+    `POST /claims/:id/decision` → ADMIN فقط (CO → 403).
+
+معيار الاستكمال النهائي (يُتحقق عندما يوصل باك/موبايل مطالبة إلى UNDER_REVIEW):
+  - إيصال مطالبة فعلياً إلى `UNDER_REVIEW` في قاعدة البيانات → دخول AD-001 →
+    الضغط Approve → 200 والتفاصيل تتحدث إلى APPROVED → زرا Approve/Reject
+    يختفيان وزر التصدير يُفعَّل → تنزيل PDF فعلي. (مع CO-001: لا يرى أزرار القرار،
+    ويرى زر التصدير مفتوحاً عندما يقرر الأدمن فعلاً).
+
+ملاحظات:
+  - تغيير RBAC (2026-09-26): الأزرار للـ ADMIN فقط — القرار النهائي قرار الأدمن؛
+    الكلايم أوفيسر يراجع + يصدّر (حسب قرار المستخدم). تحديث Skill الـ RBAC.
 
 ---
 
