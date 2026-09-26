@@ -15,12 +15,20 @@ interface ClaimInfoSectionsProps {
   claim: ClaimDetails;
   canAssign: boolean;
   onAssign: () => void;
+  canDecide: boolean;
+  deciding: boolean;
+  onApprove: () => void;
+  onReject: () => void;
 }
 
 export default function ClaimInfoSections({
   claim,
   canAssign,
   onAssign,
+  canDecide,
+  deciding,
+  onApprove,
+  onReject,
 }: ClaimInfoSectionsProps) {
   return (
     <div className="space-y-6">
@@ -45,7 +53,13 @@ export default function ClaimInfoSections({
 
       <EvidenceSection claim={claim} />
       <SignatureSection claim={claim} />
-      <DecisionSection claim={claim} />
+      <DecisionSection
+        claim={claim}
+        canDecide={canDecide}
+        deciding={deciding}
+        onApprove={onApprove}
+        onReject={onReject}
+      />
     </div>
   );
 }

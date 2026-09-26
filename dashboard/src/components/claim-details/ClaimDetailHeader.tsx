@@ -66,7 +66,7 @@ export default function ClaimDetailHeader({
               variant="secondary"
               icon={<FileDown size={17} />}
             >
-              تصدير التقرير (PDF)
+              Export Claim PDF
             </Button>
 
             {canStartReview && (

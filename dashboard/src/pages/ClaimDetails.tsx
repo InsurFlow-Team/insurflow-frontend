@@ -2,10 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import {
+  decideClaim,
   downloadClaimReport,
   getClaimById,
   getClaimExportStatus,
   startClaimReview,
+  type ClaimDecision,
 } from "../api/claims.service";
 import { getApiErrorMessage } from "../api/client";
 import type { ClaimDetails as ClaimDetailsType } from "../types";
@@ -28,8 +30,11 @@ export default function ClaimDetails() {
   const [claim, setClaim] = useState<ClaimDetailsType | null>(null);
   const [loading, setLoading] = useState(true);
   const [reviewing, setReviewing] = useState(false);
+  const [deciding, setDeciding] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
+  const [pendingDecision, setPendingDecision] =
+    useState<ClaimDecision | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [error, setError] = useState("");
 
@@ -74,6 +79,29 @@ export default function ClaimDetails() {
     }
   }
 
+  async function handleDecide() {
+    if (!claimId || !pendingDecision) return;
+
+    setDeciding(true);
+
+    try {
+      await decideClaim(claimId, pendingDecision);
+      await loadClaim();
+
+      toast(
+        "success",
+        pendingDecision === "APPROVED"
+          ? "تم قبول المطالبة."
+          : "تم رفض المطالبة.",
+      );
+    } catch (requestError) {
+      toast("error", getApiErrorMessage(requestError));
+    } finally {
+      setDeciding(false);
+      setPendingDecision(null);
+    }
+  }
+
   if (loading) {
     return <LoadingState message="Loading claim details..." />;
   }
@@ -91,6 +119,8 @@ export default function ClaimDetails() {
     user?.role === "ADMIN" || user?.role === "CLAIMS_OFFICER";
 
   const canStartReview = claim.status === "SUBMITTED";
+
+  const canDecide = claim.status === "UNDER_REVIEW" && user?.role === "ADMIN";
 
   const canAssign = claim.status === "NEW" && canManageAssignment;
 
@@ -139,6 +169,10 @@ export default function ClaimDetails() {
         claim={claim}
         canAssign={canAssign}
         onAssign={() => setShowAssignModal(true)}
+        canDecide={canDecide}
+        deciding={deciding}
+        onApprove={() => setPendingDecision("APPROVED")}
+        onReject={() => setPendingDecision("REJECTED")}
       />
 
       <ClaimTimeline timeline={claim.timeline} />
@@ -152,6 +186,19 @@ export default function ClaimDetails() {
         confirmLabel="Start Review"
         cancelLabel="Cancel"
         loading={reviewing}
+      />
+
+      <ConfirmDialog
+        isOpen={pendingDecision !== null}
+        onCancel={() => setPendingDecision(null)}
+        onConfirm={() => void handleDecide()}
+        title={
+          pendingDecision === "APPROVED" ? "Approve claim?" : "Reject claim?"
+        }
+        message={`This will change the claim status from UNDER_REVIEW to ${pendingDecision}.`}
+        confirmLabel={pendingDecision === "APPROVED" ? "Approve" : "Reject"}
+        cancelLabel="Cancel"
+        loading={deciding}
       />
 
       {showAssignModal && claimId && (

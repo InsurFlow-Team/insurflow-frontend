@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, cleanup } from "@testing-library/react";
+import { render, cleanup, within } from "@testing-library/react";
 import { screen } from "@testing-library/dom";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { setupUserEvent } from "../test/test-utils";
@@ -30,11 +30,16 @@ vi.mock("../api/claims.service", async (importOriginal) => {
     ...actual,
     getClaimById: vi.fn(),
     startClaimReview: vi.fn(),
+    decideClaim: vi.fn(),
     downloadClaimReport: vi.fn(),
   };
 });
 
-import { getClaimById, downloadClaimReport } from "../api/claims.service";
+import {
+  getClaimById,
+  downloadClaimReport,
+  decideClaim,
+} from "../api/claims.service";
 import { getFieldAdjusters } from "../api/users.service";
 import ClaimDetails from "./ClaimDetails";
 
@@ -391,6 +396,33 @@ describe("ClaimDetails", () => {
     expect(screen.getByText("Settlement paid")).toBeTruthy();
   });
 
+  it("shows the approval verdict in the Decision/Closing section for an APPROVED claim even without closing data", async () => {
+    authRole.value = "ADMIN";
+    await renderPage(
+      makeClaimDetails({ status: "APPROVED", decisionNotes: null }),
+    );
+
+    await screen.findByRole("heading", { name: "CLM-2026-0001" });
+    expect(screen.getByText("تم قبول المطالبة.")).toBeTruthy();
+    expect(
+      screen.queryByText("لم يتم اتخاذ قرار أو إغلاق المطالبة بعد."),
+    ).toBeNull();
+  });
+
+  it("shows the rejection verdict in the Decision/Closing section for a REJECTED claim", async () => {
+    authRole.value = "ADMIN";
+    await renderPage(
+      makeClaimDetails({
+        status: "REJECTED",
+        decisionNotes: "Missing required documents",
+      }),
+    );
+
+    await screen.findByRole("heading", { name: "CLM-2026-0001" });
+    expect(screen.getByText("تم رفض المطالبة.")).toBeTruthy();
+    expect(screen.getByText("Missing required documents")).toBeTruthy();
+  });
+
   it("renders a timeline event with a null performedBy without crashing", async () => {
     authRole.value = "CLAIMS_OFFICER";
     await renderPage(
@@ -518,7 +550,7 @@ describe("ClaimDetails", () => {
 
     await screen.findByRole("heading", { name: "CLM-2026-0001" });
     const exportButton = screen.getByRole("button", {
-      name: /تصدير التقرير/,
+      name: /Export Claim PDF/,
     });
     expect(exportButton.hasAttribute("disabled")).toBe(true);
     expect(screen.getByText(/أكمل أولاً: تفاصيل الحادث/)).toBeTruthy();
@@ -532,7 +564,7 @@ describe("ClaimDetails", () => {
 
     await screen.findByRole("heading", { name: "CLM-2026-0001" });
     const exportButton = screen.getByRole("button", {
-      name: /تصدير التقرير/,
+      name: /Export Claim PDF/,
     });
     expect(exportButton.hasAttribute("disabled")).toBe(true);
     expect(screen.getByText(/بعد القرار النهائي/)).toBeTruthy();
@@ -544,7 +576,7 @@ describe("ClaimDetails", () => {
 
     await screen.findByRole("heading", { name: "CLM-2026-0001" });
     const exportButton = screen.getByRole("button", {
-      name: /تصدير التقرير/,
+      name: /Export Claim PDF/,
     });
     expect(exportButton.hasAttribute("disabled")).toBe(false);
   });
@@ -556,10 +588,84 @@ describe("ClaimDetails", () => {
     await renderPage(makeClaimDetails(COMPLETE_DETAILS));
 
     await user.click(
-      await screen.findByRole("button", { name: /تصدير التقرير/ }),
+      await screen.findByRole("button", { name: /Export Claim PDF/ }),
     );
 
     expect(downloadClaimReport).toHaveBeenCalledWith("clm-1", "CLM-2026-0001");
+  });
+
+  it("shows Approve and Reject buttons to an ADMIN inside the Decision/Closing section while the claim is UNDER_REVIEW", async () => {
+    authRole.value = "ADMIN";
+    await renderPage(makeClaimDetails({ status: "UNDER_REVIEW" }));
+
+    await screen.findByRole("heading", { name: "CLM-2026-0001" });
+    expect(
+      screen.getByText("لم يتم اتخاذ قرار أو إغلاق المطالبة بعد."),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Approve" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Reject" })).toBeTruthy();
+  });
+
+  it("hides Approve and Reject from a CLAIMS_OFFICER even while the claim is UNDER_REVIEW", async () => {
+    authRole.value = "CLAIMS_OFFICER";
+    await renderPage(makeClaimDetails({ status: "UNDER_REVIEW" }));
+
+    await screen.findByRole("heading", { name: "CLM-2026-0001" });
+    expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Reject" })).toBeNull();
+  });
+
+  it("hides the decision buttons from an ADMIN for any status other than UNDER_REVIEW", async () => {
+    authRole.value = "ADMIN";
+    await renderPage(makeClaimDetails({ status: "APPROVED" }));
+
+    await screen.findByRole("heading", { name: "CLM-2026-0001" });
+    expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Reject" })).toBeNull();
+  });
+
+  it("approves an UNDER_REVIEW claim via POST /claims/:id/decision and reloads", async () => {
+    authRole.value = "ADMIN";
+    const user = setupUserEvent();
+    vi.mocked(decideClaim).mockResolvedValue({
+      status: "APPROVED",
+    } as never);
+
+    await renderPage(makeClaimDetails({ status: "UNDER_REVIEW" }));
+
+    await user.click(
+      await screen.findByRole("button", { name: "Approve" }),
+    );
+
+    const dialog = screen.getByRole("dialog");
+    expect(screen.getByText("Approve claim?")).toBeTruthy();
+
+    await user.click(
+      within(dialog).getByRole("button", { name: "Approve" }),
+    );
+
+    expect(decideClaim).toHaveBeenCalledWith("clm-1", "APPROVED");
+    expect(getClaimById).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects an UNDER_REVIEW claim after an explicit confirmation", async () => {
+    authRole.value = "ADMIN";
+    const user = setupUserEvent();
+    vi.mocked(decideClaim).mockResolvedValue({
+      status: "REJECTED",
+    } as never);
+
+    await renderPage(makeClaimDetails({ status: "UNDER_REVIEW" }));
+
+    await user.click(await screen.findByRole("button", { name: "Reject" }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(screen.getByText("Reject claim?")).toBeTruthy();
+
+    await user.click(within(dialog).getByRole("button", { name: "Reject" }));
+
+    expect(decideClaim).toHaveBeenCalledWith("clm-1", "REJECTED");
+    expect(getClaimById).toHaveBeenCalledTimes(2);
   });
 
   it("renders a declined-assignment event with its reason and performer on the timeline", async () => {
