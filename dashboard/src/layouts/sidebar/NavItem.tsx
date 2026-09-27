@@ -21,8 +21,8 @@ export default function NavItem({
       className={({ isActive }) =>
         `relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 ${
           isActive
-            ? "bg-blue-50 text-primary"
-            : "text-gray-500 hover:bg-gray-50 hover:text-primary"
+            ? "bg-info-bg text-primary"
+            : "text-text-muted hover:bg-surface-soft hover:text-primary"
         }`
       }
     >

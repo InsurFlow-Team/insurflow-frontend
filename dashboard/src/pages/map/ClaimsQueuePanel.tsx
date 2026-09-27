@@ -62,16 +62,16 @@ export default function ClaimsQueuePanel({
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
                   {claim.lastDecline && (
-                    <span className="text-[10px] bg-red-50 text-danger border border-danger/30 px-1.5 py-0.5 rounded font-bold shrink-0">
+                    <span className="text-[10px] bg-danger-bg text-danger border border-danger/30 px-1.5 py-0.5 rounded font-bold shrink-0">
                       ⚠️ Declined
                     </span>
                   )}
                   {!coords ? (
-                    <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded font-medium shrink-0">
+                    <span className="text-[10px] bg-warning-bg text-warning-text border border-warning-border px-1.5 py-0.5 rounded font-medium shrink-0">
                       No GPS
                     </span>
                   ) : (
-                    <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded font-medium shrink-0">
+                    <span className="text-[10px] bg-success-bg text-success-text border border-success-border px-1.5 py-0.5 rounded font-medium shrink-0">
                       Located
                     </span>
                   )}

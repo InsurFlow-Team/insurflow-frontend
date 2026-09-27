@@ -23,10 +23,26 @@
 | ~~Geocoding: `incidentLocation` (نص) → `incidentCoordinates`~~ | **SUPERSEDED (2026-09-24)** — intake map restored, the officer pins coordinates; server-side geocoding no longer needed for new claims | §7 |
 | PDF report export `GET /claims/:id/report` | **DELIVERED (2026-09-24)** — button in ClaimDetails header (APPROVED/REJECTED/CLOSED only); contract verified live (401/404/409); 200-PDF pending a decisioned claim to finalize | §8 |
 | Claim decision `POST /claims/:id/decision` | **VERIFIED LIVE (2026-09-26)** — endpoint EXISTS, contract confirmed (field `decision`, NOT `status`); frontend Approve/Reject buttons built (UNDER_REVIEW → APPROVED/REJECTED); no backend action needed | §9 |
+| Adjuster work history (completed claims + inspection count) | **SHIPPED FRONTEND (2026-09-26)** — derived client-side from `GET /claims` + one `GET /claims/:id` per completed claim; optional dedicated endpoint requested in §10 | §10 |
 
 ---
 
 ## 1. Notifications
+
+> **⚠️ SUPERSEDED by §11 (2026-09-27).** This section was written *before* the
+> endpoints existed and describes a contract the backend did **not** build.
+> Everything below is disproven by live probing — do not implement it.
+>
+> | This section assumed | What actually exists (§11) |
+> |---|---|
+> | `data: { total, unreadCount, items: [...] }` | `data: [...]` — a bare array |
+> | `?limit=20&offset=0` | `?page=&limit=&unreadOnly=` — **`offset` is not supported** |
+> | `id`, `message`, `claimId`, `claimNumber`, `read` | `_id`, `title`, `body`, `relatedClaimId: {_id, claimNumber}`, `readAt` |
+> | `type`: ASSIGNED, SUBMITTED, UNDER_REVIEW, APPROVED, CLOSED | 8 types; live data: `NEW_CLAIM`, `INSPECTION_COMPLETED`, `ASSIGNMENT_DECLINED`, `ASSIGNED` |
+> | `PATCH /notifications/read-all` | **404 — does not exist** |
+>
+> The parts that were right: newest-first ordering, and re-sending a mark-as-read
+> being idempotent. Both verified live.
 
 العَرَض / الجهة:
   جرس الإشعارات في الداشبورد زخرفي حالياً (نقطة حمراء ثابتة، لا Endpoints).
@@ -444,12 +460,13 @@ GET /users/adjusters?claimId ترتيب الأقرب، سقف 3 + 409 + override
 الفرونت (مبني 2026-09-26):
   - `src/api/claims.decision.ts` — `decideClaim(claimId, decision, notes?)`
     يرسل `{ decision, notes? }` فقط عند وجود notes.
-  - `ClaimDetailHeader.tsx` — زرا **Approve** / **Reject** يظهران فقط عندما
-    `claim.status === "UNDER_REVIEW"` **والداخل هو ADMIN حصراً** (قرار المستخدم
-    2026-09-26: القرار النهائي من الأدمن؛ الكلايم أوفيسر يراجع بـ Start Review
-    ثم يصدّر الملف بعد قرار الأدمن ولا يقبل/يرفض أبداً). كل زر يفتح ConfirmDialog
-    ثم يرسل القرار ويحدّث الصفحة. وعند النجاح تُحدَّث الحالة إلى APPROVED/REJECTED
-    فَيُفتح زر Export Claim PDF (لم يعد موجوداً 409).
+  - `src/components/claim-details/sections/DecisionSection.tsx` — زرا **Approve** /
+    **Reject** (2026-09-26: نُقلا من الهيدر إلى قسم Decision/Closing بقرار المستخدم)
+    يظهران فقط عندما `claim.status === "UNDER_REVIEW"` **والداخل هو ADMIN حصراً**
+    (قرار المستخدم 2026-09-26: القرار النهائي من الأدمن؛ الكلايم أوفيسر يراجع بـ
+    Start Review ثم يصدّر الملف بعد قرار الأدمن ولا يقبل/يرفض أبداً). كل زر يفتح
+    ConfirmDialog ثم يرسل القرار ويعيد تحميل الصفحة، فتقول الحالة بالعربي
+    «تم قبول المطالبة.» / «تم رفض المطالبة.». الهيدر فيه Start Review + التصدير فقط.
   - زر التصدير أُعيدت تسميته إلى **Export Claim PDF** (طلب المستخدم).
 
 تحصين مطلوب من محمد (باكند — بعد قرار "الادمن هو مَن يقرر"):
@@ -469,10 +486,218 @@ GET /users/adjusters?claimId ترتيب الأقرب، سقف 3 + 409 + override
 
 ---
 
-- Notifications: types in `src/types`, service `src/api/notifications.service.ts`,
-  bell in `Header.tsx` (currently decorative), dropdown panel with unread badge,
-  navigation to `/claims/:claimId`, Loading/Empty/Error via `LoadingState`/`ErrorState`/`EmptyState`.
+## 10. Adjuster work history — SHIPPED FRONTEND, optional endpoint requested
+
+> **STATUS: nothing is blocked.** The Work history section on the adjuster
+> profile (`/adjusters/:adjusterId`, ADMIN + CLAIMS_OFFICER) is live and derives
+> everything from endpoints that already exist. §10.2 is an optimisation request,
+> not a blocker.
+
+### 10.1 What shipped (2026-09-26)
+
+The user asked the profile to show, for one adjuster: how many claims are
+finished, how many inspections he performed, which claims, and when.
+
+The previous section was a hardcoded `EmptyState` reading *"will appear here
+once the backend exposes the adjuster's claims"* — that copy was a lie, the data
+was already reachable.
+
+No backend change was needed because:
+
+  - `GET /claims` already returns **every** claim of the organization with
+    `assignedTo: { id, name }` on each row (verified live 2026-09-26).
+  - The inspection count and the completion time live in the claim's `timeline`
+    / `closedAt`, which only `GET /claims/:id` returns.
+
+So the frontend filters the list to this adjuster's `APPROVED | REJECTED |
+CLOSED` claims, then hydrates the timeline of the most recent ones.
+
+  - `src/utils/adjusterHistory.ts` — pure derivation: which claims are
+    completed, `countInspections` (counts every `Inspection Started` event by
+    that adjuster, so a revisit counts twice), `resolveCompletedAt` (`closedAt`,
+    else the decision event — never `updatedAt`, which moves on any later edit),
+    turnaround `computeDurationHours`, `summarizeWorkHistory`.
+  - `src/api/adjusterHistory.ts` — `getAdjusterWorkHistory(adjusterId)`.
+  - `src/components/adjusters/WorkHistorySection.tsx` — four tiles (Completed
+    claims, Total inspections, Avg. turnaround, Last completed) over a
+    `DataTable`; each row links to `/claims/:id`.
+  - `ClaimSummary` gained `assignedTo?: UserSummary | null` (already sent).
+
+Honest limits, by design:
+
+  - Counts that need the timeline are `null` — rendered "—" — when a claim's
+    details cannot be loaded. The page never shows a made-up number.
+  - `updatedAt` is **not** used as a completion time.
+  - The detail fan-out is capped at `MAX_HISTORY_DETAIL_FETCHES = 25`; when a
+    longer history exists the section says *"Showing the 25 most recent completed
+    claims out of N"* instead of quietly truncating.
+
+Verified live against DEMO-INS (2026-09-26), matching the UI exactly:
+
+| Adjuster | Completed | Inspections | Avg. turnaround | Rows |
+|---|---|---|---|---|
+| FA-001 Ahmed | 3 | 3 | 22.1h | 0050 APPROVED (1 insp, 7 evidence, 23.9h), 0047 APPROVED (1, 7, 24.2h), 0046 CLOSED (1, 1, 18.1h) |
+| FA-002 Second | 0 | — | — | empty state |
+
+### 10.2 Optional request for محمد (not a blocker)
+
+`GET /claims` only accepts `status`; every other query parameter is rejected
+with 400 — probed live: `assignedTo`, `assigneeId`, `adjusterId`,
+`assignedAdjusterId`, `adjuster` → all 400. So today the profile downloads the
+whole organization's claim list, plus one extra request per completed claim.
+
+When convenient, a single endpoint would remove both:
+
+```
+GET /users/adjusters/:adjusterId/claims?status=APPROVED,REJECTED,CLOSED&limit=25
+
+  200
+  { success: true, message: "ok",
+    data: {
+      totalCompleted: 3,
+      truncated: false,
+      items: [{
+        claimId, claimNumber, status, customerName, plateNumber,
+        inspectionCount,            // count of "Inspection Started" events
+        completedAt,                 // closedAt, else the decision event timestamp
+        assignedAt,                 // for turnaround
+        durationHours
+      }]
+    }}
+```
+
+Acceptance criteria:
+
+1. Same-org isolation: an adjuster outside the caller's organization is `404`.
+2. `totalCompleted` counts **all** finished claims; `items` is the newest slice
+   and `truncated: true` when `items.length < totalCompleted`.
+3. `inspectionCount` counts every inspection start **by that adjuster**, so a
+   revisit increments it.
+4. `completedAt` is the decision/settlement moment, not the last edit.
+5. ADMIN and CLAIMS_OFFICER may read it; FIELD_ADJUSTER is blocked (it has no
+   dashboard access anyway — see `Login.tsx`).
+
+---
+
+## 11. Notification Center — VERIFIED LIVE, FRONTEND BUILT (2026-09-27)
+
+> **STATUS: shipped end-to-end.** The three endpoints in §1 now exist and were
+> verified live with `AD-001` (ADMIN) and `CO-001` (CLAIMS_OFFICER) against
+> DEMO-INS. The header bell is no longer decorative. §1 is superseded.
+
+### 11.1 The real contract (live, not from a document)
+
+| Request | HTTP | Verified response |
+|---|---|---|
+| `GET /api/v1/notifications/unread-count` | 200 | `{ success, message, data: { count } }` |
+| `GET /api/v1/notifications?page&limit&unreadOnly` | 200 | `{ success, message, data: [ … ] }` **bare array** |
+| `PATCH /api/v1/notifications/:id/read` (body `{}`) | 200 | `{ success, message, data: { …whole notification… } }` |
+| any of the above, no token | 401 | session destroyed by the axios interceptor |
+| `?limit=abc` | 400 | `VALIDATION_ERROR` — `"limit" must be a number` |
+
+Real record (AD-001, verbatim):
+
+```json
+{
+  "_id": "6ab76a2dfe08268d7464b609",
+  "recipientId": "6ab558c8a170b120d93a5f94",
+  "organizationId": "6a919f45e62778a597174333",
+  "type": "NEW_CLAIM",
+  "relatedClaimId": { "_id": "6ab76a2dfe08268d7464b608", "claimNumber": "CLM-DEMO-INS-0054" },
+  "title": "New Claim Created",
+  "body": "New claim CLM-DEMO-INS-0054 has been created.",
+  "readAt": null,
+  "createdAt": "2026-09-26T06:46:05.946Z",
+  "__v": 0
+}
+```
+
+Three things a frontend that trusted the old document would get wrong:
+
+1. **`unreadOnly` defaults to `false`.** An unfiltered `GET /notifications`
+   returns read items too (14 of 14 for AD-001 initially). Callers that want only
+   unread must send `unreadOnly: true` explicitly. Verified: after one
+   mark-as-read, `unreadOnly=true` returned 13 while the default returned 14, and
+   `/unread-count` returned 13 — the two always agree.
+2. **Pagination lives in headers**, not an envelope: `X-Total-Count`,
+   `X-Page`, `X-Total-Pages`. `offset` is not supported.
+3. **The mark-as-read response returns the whole notification**, not the
+   `{ _id, readAt }` the handoff described.
+
+Also verified: the list is ordered newest-first, and re-sending a mark-as-read
+on the same id is idempotent (200 both times, `readAt` unchanged).
+
+### 11.2 Types, and why the UI has a fallback
+
+Documented: `NEW_CLAIM`, `ASSIGNMENT_DECLINED`, `INSPECTION_COMPLETED`,
+`PENDING_ACCEPTANCE`, `ASSIGNED`, `CORRECTION_REQUIRED`, `APPROVED`, `REJECTED`.
+
+**Only four occur in live data** (`NEW_CLAIM`, `INSPECTION_COMPLETED`,
+`ASSIGNMENT_DECLINED`, `ASSIGNED`) — the adjuster-facing and decision types are
+declared but not emitted yet. So `AppNotification.type` stays a plain `string`
+and the icon/tone lookup falls back to a neutral Bell. A ninth type added later
+renders as a neutral row instead of crashing the header.
+
+`PATCH /notifications/read-all` → **404, not implemented.** The UI therefore
+offers no "mark all read" control rather than a button that would fail.
+
+### 11.3 What shipped
+
+  - `src/types/notifications.ts` — `AppNotification`, `NotificationPage`,
+    `NotificationType`, with the verified contract in the header comment.
+  - `src/api/notifications.ts` — `getUnreadNotificationCount`,
+    `getNotifications`, `markNotificationRead`, plus the defensive
+    `toAppNotification` normaliser (`_id` → `id`; a record with no id is
+    dropped, because it cannot be marked read; an unknown `type` is kept).
+  - `src/hooks/useNotifications.ts` — the badge count is fetched on mount and
+    polled every `NOTIFICATION_POLL_MS = 60_000`; the list is fetched **lazily,
+    once, on first open**, so a normal page view costs one small request.
+    `markRead` is optimistic and **rolls the row and the badge back together** if
+    the PATCH fails, so the two can never disagree.
+  - `src/components/notifications/NotificationBell.tsx` — the bell, the red
+    badge (hidden at 0, capped at `9+`), and the dropdown. Escape and
+    outside-click close it; focus moves to the first row on open; unread rows
+    are tinted with a dot; relative time comes from
+    `src/utils/relativeTime.ts` (hand-rolled, **no new dependency**).
+  - Clicking a row marks it read and navigates to
+    `/claims/${relatedClaimId._id}`. Verified live that all 10 notifications'
+    `relatedClaimId`s resolve: `GET /claims/:id` → 200 with a matching
+    `claimNumber`.
+  - `src/layouts/Header.tsx` — the dead bell button is replaced by
+    `<NotificationBell />`.
+
+RBAC: notifications are **per recipient**, and two of the documented types are
+adjuster-facing, so the bell is shown to **every authenticated role** — it is
+not gated like the dashboard. There is no cross-user read: each caller only ever
+sees their own (AD-001 had 14, CO-001 had 11, in the same organization).
+
+Tests: 48 added (`notifications.test.ts` 13, `useNotifications.test.ts` 9,
+`NotificationBell.test.tsx` 16, `relativeTime.test.ts` 10) — 366 total, all green.
+
+### 11.4 Optional requests for محمد (not blockers)
+
+1. **`PATCH /notifications/read-all`** — §1 asked for it, it returns 404. The
+   dropdown caps at 10 and the user can only clear one row at a time, so a
+   user with 14 unread has to open the list 14 times.
+2. **A notifications page** — there is no `/notifications` route, so the
+   dropdown is the only surface. The UI states "13 older notifications" as a
+   plain sentence rather than linking to a dead route.
+3. **Emit the four missing types** (`PENDING_ACCEPTANCE`, `CORRECTION_REQUIRED`,
+   `APPROVED`, `REJECTED`) so the mobile-facing flows and the final decision
+   reach the adjuster and the officer without polling the claim list.
+
+---
+
+- Notifications: **built 2026-09-27** — see §11. Types in `src/types/notifications.ts`,
+  service `src/api/notifications.ts`, hook `src/hooks/useNotifications.ts`,
+  bell + dropdown in `src/components/notifications/NotificationBell.tsx`, wired
+  into `src/layouts/Header.tsx`. Three live endpoints, no backend changes needed.
 - Map: Leaflet (react-leaflet) + markers colored by load; nearest suggestion in
   `AssignClaimModal` reuse of `POST /claims/:id/assign`; decline reason surfaced in
   `ClaimDetails` timeline; soft-cap badges in adjuster select/markers.
-- Every change keeps the green bar: `npx vitest run` → `npm run build` → `npm run lint`.
+- Design tokens (2026-09-27): every non-brand colour now resolves through
+  `src/utils/toneStyles.ts` (7 semantic families × bg/border/text/solid/icon)
+  and `src/utils/statusStyles.ts` (one label + tone per status, consumed by
+  `StatusBadge` and by the claim stat cards). 143 raw Tailwind palette usages
+  across 37 files were migrated; the palette is defined once in `index.css`.
+- Every change keeps the green bar: `npx vitest run` → `npx tsc -b` → `npm run build` → `npx eslint src`.

@@ -1,4 +1,48 @@
-import type { ClaimStatus } from "../types";
+import type { ClaimStatus, ClaimSummary } from "../types";
+
+// Every status a claim can hold. The stat cards are generated from this list, so
+// a new status must be added here or the cards will silently under-report.
+export const ALL_CLAIM_STATUSES: readonly ClaimStatus[] = [
+  "NEW",
+  "PENDING_ACCEPTANCE",
+  "ASSIGNED",
+  "IN_PROGRESS",
+  "SUBMITTED",
+  "UNDER_REVIEW",
+  "CORRECTION_REQUIRED",
+  "APPROVED",
+  "REJECTED",
+  "CLOSED",
+] as const;
+
+export type ClaimStatusCounts = Record<ClaimStatus, number>;
+
+export function emptyClaimStatusCounts(): ClaimStatusCounts {
+  return ALL_CLAIM_STATUSES.reduce<ClaimStatusCounts>((acc, status) => {
+    acc[status] = 0;
+    return acc;
+  }, {} as ClaimStatusCounts);
+}
+
+// One counting rule for every stat card, so the Claims page and the Dashboard
+// can never drift apart. Unknown statuses from a newer backend are counted into
+// the total but get no card, which is why the total is claims.length and not the
+// sum of the buckets.
+export function countClaimsByStatus(claims: ClaimSummary[]): ClaimStatusCounts {
+  const counts = emptyClaimStatusCounts();
+
+  for (const claim of claims) {
+    if (ALL_CLAIM_STATUSES.includes(claim.status)) {
+      counts[claim.status] += 1;
+    }
+  }
+
+  return counts;
+}
+
+export function sumClaimStatusCounts(counts: ClaimStatusCounts): number {
+  return ALL_CLAIM_STATUSES.reduce((sum, status) => sum + counts[status], 0);
+}
 
 export type ClaimStatusFilter = "" | ClaimStatus;
 export type DateRangeFilter = "all" | "7days" | "30days" | "90days";

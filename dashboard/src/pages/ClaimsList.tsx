@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { getClaims } from "../api/claims.service";
 import { getApiErrorMessage } from "../api/client";
 import type { ClaimStatus, ClaimSummary } from "../types";
@@ -12,23 +12,35 @@ import Pagination from "../components/ui/Pagination";
 import AddClaimModal from "../components/ui/AddClaimModal";
 import PolicyVerificationModal from "../components/ui/PolicyVerificationModal";
 import { buildClaimColumns } from "../components/claims/claimsColumns";
+import { ALL_CLAIM_STATUSES } from "../utils/claims";
 import ClaimsBanners from "../components/claims/ClaimsBanners";
 import ClaimsFilters from "../components/claims/ClaimsFilters";
 import ClaimsPageHeader from "../components/claims/ClaimsPageHeader";
-import ClaimsStats, {
-  type ClaimsStats as ClaimsStatsData,
-} from "../components/claims/ClaimsStats";
+import ClaimStatsGrid from "../components/claims/ClaimStatsGrid";
 import {
   getDateCutoff,
   ROWS_PER_PAGE_OPTIONS,
   type DateRangeFilter,
 } from "../components/claims/filterOptions";
 
+/**
+ * The dashboard attention queue and the capacity card deep-link into
+ * /claims?status=<STATUS>, so the list has to honour the query string instead
+ * of silently ignoring it. An unknown value falls back to "no filter" rather
+ * than showing an empty table.
+ */
+function readStatusParam(value: string | null): "" | ClaimStatus {
+  return value && ALL_CLAIM_STATUSES.includes(value as ClaimStatus)
+    ? (value as ClaimStatus)
+    : "";
+}
+
 export default function ClaimsList() {
   const { user } = useAuth();
   const canAssign =
     user?.role === "ADMIN" || user?.role === "CLAIMS_OFFICER";
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [claims, setClaims] = useState<ClaimSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +49,9 @@ export default function ClaimsList() {
   const [errorBanner, setErrorBanner] = useState("");
 
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"" | ClaimStatus>("");
+  const [statusFilter, setStatusFilter] = useState<"" | ClaimStatus>(() =>
+    readStatusParam(searchParams.get("status")),
+  );
   const [dateRange, setDateRange] = useState<DateRangeFilter>("all");
 
   const [page, setPage] = useState(1);
@@ -75,6 +89,29 @@ export default function ClaimsList() {
     void loadClaims();
   }, [loadClaims]);
 
+  // Keep ?status= in the URL so a dashboard drill-down survives a refresh and
+  // can be shared/bookmarked. Back/forward navigation also re-applies the filter.
+  useEffect(() => {
+    const fromUrl = readStatusParam(searchParams.get("status"));
+    setStatusFilter(fromUrl);
+  }, [searchParams]);
+
+  const applyStatusFilter = useCallback(
+    (value: "" | ClaimStatus) => {
+      setStatusFilter(value);
+      setPage(1);
+
+      const next = new URLSearchParams(searchParams);
+      if (value) {
+        next.set("status", value);
+      } else {
+        next.delete("status");
+      }
+      setSearchParams(next, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
+
   // Assigning happens on the Dispatch Map (same-backed dataset, nearest adjuster
   // + distances there) — deep-link the claim so it is selected and the assign
   // modal opens immediately.
@@ -83,27 +120,6 @@ export default function ClaimsList() {
   }
 
   const columns = buildClaimColumns({ canAssign, onAssign: openAssign });
-
-  const stats: ClaimsStatsData = useMemo(() => {
-    const newClaims = claims.filter((c) => c.status === "NEW").length;
-    const awaitingReply = claims.filter(
-      (c) => c.status === "PENDING_ACCEPTANCE",
-    ).length;
-    const submittedClaims = claims.filter((c) => c.status === "SUBMITTED")
-      .length;
-    const pendingReview = claims.filter((c) => c.status === "UNDER_REVIEW")
-      .length;
-    const inProgress = claims.filter((c) => c.status === "IN_PROGRESS").length;
-
-    return {
-      totalClaims: claims.length,
-      newClaims,
-      awaitingReply,
-      submittedClaims,
-      pendingReview,
-      inProgress,
-    };
-  }, [claims]);
 
   const filteredClaims = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -134,9 +150,9 @@ export default function ClaimsList() {
 
   const handleResetFilters = () => {
     setSearch("");
-    setStatusFilter("");
     setDateRange("all");
     setPage(1);
+    applyStatusFilter("");
   };
 
   const tableFooter = (
@@ -173,7 +189,7 @@ export default function ClaimsList() {
         }}
       />
 
-      <ClaimsStats stats={stats} />
+      <ClaimStatsGrid claims={claims} loading={loading} />
 
       <ClaimsFilters
         search={search}
@@ -186,8 +202,7 @@ export default function ClaimsList() {
           setPage(1);
         }}
         onStatusChange={(value) => {
-          setStatusFilter(value);
-          setPage(1);
+          applyStatusFilter(value);
         }}
         onDateRangeChange={(value) => {
           setDateRange(value);

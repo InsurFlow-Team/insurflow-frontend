@@ -11,8 +11,13 @@ vi.mock("../api/claims.service", () => ({
   getClaims: vi.fn(),
 }));
 
+vi.mock("../api/users.service", () => ({
+  getFieldAdjusters: vi.fn(),
+}));
+
 import { getClaims } from "../api/claims.service";
-import type { ClaimSummary } from "../types";
+import { getFieldAdjusters } from "../api/users.service";
+import type { ClaimSummary, FieldAdjuster } from "../types";
 import Dashboard from "./Dashboard";
 
 const NOW = "2026-09-09T10:00:00.000Z";
@@ -29,8 +34,29 @@ function makeClaim(overs: Partial<ClaimSummary> & { claimNumber: string }): Clai
   } as ClaimSummary;
 }
 
+function makeAdjuster(overs: Partial<FieldAdjuster> = {}): FieldAdjuster {
+  return {
+    id: "fa-1",
+    name: "Ahmed Adjuster",
+    employeeCode: "FA-001",
+    role: "FIELD_ADJUSTER",
+    organizationId: "org-1",
+    organizationName: "Demo Ins",
+    status: "ACTIVE",
+    activeTasksCount: 1,
+    capacityLimit: 3,
+    availability: "AVAILABLE",
+    ...overs,
+  } as FieldAdjuster;
+}
+
+const daysAgo = (days: number) =>
+  new Date(Date.now() - days * 86_400_000).toISOString();
+
 beforeEach(() => {
   vi.mocked(getClaims).mockReset();
+  vi.mocked(getFieldAdjusters).mockReset();
+  vi.mocked(getFieldAdjusters).mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -60,10 +86,15 @@ describe("Dashboard", () => {
     // Real totals derived from the API response — not mock/hardcoded numbers.
     expect(await screen.findByText("Total Claims")).toBeTruthy();
     expect(screen.getByText("5")).toBeTruthy();
-    expect(screen.getByText("New Claims")).toBeTruthy();
-    expect(screen.getByText("Assigned Claims")).toBeTruthy();
-    expect(screen.getByText("Submitted Claims")).toBeTruthy();
-    expect(screen.getByText("Closed Claims")).toBeTruthy();
+
+    // Scoped to the stat cards: the recent-claims table also renders status
+    // badges with these same words.
+    for (const label of ["New", "Assigned", "Submitted", "Closed"]) {
+      const card = screen
+        .getAllByText(label)
+        .find((element) => element.closest("article"));
+      expect(card, `stat card "${label}"`).toBeTruthy();
+    }
 
     // Recent claims come from the same real response.
     for (const claimNumber of ["CLM-1", "CLM-2", "CLM-3", "CLM-4", "CLM-5"]) {
@@ -190,5 +221,103 @@ describe("Dashboard", () => {
     // Only the latest 5 of the 7 claims appear in the recent table.
     expect(screen.getByText("CLM-7")).toBeTruthy();
     expect(screen.queryByText("CLM-1")).toBeFalsy();
+  });
+
+  it("surfaces the blocked claims in an attention queue with drill-down links", async () => {
+    vi.mocked(getClaims).mockResolvedValue([
+      makeClaim({ claimNumber: "CLM-N1", status: "NEW", createdAt: daysAgo(6) }),
+      makeClaim({ claimNumber: "CLM-N2", status: "NEW", createdAt: daysAgo(1) }),
+      makeClaim({
+        claimNumber: "CLM-R1",
+        status: "UNDER_REVIEW",
+        createdAt: daysAgo(2),
+      }),
+      makeClaim({
+        claimNumber: "CLM-IP",
+        status: "IN_PROGRESS",
+        createdAt: daysAgo(1),
+      }),
+    ]);
+
+    await renderPage();
+
+    // Only the statuses that block somebody appear.
+    expect(await screen.findByText("Needs Assignment")).toBeTruthy();
+    expect(screen.getByText("Awaiting Decision")).toBeTruthy();
+    expect(screen.queryByText("Ready for Review")).toBeNull();
+    expect(screen.queryByText("Awaiting Correction")).toBeNull();
+
+    // Age comes from the oldest claim in the group, and drives the overdue flag.
+    expect(screen.getByText(/oldest 6 days/)).toBeTruthy();
+    expect(screen.getByText(/Overdue — waiting 6 days/)).toBeTruthy();
+
+    // The group label drills into the matching /claims status filter.
+    expect(
+      screen.getByRole("link", { name: "Needs Assignment" }).getAttribute("href"),
+    ).toBe("/claims?status=NEW");
+  });
+
+  it("confirms a clear queue instead of listing empty rows", async () => {
+    vi.mocked(getClaims).mockResolvedValue([
+      makeClaim({ claimNumber: "CLM-OK", status: "IN_PROGRESS" }),
+      makeClaim({ claimNumber: "CLM-DONE", status: "CLOSED" }),
+    ]);
+
+    await renderPage();
+
+    expect(
+      await screen.findByText(/Nothing is waiting on anyone/),
+    ).toBeTruthy();
+  });
+
+  it("compares waiting claims against real adjuster capacity", async () => {
+    vi.mocked(getClaims).mockResolvedValue([
+      makeClaim({ claimNumber: "CLM-W1", status: "NEW" }),
+    ]);
+    vi.mocked(getFieldAdjusters).mockResolvedValue([
+      makeAdjuster({ id: "fa-1", activeTasksCount: 1, capacityLimit: 3 }),
+      makeAdjuster({ id: "fa-2", activeTasksCount: 1, capacityLimit: 3 }),
+    ]);
+
+    await renderPage();
+
+    expect(await screen.findByText(/spare inspection slots/)).toBeTruthy();
+    expect(screen.getByText("2 adjusters")).toBeTruthy();
+    expect(
+      screen.getByText(/Capacity covers all 1 claim waiting/),
+    ).toBeTruthy();
+  });
+
+  it("keeps the rest of the dashboard usable when the roster request fails", async () => {
+    vi.mocked(getClaims).mockResolvedValue([
+      makeClaim({ claimNumber: "CLM-K", status: "NEW" }),
+    ]);
+    vi.mocked(getFieldAdjusters).mockRejectedValue(
+      new Error("Roster unavailable"),
+    );
+
+    await renderPage();
+
+    expect(await screen.findByText("CLM-K")).toBeTruthy();
+    expect(screen.getByText(/Adjuster capacity is unavailable/)).toBeTruthy();
+    expect(screen.getByText("Needs Assignment")).toBeTruthy();
+  });
+
+  it("shows the assigned adjuster and the claim age in the recent table", async () => {
+    vi.mocked(getClaims).mockResolvedValue([
+      makeClaim({
+        claimNumber: "CLM-AS",
+        status: "IN_PROGRESS",
+        createdAt: daysAgo(4),
+        assignedTo: { id: "fa-1", name: "Ahmed Adjuster", employeeCode: null },
+      }),
+    ]);
+
+    await renderPage();
+
+    expect(await screen.findByText("Assigned To")).toBeTruthy();
+    expect(screen.getByText("Ahmed Adjuster")).toBeTruthy();
+    expect(screen.getByText("Age")).toBeTruthy();
+    expect(screen.getByText("4 days")).toBeTruthy();
   });
 });

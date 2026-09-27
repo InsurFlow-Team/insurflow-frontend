@@ -62,9 +62,9 @@ export default function DispatchPanel({
           <p>
             <span className="text-text-muted">Incident Location:</span>{" "}
             {coords ? (
-              <span className="font-medium text-emerald-600">📍 Pin on map</span>
+              <span className="font-medium text-success-strong">📍 Pin on map</span>
             ) : (
-              <span className="font-medium text-amber-600">
+              <span className="font-medium text-warning">
                 ⚠ Incident coordinates unavailable
               </span>
             )}
@@ -96,7 +96,7 @@ export default function DispatchPanel({
               </span>
             </p>
             {demo && (
-              <span className="shrink-0 rounded border border-amber-200 bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
+              <span className="shrink-0 rounded border border-warning-border bg-accent-light px-1.5 py-0.5 text-[10px] font-bold text-warning-deep">
                 DEMO
               </span>
             )}

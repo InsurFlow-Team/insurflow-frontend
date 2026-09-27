@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, cleanup } from "@testing-library/react";
+import { render, cleanup, waitFor } from "@testing-library/react";
 import { screen } from "@testing-library/dom";
 import { MemoryRouter } from "react-router-dom";
 import { setupUserEvent } from "../test/test-utils";
@@ -446,7 +446,11 @@ describe("MapPage", () => {
 
     // Claim selected directly with its claim-scoped adjusters (nearest list)…
     expect(await screen.findByText("Selected Claim")).toBeTruthy();
-    expect(getFieldAdjusters).toHaveBeenCalledWith(LOCATED_CLAIM.id);
+    // The adjuster request is a separate effect from the claim list, so it may
+    // still be in flight when the claim panel renders — wait for the call.
+    await waitFor(() =>
+      expect(getFieldAdjusters).toHaveBeenCalledWith(LOCATED_CLAIM.id),
+    );
 
     // …and the assign modal is NOT auto-opened — the officer reviews the
     // nearest adjuster and presses Assign on the panel to open the form.

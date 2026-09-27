@@ -39,6 +39,63 @@
   --color-field-bg: #d1fae5;
 }
 
+/*
+ * Feedback families — the single place any non-brand colour is defined.
+ * Every family has the same shape: `-bg` (surface), `-border` (outline),
+ * `-text` (icon/label on that surface). Deeper shades exist only where a
+ * design actually needs a stronger contrast step.
+ * Never write `bg-emerald-50` in a component: use `bg-success-bg`.
+ */
+@theme {
+  /* success */
+  --color-success-bg: #ecfdf5;
+  --color-success-border: #a7f3d0;
+  --color-success-strong: #059669;
+  --color-success-text: #047857;
+  --color-success-deep: #065f46;
+  --color-success-soft: #d1fae5;
+
+  /* warning */
+  --color-warning-bg: #fffbeb;
+  --color-warning-border: #fde68a;
+  --color-warning-border-strong: #fcd34d;
+  --color-warning-muted: #f59e0b;
+  --color-warning-text: #b45309;
+  --color-warning-deep: #92400e;
+  --color-warning-ink: #78350f;
+
+  /* danger */
+  --color-danger-border: #fecaca;
+  --color-danger-text: #b91c1c;
+
+  /* info */
+  --color-info-bg: #eff6ff;
+  --color-info-border: #bfdbfe;
+  --color-info-soft: #dbeafe;
+  --color-info-muted: #3b82f6;
+  --color-info-text: #1d4ed8;
+  --color-info-deep: #1e40af;
+
+  /* rose — a softer negative, used for CORRECTION_REQUIRED */
+  --color-rose-bg: #fff1f2;
+  --color-rose-soft: #ffe4e6;
+  --color-rose-border: #fecdd3;
+  --color-rose-strong: #e11d48;
+  --color-rose-text: #be123c;
+
+  /* violet — "assigned" work */
+  --color-violet-bg: #f5f3ff;
+  --color-violet-soft: #ede9fe;
+  --color-violet-border: #ddd6fe;
+  --color-violet-text: #6d28d9;
+
+  /* neutral steps, for when a surface is not a feedback family */
+  --color-surface-sunken: #f3f4f6;
+  --color-surface-disabled: #e5e7eb;
+  --color-text-subtle: #9ca3af;
+  --color-text-soft: #4b5563;
+}
+
 * {
   box-sizing: border-box;
 }

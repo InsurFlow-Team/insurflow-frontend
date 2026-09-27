@@ -73,7 +73,7 @@ export default function Sidebar({
             type="button"
             onClick={onClose}
             aria-label="Close sidebar"
-            className="p-1.5 rounded-lg text-text-muted hover:bg-gray-50 hover:text-text lg:hidden"
+            className="p-1.5 rounded-lg text-text-muted hover:bg-surface-soft hover:text-text lg:hidden"
           >
             <X size={20} />
           </button>

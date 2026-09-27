@@ -70,14 +70,14 @@ export default function PreciseLocationSection({
             <div className="flex items-center gap-2">
               {position ? (
                 <>
-                  <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                  <CheckCircle2 size={16} className="text-success-strong shrink-0" />
                   <span className="font-medium text-text">
                     موقع الحادث المحدد: {position[0].toFixed(5)}, {position[1].toFixed(5)}
                   </span>
                 </>
               ) : (
                 <>
-                  <MapPin size={16} className="text-amber-500 shrink-0" />
+                  <MapPin size={16} className="text-warning-muted shrink-0" />
                   <span className="text-text-muted">
                     لم يتم تحديد موقع الحادث بعد. انقر على الخريطة أدناه لتحديد الموقع.
                   </span>
@@ -115,7 +115,7 @@ export default function PreciseLocationSection({
           {hasCoordinatesError && (
             <div
               role="alert"
-              className="flex items-start gap-2 rounded-lg border border-danger/20 bg-red-50 px-3 py-2.5 text-sm text-danger"
+              className="flex items-start gap-2 rounded-lg border border-danger/20 bg-danger-bg px-3 py-2.5 text-sm text-danger"
             >
               <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
               <span>

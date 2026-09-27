@@ -92,9 +92,9 @@ export default function DecisionSection({
     <DetailSection title="Decision / Closing">
       <div className="flex items-center gap-2">
         {approved ? (
-          <CheckCircle2 size={18} className="text-emerald-600" />
+          <CheckCircle2 size={18} className="text-success-strong" />
         ) : (
-          <XCircle size={18} className="text-red-600" />
+          <XCircle size={18} className="text-danger" />
         )}
         <p className="text-sm font-medium text-text">
           {approved ? "تم قبول المطالبة." : "تم رفض المطالبة."}
