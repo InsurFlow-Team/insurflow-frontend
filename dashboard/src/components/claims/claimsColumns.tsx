@@ -55,7 +55,7 @@ export function buildClaimColumns(
         <div className="flex flex-col gap-1 items-start">
           <StatusBadge status={claim.status} />
           {claim.status === "NEW" && claim.lastDecline && (
-            <span className="inline-flex items-center gap-1 rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">
+            <span className="inline-flex items-center gap-1 rounded border border-warning-border-strong bg-warning-bg px-1.5 py-0.5 text-[10px] font-semibold text-warning-deep">
               ⚠️ Re-dispatch Needed
             </span>
           )}

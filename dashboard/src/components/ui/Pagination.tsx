@@ -40,7 +40,7 @@ function pageButtonClass(isCurrent: boolean) {
   return `inline-flex h-8 w-8 items-center justify-center rounded-lg border text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
     isCurrent
       ? "bg-primary border-transparent text-white"
-      : "bg-surface border-border text-text-muted hover:bg-gray-50 hover:text-text"
+      : "bg-surface border-border text-text-muted hover:bg-surface-soft hover:text-text"
   }`;
 }
 

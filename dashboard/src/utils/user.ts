@@ -1,12 +1,12 @@
 import type { Role, User, UserStatus } from "../types";
 
 const AVATAR_PALETTES = [
-  "bg-blue-100 text-blue-700",
-  "bg-purple-100 text-purple-700",
-  "bg-emerald-100 text-emerald-700",
-  "bg-amber-100 text-amber-700",
-  "bg-rose-100 text-rose-700",
-  "bg-indigo-100 text-indigo-700",
+  "bg-info-soft text-info-text",
+  "bg-violet-soft text-violet-text",
+  "bg-success-soft text-success-text",
+  "bg-accent-light text-warning-text",
+  "bg-rose-soft text-rose-text",
+  "bg-violet-soft text-violet-text",
 ];
 
 export const ROLE_OPTIONS: Array<{ value: Role; label: string }> = [

@@ -2,24 +2,18 @@ import { useMemo } from "react";
 import { RefreshCw } from "lucide-react";
 
 import { useDashboardStats } from "../hooks/useDashboardStats";
+import { useDashboardTeam } from "../hooks/useDashboardTeam";
 import { RECENT_CLAIMS_COUNT } from "../components/dashboard/dashboardConstants";
-import DashboardStatsGrid from "../components/dashboard/DashboardStatsGrid";
+import ClaimStatsGrid from "../components/claims/ClaimStatsGrid";
+import NeedsAttentionSection from "../components/dashboard/NeedsAttentionSection";
 import RecentClaimsTable from "../components/dashboard/RecentClaimsTable";
+import TeamCapacityCard from "../components/dashboard/TeamCapacityCard";
 import ErrorState from "../components/ui/ErrorState";
 import Button from "../components/ui/Button";
 
 export default function Dashboard() {
   const { claims, loading, error, load } = useDashboardStats();
-
-  const counts = useMemo(() => {
-    const total = claims.length;
-    const byStatus = claims.reduce<Record<string, number>>((acc, claim) => {
-      acc[claim.status] = (acc[claim.status] ?? 0) + 1;
-      return acc;
-    }, {});
-
-    return { total, ...byStatus } as Record<string, number>;
-  }, [claims]);
+  const team = useDashboardTeam();
 
   const recentClaims = useMemo(
     () =>
@@ -60,7 +54,16 @@ export default function Dashboard() {
         </Button>
       </div>
 
-      <DashboardStatsGrid counts={counts} loading={loading} />
+      <ClaimStatsGrid claims={claims} loading={loading} />
+
+      <NeedsAttentionSection claims={claims} loading={loading} />
+
+      <TeamCapacityCard
+        adjusters={team.adjusters}
+        claims={claims}
+        loading={team.loading}
+        error={team.error}
+      />
 
       <RecentClaimsTable claims={recentClaims} loading={loading} />
     </div>

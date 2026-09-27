@@ -42,7 +42,7 @@ export function buildAdjusterColumns({
       key: "employeeCode",
       header: "Employee Code",
       render: (adjuster) => (
-        <span className="inline-block rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+        <span className="inline-block rounded-md bg-surface-sunken px-2 py-0.5 text-xs font-medium text-text-soft">
           {adjuster.employeeCode}
         </span>
       ),

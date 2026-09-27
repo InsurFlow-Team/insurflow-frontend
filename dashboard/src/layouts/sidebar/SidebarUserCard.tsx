@@ -32,7 +32,7 @@ export default function SidebarUserCard({
       <button
         type="button"
         onClick={onLogout}
-        className="mt-3 flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-danger-bg hover:text-danger transition-colors duration-150 w-full"
+        className="mt-3 flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-text-muted hover:bg-danger-bg hover:text-danger transition-colors duration-150 w-full"
       >
         <LogOut size={18} />
         <span>Logout</span>

@@ -13,18 +13,18 @@ export const WORKLOAD_TIER_META: Record<
 > = {
   OK: {
     label: "Healthy",
-    chipClass: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    barClass: "bg-emerald-500",
+    chipClass: "border-success-border bg-success-bg text-success-text",
+    barClass: "bg-success-strong",
   },
   HIGH: {
     label: "Near capacity",
-    chipClass: "border-amber-200 bg-amber-50 text-amber-700",
-    barClass: "bg-amber-500",
+    chipClass: "border-warning-border bg-warning-bg text-warning-text",
+    barClass: "bg-warning-muted",
   },
   FULL: {
     label: "Full",
-    chipClass: "border-rose-200 bg-rose-50 text-rose-700",
-    barClass: "bg-rose-500",
+    chipClass: "border-rose-border bg-rose-bg text-rose-text",
+    barClass: "bg-rose-strong",
   },
 };
 

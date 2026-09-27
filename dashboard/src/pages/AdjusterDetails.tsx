@@ -3,13 +3,14 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 
 import { getFieldAdjusterById } from "../api/users.service";
+import { getAdjusterWorkHistory } from "../api/claims.service";
 import { getApiErrorMessage } from "../api/client";
-import type { FieldAdjuster } from "../types";
+import type { AdjusterWorkHistory, FieldAdjuster } from "../types";
 import StatusBadge from "../components/ui/StatusBadge";
 import LoadingState from "../components/ui/LoadingState";
 import ErrorState from "../components/ui/ErrorState";
-import EmptyState from "../components/ui/EmptyState";
 import ActiveTasksCell from "../components/adjusters/ActiveTasksCell";
+import WorkHistorySection from "../components/adjusters/WorkHistorySection";
 import { avatarClasses, userInitials } from "../utils/user";
 
 function InfoRow({
@@ -39,6 +40,10 @@ export default function AdjusterDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [history, setHistory] = useState<AdjusterWorkHistory | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState("");
+
   const loadAdjuster = useCallback(async () => {
     if (!adjusterId) return;
 
@@ -55,9 +60,27 @@ export default function AdjusterDetails() {
     }
   }, [adjusterId]);
 
+  // The work history is derived client-side from the claim list, so it loads
+  // independently of the profile: a failure here must not blank the page.
+  const loadHistory = useCallback(async () => {
+    if (!adjusterId) return;
+
+    setHistoryLoading(true);
+    setHistoryError("");
+
+    try {
+      setHistory(await getAdjusterWorkHistory(adjusterId));
+    } catch (requestError) {
+      setHistoryError(getApiErrorMessage(requestError));
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [adjusterId]);
+
   useEffect(() => {
     void loadAdjuster();
-  }, [loadAdjuster]);
+    void loadHistory();
+  }, [loadAdjuster, loadHistory]);
 
   if (loading) {
     return <LoadingState message="Loading adjuster details..." />;
@@ -93,7 +116,7 @@ export default function AdjusterDetails() {
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl font-bold text-text">{adjuster.name}</h1>
-              <span className="inline-block rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+              <span className="inline-block rounded-md bg-surface-sunken px-2 py-0.5 text-xs font-medium text-text-soft">
                 {adjuster.employeeCode}
               </span>
             </div>
@@ -138,8 +161,18 @@ export default function AdjusterDetails() {
           Work history
         </h2>
 
-        <div className="mt-3">
-          <EmptyState message="Recent claims and work history will appear here once the backend exposes the adjuster's claims." />
+        <p className="mt-1 text-sm text-text-muted">
+          Claims this adjuster finished, with the inspections performed and how
+          long each one took.
+        </p>
+
+        <div className="mt-5">
+          <WorkHistorySection
+            history={history}
+            loading={historyLoading}
+            error={historyError}
+            onRetry={() => void loadHistory()}
+          />
         </div>
       </section>
     </div>

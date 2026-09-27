@@ -47,15 +47,15 @@ export default function UserStats({ stats }: UserStatsProps) {
       value: stats.active,
       secondary: `${activePercent}%`,
       icon: CheckCircle,
-      iconClass: "text-emerald-500",
-      dot: "bg-emerald-500",
+      iconClass: "text-success-strong",
+      dot: "bg-success-strong",
     },
     {
       label: "Inactive / Suspended",
       value: stats.inactive,
       secondary: "locked",
       icon: Lock,
-      iconClass: "text-gray-400",
+      iconClass: "text-text-subtle",
     },
     {
       label: "Admins",

@@ -28,9 +28,9 @@ export default function AdjustersHeader({
         </h1>
 
         {showLiveBadge && (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-600">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-success-border bg-success-bg px-2.5 py-0.5 text-xs font-semibold text-success-strong">
             <span
-              className={`h-2 w-2 rounded-full bg-emerald-500 ${pollingPaused ? "" : "animate-pulse"}`}
+              className={`h-2 w-2 rounded-full bg-success-strong ${pollingPaused ? "" : "animate-pulse"}`}
               aria-hidden="true"
             />
             {pollingPaused ? "Live Sync Paused" : "Live Synced"}

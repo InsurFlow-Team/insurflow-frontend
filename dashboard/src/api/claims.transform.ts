@@ -1,4 +1,4 @@
-import type { ClaimSummary } from "../types";
+import type { ClaimSummary, UserSummary } from "../types";
 import { normalizeGeoPoint } from "../utils/geo";
 
 const CLAIM_STATUSES: readonly string[] = [
@@ -13,6 +13,28 @@ const CLAIM_STATUSES: readonly string[] = [
   "REJECTED",
   "CLOSED",
 ];
+
+function normalizeUserSummary(value: unknown): UserSummary | null {
+  if (!value || typeof value !== "object") return null;
+
+  const source = value as Record<string, unknown>;
+  const id =
+    typeof source.id === "string"
+      ? source.id
+      : typeof source._id === "string"
+        ? source._id
+        : "";
+
+  if (!id) return null;
+
+  return {
+    id,
+    name: typeof source.name === "string" ? source.name : null,
+    employeeCode:
+      typeof source.employeeCode === "string" ? source.employeeCode : null,
+    role: typeof source.role === "string" ? source.role : undefined,
+  };
+}
 
 export function toClaimSummary(record: unknown): ClaimSummary {
   if (!record || typeof record !== "object") {
@@ -41,6 +63,7 @@ export function toClaimSummary(record: unknown): ClaimSummary {
   const vehicle = source.vehicle as Record<string, unknown> | null;
 
   const rawDecline = source.lastDecline as Record<string, unknown> | null;
+  const assignedTo = normalizeUserSummary(source.assignedTo);
   const lastDecline = rawDecline
     ? {
         reason:
@@ -89,6 +112,7 @@ export function toClaimSummary(record: unknown): ClaimSummary {
           ? vehicle.plateNumber
           : "",
     incidentCoordinates: normalizeGeoPoint(source.incidentCoordinates),
+    ...(assignedTo ? { assignedTo } : {}),
     ...(lastDecline ? { lastDecline } : {}),
     createdAt: rawCreatedAt,
     updatedAt:

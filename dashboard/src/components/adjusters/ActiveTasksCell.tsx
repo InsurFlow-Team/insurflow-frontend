@@ -37,7 +37,7 @@ export default function ActiveTasksCell({
         )}
       </div>
       <div
-        className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-gray-100"
+        className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-sunken"
         role="progressbar"
         aria-valuenow={percent}
         aria-valuemin={0}

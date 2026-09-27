@@ -28,7 +28,7 @@ export default function ClaimTimeline({ timeline }: ClaimTimelineProps) {
             <div
               key={`${event.timestamp}-${index}`}
               className={`border-l-2 pl-4 ${
-                view.isDecline ? "border-amber-400" : "border-primary"
+                view.isDecline ? "border-warning-border-strong" : "border-primary"
               }`}
             >
               <div className="flex flex-wrap items-center gap-2">
@@ -37,7 +37,7 @@ export default function ClaimTimeline({ timeline }: ClaimTimelineProps) {
                 </p>
 
                 {view.isDecline && (
-                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                  <span className="rounded-full bg-accent-light px-2 py-0.5 text-xs font-semibold text-warning-text">
                     Declined
                   </span>
                 )}

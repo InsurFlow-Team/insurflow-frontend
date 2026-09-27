@@ -17,6 +17,38 @@ export interface ClaimSummary {
   updatedAt?: string;
   incidentCoordinates?: GeoPoint | null;
   lastDecline?: LastDeclineInfo | null;
+  // Sent by GET /claims so a claim can be traced back to its adjuster without
+  // a per-adjuster endpoint. Absent on unassigned claims.
+  assignedTo?: UserSummary | null;
+}
+
+// ─── Adjuster work history (GET /claims + GET /claims/:id) ───────────────────
+
+// A claim counts as completed once a final decision was made: approved and
+// rejected both end the adjuster's part of the work, and closed means settled.
+// The runtime list lives in utils/adjusterHistory.ts; this barrel is types-only.
+
+export interface AdjusterWorkHistoryEntry {
+  claimId: string;
+  claimNumber: string;
+  status: ClaimStatus;
+  customerName: string;
+  plateNumber: string | null;
+  // null when the claim details could not be hydrated — the UI shows "—" rather
+  // than inventing a number.
+  inspectionCount: number | null;
+  evidenceCount: number | null;
+  completedAt: string | null;
+  durationHours: number | null;
+}
+
+export interface AdjusterWorkHistory {
+  entries: AdjusterWorkHistoryEntry[];
+  // Counts every completed claim for the adjuster, even when only the most
+  // recent ones are hydrated into `entries`.
+  totalCompleted: number;
+  // true when `entries` is a capped slice and older claims were left out.
+  truncated: boolean;
 }
 
 export interface CreateClaimDraft {

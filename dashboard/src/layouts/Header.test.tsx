@@ -22,6 +22,24 @@ vi.mock("../contexts/AuthContext", () => ({
   useAuth: () => auth,
 }));
 
+// The header now mounts the notification bell. Mocked so these tests stay
+// hermetic instead of issuing a real request per render.
+const notifications = vi.hoisted(() => ({
+  getUnreadNotificationCount: vi.fn().mockResolvedValue(0),
+  getNotifications: vi.fn().mockResolvedValue({
+    items: [],
+    total: 0,
+    page: 1,
+    totalPages: 1,
+  }),
+  markNotificationRead: vi.fn(),
+}));
+
+vi.mock("../api/notifications", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../api/notifications")>();
+  return { ...actual, ...notifications };
+});
+
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Header from "./Header";
 

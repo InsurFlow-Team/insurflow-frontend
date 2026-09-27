@@ -54,7 +54,7 @@ export function buildUserColumns({
       key: "employeeCode",
       header: "Employee Code",
       render: (user) => (
-        <span className="inline-block rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+        <span className="inline-block rounded-md bg-surface-sunken px-2 py-0.5 text-xs font-medium text-text-soft">
           {user.employeeCode}
         </span>
       ),
@@ -126,7 +126,7 @@ export function buildUserColumns({
                   type="button"
                   disabled={disabled}
                   onClick={() => onToggleStatus(user)}
-                  className={`${rowActionClass} text-emerald-600 hover:bg-emerald-50 focus-visible:ring-emerald-400/40`}
+                  className={`${rowActionClass} text-success-strong hover:bg-success-bg focus-visible:ring-success-strong/40`}
                 >
                   <CheckCircle size={14} />
                   Activate

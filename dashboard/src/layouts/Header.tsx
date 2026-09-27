@@ -1,6 +1,7 @@
 import { useLocation } from "react-router-dom";
-import { Bell, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import UserMenu from "./header/UserMenu";
+import NotificationBell from "../components/notifications/NotificationBell";
 import { pageTitle } from "./header/pageTitle";
 
 interface HeaderProps {
@@ -28,21 +29,13 @@ export default function Header({ onMenuClick = () => {} }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-3">
-        {/* Notification bell — inactive tonight: the backend has no
-            notifications module yet (GET /notifications/unread-count →
-            404). No fake dot. */}
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="p-2 text-text-muted hover:text-text hover:bg-background rounded-lg transition-colors"
-        >
-          <Bell size={19} />
-        </button>
+        <NotificationBell />
 
         <div className="w-px h-7 bg-border" />
 
         <UserMenu />
       </div>
+
     </header>
   );
 }

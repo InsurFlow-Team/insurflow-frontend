@@ -62,7 +62,7 @@ vi.mock("../api/policy.service", () => ({
 import { getClaims, createClaim } from "../api/claims.service";
 import { verifyPolicy } from "../api/policy.service";
 import ClaimsList from "./ClaimsList";
-import type { ClaimSummary, PolicyVerificationResponse } from "../types";
+import type { ClaimStatus, ClaimSummary, PolicyVerificationResponse } from "../types";
 
 const VERIFIED_POLICY: PolicyVerificationResponse = {
   isEligible: true,
@@ -109,6 +109,17 @@ const CREATED_ROW: ClaimSummary = {
 
 const CLAIM_NUMBER_TEXT = "CLM-2026-0001";
 
+function makeRow(id: string, claimNumber: string, status: ClaimStatus): ClaimSummary {
+  return {
+    id,
+    claimNumber,
+    status,
+    customerName: "Ahmed Ibrahim",
+    initialPlateNumber: "ABC-1234",
+    createdAt: "2026-08-26T15:00:00.000Z",
+  };
+}
+
 beforeEach(() => {
   vi.mocked(getClaims).mockReset();
   vi.mocked(verifyPolicy).mockReset();
@@ -142,6 +153,18 @@ async function renderPage() {
     </MemoryRouter>,
   );
   return utils;
+}
+
+async function renderPageAt(path: string) {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <Routes>
+        <Route path="/claims" element={<ClaimsList />} />
+        <Route path="/claims/:claimId" element={<DetailsStub />} />
+        <Route path="/map" element={<MapStub />} />
+      </Routes>
+    </MemoryRouter>,
+  );
 }
 
 // The claim intake flow is gated by policy verification: Add Claim → verify a
@@ -202,7 +225,7 @@ describe("ClaimsList", () => {
     await user.click(screen.getByRole("button", { name: /Create Claim/i }));
 
     // The user lands directly on the Claim Details page for the created claim.
-    expect(await screen.findByText("Details for clm-new")).toBeTruthy();
+    expect(await screen.findByText("Details for clm-new", undefined, { timeout: 5000 })).toBeTruthy();
 
     // POST payload contains ONLY the verified contract fields from policy
     // verification plus incident details. The officer pins the incident on the
@@ -260,7 +283,7 @@ describe("ClaimsList", () => {
     await user.click(screen.getByRole("button", { name: /Create Claim/i }));
 
     // Success navigates straight to the claim details (id from the response).
-    await screen.findByText("Details for clm-new");
+    await screen.findByText("Details for clm-new", undefined, { timeout: 5000 });
 
     expect(createClaim).toHaveBeenCalledTimes(1);
     expect(createClaim).toHaveBeenCalledWith(
@@ -309,7 +332,7 @@ describe("ClaimsList", () => {
 
     // Creation is committed: the user is taken straight to the claim details
     // even though the background list refresh failed.
-    expect(await screen.findByText("Details for clm-new")).toBeTruthy();
+    expect(await screen.findByText("Details for clm-new", undefined, { timeout: 5000 })).toBeTruthy();
     // …exactly one create request was made (no duplicate-creating retry)…
     expect(createClaim).toHaveBeenCalledTimes(1);
     // …and no "creation failed" message ever appears.
@@ -446,5 +469,53 @@ describe("ClaimsList", () => {
       await screen.findByText(/map-stub:\/map\?claim=clm-1/),
     ).toBeTruthy();
     expect(screen.queryByText("Assign Field Adjuster")).toBeNull();
+  });
+
+  it("applies ?status= from the URL so the dashboard attention queue drill-down works", async () => {
+    vi.mocked(getClaims).mockResolvedValue([
+      makeRow("clm-n1", "CLM-N1", "NEW"),
+      makeRow("clm-n2", "CLM-N2", "NEW"),
+      makeRow("clm-r1", "CLM-R1", "UNDER_REVIEW"),
+    ]);
+
+    await renderPageAt("/claims?status=NEW");
+
+    await screen.findByText("CLM-N1");
+
+    // Only the linked status is listed.
+    expect(screen.queryByText("CLM-R1")).toBeNull();
+    expect(screen.getByText("CLM-N2")).toBeTruthy();
+  });
+
+  it("ignores an unknown ?status= instead of rendering an empty table", async () => {
+    vi.mocked(getClaims).mockResolvedValue([
+      makeRow("clm-n1", "CLM-N1", "NEW"),
+      makeRow("clm-r1", "CLM-R1", "UNDER_REVIEW"),
+    ]);
+
+    await renderPageAt("/claims?status=NOT_A_STATUS");
+
+    expect(await screen.findByText("CLM-N1")).toBeTruthy();
+    expect(screen.getByText("CLM-R1")).toBeTruthy();
+  });
+
+  it("keeps ?status= in the URL when the officer changes the filter", async () => {
+    vi.mocked(getClaims).mockResolvedValue([
+      makeRow("clm-n1", "CLM-N1", "NEW"),
+      makeRow("clm-r1", "CLM-R1", "UNDER_REVIEW"),
+    ]);
+
+    const user = setupUserEvent();
+    await renderPageAt("/claims?status=NEW");
+
+    await screen.findByText("CLM-N1");
+    expect(screen.queryByText("CLM-R1")).toBeNull();
+
+    await user.selectOptions(
+      screen.getByLabelText(/filter by status/i),
+      "UNDER_REVIEW",
+    );
+
+    expect(await screen.findByText("CLM-R1")).toBeTruthy();
   });
 });

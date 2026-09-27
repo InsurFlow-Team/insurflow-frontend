@@ -296,7 +296,7 @@ export default function MapPage() {
       </div>
 
       {demoMode && (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+        <div className="flex items-start gap-2 rounded-lg border border-warning-border-strong bg-warning-bg px-3 py-2 text-xs text-warning-ink">
           <FlaskConical size={14} className="mt-0.5 shrink-0" />
           <p>
             <span className="font-bold">DEMO mode on</span> — adjuster

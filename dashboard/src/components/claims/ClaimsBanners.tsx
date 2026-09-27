@@ -11,7 +11,7 @@ export default function ClaimsBanners({ success, error }: ClaimsBannersProps) {
       {success && (
         <div
           role="status"
-          className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700"
+          className="flex items-center gap-2 rounded-lg border border-success-border bg-success-bg px-4 py-3 text-sm text-success-text"
         >
           <CheckCircle2 size={16} className="flex-shrink-0" />
           <span>{success}</span>
@@ -21,7 +21,7 @@ export default function ClaimsBanners({ success, error }: ClaimsBannersProps) {
       {error && (
         <div
           role="alert"
-          className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+          className="flex items-start gap-2 rounded-lg border border-warning-border bg-warning-bg px-4 py-3 text-sm text-warning-deep"
         >
           <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
           <span>{error}</span>

@@ -43,15 +43,15 @@ export default function AdjustersStats({ stats }: AdjustersStatsProps) {
       value: stats.available,
       secondary: `${availablePercent}% of fleet · Ready for dispatch`,
       icon: CheckCircle,
-      iconClass: "text-emerald-500",
-      dot: "bg-emerald-500",
+      iconClass: "text-success-strong",
+      dot: "bg-success-strong",
     },
     {
       label: "Unavailable / Off-Shift",
       value: stats.unavailableOrOffShift,
       secondary: "Busy or inactive",
       icon: Briefcase,
-      iconClass: "text-amber-600",
+      iconClass: "text-warning",
     },
     {
       label: "Claims Awaiting Assignment",

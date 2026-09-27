@@ -27,8 +27,8 @@ function AdjusterRow({
         <span
           className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
             busy
-              ? "bg-red-50 text-danger border border-danger/20"
-              : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+              ? "bg-danger-bg text-danger border border-danger/20"
+              : "bg-success-bg text-success-text border border-success-border"
           }`}
         >
           {busy ? "Busy" : "Available"}
@@ -77,7 +77,7 @@ export default function AdjustersList({
             Sorting by proximity...
           </span>
         ) : demo ? (
-          <span className="rounded border border-amber-200 bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
+          <span className="rounded border border-warning-border bg-accent-light px-1.5 py-0.5 text-[10px] font-bold text-warning-deep">
             DEMO
           </span>
         ) : null}
