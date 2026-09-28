@@ -15,7 +15,7 @@ export default function DashboardLayout() {
   };
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background" dir="ltr">
       {/* Mobile sidebar backdrop */}
       {isSidebarOpen && (
         <button
