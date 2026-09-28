@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Loader2, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { login } from "../api/auth.service";
 import { getApiErrorMessage } from "../api/client";
@@ -62,16 +62,16 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8" dir="ltr">
       <div className="bg-surface rounded-2xl border border-border shadow-sm p-8 sm:p-10 w-full max-w-sm">
         <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shrink-0">
-            <ShieldCheck size={20} className="text-white" />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
+            <img src="/logo.jpeg" alt="صَوْن" className="w-full h-full object-cover" />
           </div>
 
           <div>
             <strong className="block text-base font-bold text-text leading-tight">
-              InsurFlow
+              صَوْن | SAWN
             </strong>
 
             <small className="text-text-muted text-xs">

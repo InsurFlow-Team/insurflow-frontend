@@ -13,12 +13,12 @@ import AdjusterDetails from "./pages/AdjusterDetails";
 import Profile from "./pages/Profile";
 import Unauthorized from "./pages/Unauthorized";
 import Login from "./pages/Login";
+import LandingPage from "./pages/LandingPage";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleGuard from "./routes/RoleGuard";
 import LoadingState from "./components/ui/LoadingState";
 
-// Leaflet adds ~150 KB; keep it out of the initial bundle and load the map
-// only when the route is actually opened.
+
 const MapPage = lazy(() =>
   import("./pages/MapPage").then((module) => ({ default: module.default })),
 );
@@ -27,7 +27,7 @@ function App() {
   return (
     <ToastProvider>
       <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
 
         <Route element={<ProtectedRoute />}>
