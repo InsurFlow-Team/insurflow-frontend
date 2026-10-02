@@ -1,5 +1,7 @@
 import axios from "axios";
 
+import { mockAdapter } from "./mock/adapter";
+
 export const TOKEN_STORAGE_KEY = "insurflow_access_token";
 export const USER_STORAGE_KEY = "insurflow_user";
 
@@ -23,8 +25,21 @@ const apiClient = axios.create({
     import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000/api/v1",
   headers: {
     "Content-Type": "application/json",
+    ...(import.meta.env.VITE_NGROK_SKIP_WARNING === "true"
+      ? { "ngrok-skip-browser-warning": "true" }
+      : {}),
   },
 });
+
+// Development escape hatch while the real backend tunnel is down: with
+// VITE_USE_MOCK_API=true every request is served from localStorage (auth,
+// claims, users) by a custom axios adapter, so no service file changes.
+// `import.meta.env.DEV` is deliberate: vitest runs with mode "test" and
+// production builds are DEV=false, so neither can ever pick up mock responses.
+// See src/api/mock/seed.ts for the dev-only warning and the credentials.
+if (import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_API === "true") {
+  apiClient.defaults.adapter = mockAdapter;
+}
 
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem(TOKEN_STORAGE_KEY);

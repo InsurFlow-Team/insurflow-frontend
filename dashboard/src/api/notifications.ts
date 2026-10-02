@@ -137,3 +137,25 @@ export async function markNotificationRead(id: string): Promise<AppNotification 
 
   return toAppNotification(response.data?.data);
 }
+
+/**
+ * The backend has no "mark all as read" endpoint, so this marks all provided
+ * notifications as read sequentially. Used by the "Clear All" button.
+ */
+export async function markMultipleNotificationsRead(
+  ids: string[],
+): Promise<{ succeeded: string[]; failed: string[] }> {
+  const succeeded: string[] = [];
+  const failed: string[] = [];
+
+  for (const id of ids) {
+    try {
+      await markNotificationRead(id);
+      succeeded.push(id);
+    } catch {
+      failed.push(id);
+    }
+  }
+
+  return { succeeded, failed };
+}

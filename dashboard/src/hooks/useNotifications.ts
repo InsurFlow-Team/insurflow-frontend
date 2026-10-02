@@ -3,6 +3,7 @@ import {
   getNotifications,
   getUnreadNotificationCount,
   markNotificationRead,
+  markMultipleNotificationsRead,
   NOTIFICATIONS_PAGE_SIZE,
 } from "../api/notifications";
 import { getApiErrorMessage } from "../api/client";
@@ -18,10 +19,13 @@ interface UseNotificationsResult {
   total: number;
   /** True only for the first load of the list, which happens on first open. */
   loadingList: boolean;
+  /** True while clearing all notifications. */
+  clearingAll: boolean;
   error: string;
   open: boolean;
   setOpen: (next: boolean) => void;
   markRead: (id: string) => void;
+  clearAll: () => void;
   refresh: () => void;
 }
 
@@ -42,6 +46,7 @@ export function useNotifications(): UseNotificationsResult {
   const [items, setItems] = useState<AppNotification[]>([]);
   const [total, setTotal] = useState(0);
   const [loadingList, setLoadingList] = useState(false);
+  const [clearingAll, setClearingAll] = useState(false);
   const [error, setError] = useState("");
   const [open, setOpen] = useState(false);
 
@@ -149,5 +154,56 @@ export function useNotifications(): UseNotificationsResult {
     if (open) void loadList();
   }, [loadCount, loadList, open]);
 
-  return { count, items, total, loadingList, error, open, setOpen, markRead, refresh };
+  const clearAll = useCallback(() => {
+    const unreadItems = items.filter((item) => item.readAt === null);
+    
+    if (unreadItems.length === 0) return;
+
+    const unreadIds = unreadItems.map((item) => item.id);
+    const stampedAt = new Date().toISOString();
+
+    // Optimistically mark all as read
+    setItems((current) =>
+      current.map((item) =>
+        unreadIds.includes(item.id) ? { ...item, readAt: stampedAt } : item,
+      ),
+    );
+    setCount(0);
+    setClearingAll(true);
+
+    void (async () => {
+      try {
+        const result = await markMultipleNotificationsRead(unreadIds);
+
+        // If any failed, roll them back
+        if (result.failed.length > 0) {
+          setItems((current) =>
+            current.map((item) => {
+              if (result.failed.includes(item.id)) {
+                const original = unreadItems.find((u) => u.id === item.id);
+                return original ?? item;
+              }
+              return item;
+            }),
+          );
+          setCount(result.failed.length);
+          setError(`Failed to mark ${result.failed.length} notification(s) as read.`);
+        }
+      } catch (requestError) {
+        // Roll back all on total failure
+        setItems((current) =>
+          current.map((item) => {
+            const original = unreadItems.find((u) => u.id === item.id);
+            return original ?? item;
+          }),
+        );
+        setCount(unreadItems.length);
+        setError(getApiErrorMessage(requestError));
+      } finally {
+        setClearingAll(false);
+      }
+    })();
+  }, [items]);
+
+  return { count, items, total, loadingList, clearingAll, error, open, setOpen, markRead, clearAll, refresh };
 }

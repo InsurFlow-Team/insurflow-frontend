@@ -701,3 +701,307 @@ Tests: 48 added (`notifications.test.ts` 13, `useNotifications.test.ts` 9,
   `StatusBadge` and by the claim stat cards). 143 raw Tailwind palette usages
   across 37 files were migrated; the palette is defined once in `index.css`.
 - Every change keeps the green bar: `npx vitest run` → `npx tsc -b` → `npm run build` → `npx eslint src`.
+
+## 12. Policy coverage snapshot — DELIVERED by backend, pending live re-verify
+
+> **STATUS: CONTRACT RECEIVED (2026-09-29), NOT YET VERIFIED LIVE.**
+> The backend replied with a full contract. The frontend has **not** been built
+> against it yet: the tunnel points at a **local** backend, and the reply says
+> "تم اعتماد وتطبيق" — that still has to be confirmed against a real response
+> before any code is written. See §12.6 for the open questions.
+
+### 12.1 What was actually verified (2026-09-29)
+
+| Source | Result |
+|---|---|
+| `dashboard/src/types/policy.ts` → `PolicyVerificationResponse` | `{ isEligible, policy, vehicle, customer }` |
+| `dashboard/src/api/policy.service.ts` docblock | identical shape |
+| §6 above (live-verified 2026-09-24, CO-001) | "matching frontend types exactly" |
+| grep over this entire document | **0** hits for `coverage`, `deductible`, `isCollisionCovered`, `isTheftCovered`, `tglass` |
+
+Re-probe attempted 2026-09-29: every endpoint on
+`insurflow-backend.onrender.com` returned **503** (service down, including
+`/notifications/unread-count` which was 200 earlier the same day), so the
+contract could **not** be re-confirmed live today. §6 stands as the last
+confirmed state.
+
+**Conclusion: the verify contract has no coverage fields, and the product
+brief's assumption that the backend "likely added them" is unsupported.**
+
+### 12.2 DELIVERED contract (2026-09-29, backend reply — not yet live-verified)
+
+**Request** — one new **optional** field, `incidentType`:
+
+```jsonc
+POST /api/v1/policies/verify
+Headers: Authorization: Bearer <TOKEN>
+{ "policyNumber": "POL-1000", "plateNumber": "ABC-1234",
+  "incidentDate": "2026-06-15", "incidentType": "COLLISION" }
+```
+
+**Response** — `eligibilityHint` + `coverage` added, and `policy` gained three
+fields:
+
+```jsonc
+{ "success": true, "message": "Policy verified successfully",
+  "data": {
+    "isEligible": true,
+    "eligibilityHint": "ELIGIBLE_FOR_REVIEW",      // NEW — nullable
+    "policy": {
+      "id": "66d0fe4f5311236168a109d1",
+      "policyNumber": "POL-1000",
+      "status": "ACTIVE",
+      "startDate": "2026-01-01",
+      "expiryDate": "2026-12-31",
+      "policyType": "COMPREHENSIVE",               // NEW
+      "coveredPerils": ["COLLISION", "THEFT", "FIRE", "NATURAL_DISASTER"],  // NEW
+      "deductibleAmount": 500                      // NEW
+    },
+    "coverage": {                                   // NEW — nullable
+      "policyType": "COMPREHENSIVE",
+      "effectiveFrom": "2026-01-01",
+      "effectiveTo":   "2026-12-31",
+      "deductible": 500,                            // POLICY-level, not per-incident
+      "incidents": [
+        { "code": "COLLISION",        "covered": true  },
+        { "code": "THEFT",            "covered": true  },
+        { "code": "FIRE",             "covered": true  },
+        { "code": "NATURAL_DISASTER", "covered": true  }
+      ]
+    },
+    "vehicle":  { "id", "plateNumber", "make", "model", "year", "color" },
+    "customer": { "id", "fullName", "phone" }
+  }}
+```
+
+`eligibilityHint` values:
+
+| Value | Meaning | Nullable |
+|---|---|---|
+| `ELIGIBLE_FOR_REVIEW` | incident covered, claim may be opened | no |
+| `NOT_COVERED_BY_POLICY_TYPE` | e.g. own-damage on a third-party policy | no |
+| `COVERAGE_UNKNOWN` | legacy policy, no coverage record | no |
+| `null` | `incidentType` was not supplied | **yes** |
+
+`coverage: null` comes with `eligibilityHint: "COVERAGE_UNKNOWN"`.
+
+### 12.3 What changed against the original request
+
+| Requested | Delivered | Why |
+|---|---|---|
+| `limit`, `limitType` | **dropped** | No fixed monetary ceilings exist in the data model; physical-damage cover is assessed by the field adjuster against market value. **The UI must not display any money ceiling.** |
+| `currency` | **dropped** | Follows from the above. |
+| per-incident `deductible` | **one policy-level `deductible`** | The deductible is carried by the policy, not per peril. |
+| `incidents[]` + `code`/`covered` | **kept as proposed** ✅ | New perils can be added without a breaking change. |
+| — | **`policyType`, `coveredPerils`, `deductibleAmount` added to `policy`** | Duplicate surface for the same facts; see §12.6. |
+| — | **`incidentType` added to the request** | Needed to compute `eligibilityHint`. Optional; `null` hint without it. |
+
+Peril codes: `COLLISION`, `THEFT`, `FIRE`, `NATURAL_DISASTER`.
+
+### 12.4 Explicitly out of scope
+
+Confirmed by the backend and held on the frontend side too:
+
+- any change to `POST /claims` or to the claim model — `policyId` stays the only
+  linkage, and the claim stores no copy of the coverage snapshot;
+- automatic approval / rejection — the backend states the verify step is an
+  **Advisory Gate** and the decision stays with the Claims Officer, matching
+  `docs/landing-page/01-product-overview.md` ("does not automatically make the
+  final compensation decision");
+- the incident map — dispatch only, it does not return to the claim form (see §7);
+- RBAC.
+
+### 12.5 What the frontend must not do with `eligibilityHint`
+
+The contract is advisory, and the UI has to keep it advisory. Three rules, all
+derived from the constraints above:
+
+1. **Never block claim creation on `NOT_COVERED_BY_POLICY_TYPE`.** Blocking the
+   "Continue" step would *be* an auto-reject. The officer must still be able to
+   open the claim; own-damage assessment is a field decision, not an intake gate.
+2. **`COVERAGE_UNKNOWN` is a data gap, not a "not covered".** A legacy policy with
+   no coverage record must never be styled as excluded.
+3. **`ELIGIBLE_FOR_REVIEW` must not read as an approval.** A green "eligible"
+   badge is exactly the language §12.4 forbids. Render it as an explicitly
+   advisory hint, and never fall back to `policy.status` when the hint is `null`
+   (that is what `null` means).
+
+### 12.6 Open questions before any code is written
+
+1. **Live confirmation.** The reply is a contract, not a response. The ngrok
+   tunnel points at a **local** backend, so the feature may not be deployed
+   there yet. Verify with a real `POST /policies/verify` first.
+2. **Taxonomy clash — needs a decision.** The verify request now takes a peril
+   code (`COLLISION` / `THEFT` / `FIRE` / `NATURAL_DISASTER`), but the Create
+   Claim form already collects a *different* `incidentType` allow-list
+   (`COLLISION`, `REAR_END_COLLISION`, `SIDE_IMPACT`, `PARKING_DAMAGE`, `OTHER`
+   — see `utils/validation.ts`). Only `COLLISION` overlaps. The officer would
+   pick a peril at verification and a collision sub-type at claim creation, and
+   the peril is not persisted anywhere. Options: keep the two taxonomies apart
+   and label them clearly, align the claim form to the peril codes, or ask the
+   backend to accept the claim's sub-types.
+3. **Duplicated facts.** `coverage.policyType` / `deductible` repeat
+   `policy.policyType` / `deductibleAmount`, and `coveredPerils` repeats
+   `coverage.incidents[].code`. Confirm which surface is authoritative so the UI
+   does not render two disagreeing numbers.
+4. **`policyId` provenance.** Confirm `data.policy.id` is still the linkage for
+   `POST /claims`; the samples show Mongo-style 24-hex ids.
+
+### 12.7 Frontend state
+
+No Coverage component, no types, no tests were written yet. The claim intake
+flow is untouched and green. The temporary ngrok wiring (see §13) is the only
+code change so far.
+
+## 13. TEMPORARY dev wiring — ngrok (not production)
+
+> **Development only. Must not ship.** The Render service is suspended
+> (`x-render-routing: suspend`), so the frontend was pointed at a colleague's
+> local backend over an ngrok free tunnel while coverage work is blocked on the
+> backend.
+
+| Item | Value |
+|---|---|
+| Temporary base URL | `https://carport-update-unease.ngrok-free.dev/api/v1` |
+| Where | `dashboard/.env` only (gitignored) |
+| Revert | delete the two lines below from `dashboard/.env`; no code change needed |
+
+```
+VITE_API_BASE_URL=https://carport-update-unease.ngrok-free.dev/api/v1
+VITE_NGROK_SKIP_WARNING=true
+```
+
+`dashboard/.env.example` is deliberately **unchanged** and still points at
+Render, so a fresh clone never inherits the tunnel.
+
+### 13.1 Why `VITE_NGROK_SKIP_WARNING` exists
+
+ngrok's free tier serves a **browser-warning interstitial** to browser
+User-Agents. Measured against the tunnel:
+
+| User-Agent | without the header | with the header |
+|---|---|---|
+| `curl/8.4.0` | `401` | `401` |
+| Chrome (what axios sends) | `200 text/plain` — the ngrok page | `401 application/json` |
+
+So pointing the app at the tunnel **without** this header makes every browser
+request receive HTML instead of JSON, and login fails with a misleading error.
+Note the interstitial returns **`200` for an error** — status code alone lies
+here, the body is the only reliable signal.
+
+`client.ts` therefore adds the header only when the env var is exactly `"true"`,
+so it is inert in every build that does not set it, and removing one line from
+`.env` fully reverts the setup.
+
+### 13.2 Not production
+
+ngrok free URLs are public, unauthenticated, and change per session. They must
+never be used for real claim data, and this entry must be deleted once the
+Render service is back.
+
+---
+
+## 14. Screens 2-5 contract (backend message, NOT live-verified)
+
+Status: received in a chat message only. Nothing below has been confirmed
+against a running instance. Section 12 has the same caveat. Do not build on
+this until `verify-all-screens.ps1` returns real JSON.
+
+### 14.1 Screen 2 - POST /claims
+
+New in request:
+
+- `description` - free text describing the incident. We do not send it today.
+
+New in response:
+
+- `trackingToken` - opaque token for the public tracking page.
+- `trackingUrl` - backend-built link to the tracking page.
+- `coverageSnapshot` - coverage as evaluated at submission time.
+
+Open conflict, must be resolved live:
+
+- Section 5 records `latitude` and `longitude` as flat top-level request
+  fields, and that was verified live earlier. The backend message now shows
+  `incidentCoordinates: { latitude, longitude }` as a nested object. The
+  message also says coordinates are now optional. These three claims cannot
+  all be true at once. Keep the flat shape until a real response proves
+  otherwise.
+
+Unchanged: `policyId` still comes from `data.policy.id`.
+
+### 14.2 Screen 3 - GET /claims/:claimId
+
+New fields to surface:
+
+- `incidentDate` in the basic information block.
+- `trackingToken` and `trackingUrl`.
+- `coverageSnapshot` - frozen copy of `policyType`, `coveredPerils`,
+  `deductibleAmount`, `capturedAt`. This is the snapshot taken at submission,
+  not live coverage, so the UI must label it as such and must not re-query
+  the policy endpoint for these values.
+- `lossAssessment` - the decision figures, see 14.3.
+
+Our claim details page renders none of these today.
+
+### 14.3 Screen 4 - POST /claims/:claimId/decision
+
+New in request: `lossAssessment` object.
+
+| Field | Rule |
+| --- | --- |
+| `estimatedPartsCost` | positive, max 2 decimals |
+| `laborCost` | positive, max 2 decimals |
+| `deductibleApplied` | positive, max 2 decimals, may differ from policy deductible |
+| `deductibleOverrideReason` | required only when `deductibleApplied` differs from the policy deductible |
+
+Backend computes, frontend must never send: `totalDamage` =
+`estimatedPartsCost` + `laborCost`; `netApprovedPayout` = `totalDamage` -
+`deductibleApplied`.
+
+New error codes:
+
+| Code | Condition |
+| --- | --- |
+| `DAMAGE_BELOW_DEDUCTIBLE` | 422 when `totalDamage` <= `deductibleApplied` |
+| `OVERRIDE_REASON_REQUIRED` | 422 when the deductible was changed and the reason is empty |
+
+Our decision payload is `{ decision, notes }` today and has no loss figures
+and no client-side decimal or lower-bound validation.
+
+### 14.4 Screen 5 - GET /api/v1/public/claims/track/:trackingToken
+
+Unauthenticated by design. This is the only endpoint of the five that must not
+send an Authorization header.
+
+Response shape: `claimNumber`, `status`, `statusDescription` (Arabic),
+`vehicle` with `plateNumber` / `make` / `model` / `year`, and `timeline`
+entries of `status`, `title`, `description`, `timestamp`.
+
+Timeline uses a simplified vocabulary: `RECEIVED`, `IN_PROGRESS`, `IN_REVIEW`,
+`APPROVED` / `REJECTED`, `CLOSED`.
+
+Status vocabulary conflict:
+
+- `RECEIVED` and `IN_REVIEW` do not exist in our internal enum.
+- Our internal enum has `UNDER_REVIEW`, which the public timeline never uses.
+- Therefore the public timeline cannot be rendered by reusing the internal
+  claim status union or its labels. It needs its own label map and its own
+  progress component.
+
+Error: `404` with `CLAIM_NOT_FOUND`. The page must show a friendly Arabic
+message and must not render the raw error code to the public.
+
+Last live probe of this endpoint returned a bare `404` with `text/plain` and
+an empty body, identical to a nonexistent route, so the endpoint itself is
+still unconfirmed.
+
+### 14.5 What the frontend still owes, in order
+
+1. `description` field on the claim form.
+2. Tracking token and link on create response and claim details.
+3. `coverageSnapshot` display labelled as frozen-at-submission.
+4. Loss assessment inputs plus decimal and minimum validation.
+5. Map `DAMAGE_BELOW_DEDUCTIBLE` and `OVERRIDE_REASON_REQUIRED` to Arabic.
+6. Public tracking route with its own status vocabulary and no auth header.
+7. Live verification of all of the above before any of it ships.
