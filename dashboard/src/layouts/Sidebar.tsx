@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShieldCheck, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import NavItem from "./sidebar/NavItem";
 import SidebarUserCard from "./sidebar/SidebarUserCard";
@@ -55,13 +55,13 @@ export default function Sidebar({
       <div className="px-5 py-6 border-b border-border">
         <div className="flex items-center justify-between gap-2.5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shrink-0">
-              <ShieldCheck size={20} className="text-white" />
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+              <img src="/logo.jpeg" alt="صَوْن" className="w-full h-full object-cover" />
             </div>
 
             <div className="min-w-0">
               <span className="block text-base font-bold text-text tracking-tight leading-tight">
-                InsurFlow
+                صَوْن | SAWN
               </span>
               <span className="block text-xs text-text-muted">
                 Enterprise Operations

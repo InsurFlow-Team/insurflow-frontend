@@ -13,7 +13,7 @@ import AdjusterDetails from "./pages/AdjusterDetails";
 import Profile from "./pages/Profile";
 import Unauthorized from "./pages/Unauthorized";
 import Login from "./pages/Login";
-import TrackClaim from "./pages/TrackClaim";
+import LandingPage from "./pages/LandingPage";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import RoleGuard from "./routes/RoleGuard";
 import LoadingState from "./components/ui/LoadingState";
@@ -27,12 +27,8 @@ function App() {
   return (
     <ToastProvider>
       <Routes>
-        {/* <Route path="/" element= {<} /> */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
-
-        {/* Public Tracking - No authentication required */}
-        <Route path="/track/:token" element={<TrackClaim />} />
 
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardLayout />}>

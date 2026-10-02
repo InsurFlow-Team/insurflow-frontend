@@ -1,11 +1,11 @@
-﻿import { LayoutDashboard, User, Car, UserCheck, Clock } from "lucide-react";
+import { LayoutDashboard, User, Car, UserCheck, Clock } from "lucide-react";
 
 const HIGHLIGHTS = [
-  { icon: LayoutDashboard, label: "╪ص╪د┘╪ر ╪د┘┘à╪╖╪د┘╪ذ╪ر" },
-  { icon: User, label: "╪ذ┘è╪د┘╪د╪ز ╪د┘╪╣┘à┘è┘" },
-  { icon: Car, label: "╪ذ┘è╪د┘╪د╪ز ╪د┘┘à╪▒┘â╪ذ╪ر" },
-  { icon: UserCheck, label: "╪د┘╪ز╪╣┘è┘è┘" },
-  { icon: Clock, label: "╪│╪ش┘ ╪د┘╪ح╪ش╪▒╪د╪ة╪د╪ز" },
+  { icon: LayoutDashboard, label: "حالة المطالبة" },
+  { icon: User, label: "بيانات العميل" },
+  { icon: Car, label: "بيانات المركبة" },
+  { icon: UserCheck, label: "التعيين" },
+  { icon: Clock, label: "سجل الإجراءات" },
 ];
 
 export default function ClaimsOfficerSection() {
@@ -18,7 +18,7 @@ export default function ClaimsOfficerSection() {
             <div className="flex max-h-[320px] items-center justify-center overflow-hidden rounded-xl border border-border bg-surface shadow-lg">
               <img
                 src="/screenshots/claims-dashboard.png"
-                alt="┘┘ê╪ص╪ر ╪د┘┘à╪╖╪د┘╪ذ╪د╪ز ┘┘è ╪╡┘┘ê┘ْ┘"
+                alt="لوحة المطالبات في صَوْن"
                 className="h-auto max-h-[320px] w-full object-contain"
               />
             </div>
@@ -27,11 +27,11 @@ export default function ClaimsOfficerSection() {
           {/* Copy */}
           <div className="order-1 lg:order-2">
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-navy-700 leading-tight mb-6">
-              ┘à┘ ┘à╪▒┘â╪▓ ┘ê╪د╪ص╪»╪î ┘è╪▒┘ë ┘à┘ê╪╕┘ ╪د┘┘à╪╖╪د┘╪ذ╪د╪ز ╪د┘╪╡┘ê╪▒╪ر ┘â╪د┘à┘╪ر.
+              من مركز واحد، يرى موظف المطالبات الصورة كاملة.
             </h2>
             <p className="text-lg text-text-muted leading-relaxed mb-8">
-              ┘è╪ز╪د╪ذ╪╣ ┘à┘ê╪╕┘ ╪د┘┘à╪╖╪د┘╪ذ╪د╪ز ╪ص╪د┘╪ر ┘â┘ ┘à╪╖╪د┘╪ذ╪ر╪î ╪ذ┘è╪د┘╪د╪ز ╪د┘┘ê╪س┘è┘é╪ر╪î ╪د┘╪ز╪╣┘è┘è┘╪î
-              ╪د┘┘à╪╣╪د┘è┘╪ر╪î ╪د┘╪ث╪»┘╪ر╪î ┘ê╪د┘┘à╪▒╪د╪ش╪╣╪ر ╪╢┘à┘ ╪▒╪ص┘╪ر ┘ê╪د╪ص╪»╪ر.
+              يتابع موظف المطالبات حالة كل مطالبة، بيانات الوثيقة، التعيين،
+              المعاينة، الأدلة، والمراجعة ضمن رحلة واحدة.
             </p>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
