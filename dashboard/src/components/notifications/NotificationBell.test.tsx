@@ -8,6 +8,7 @@ const api = vi.hoisted(() => ({
   getUnreadNotificationCount: vi.fn(),
   getNotifications: vi.fn(),
   markNotificationRead: vi.fn(),
+  markMultipleNotificationsRead: vi.fn(),
 }));
 
 vi.mock("../../api/notifications", async (importOriginal) => {
@@ -67,6 +68,10 @@ beforeEach(() => {
   api.markNotificationRead.mockResolvedValue(
     notification({ readAt: new Date().toISOString() }),
   );
+  api.markMultipleNotificationsRead.mockResolvedValue({
+    succeeded: [],
+    failed: [],
+  });
 });
 
 // This project does not enable vitest `globals`, so Testing Library cannot
@@ -281,5 +286,135 @@ describe("notificationPresentation", () => {
 
   it("falls back to a neutral presentation for an unknown type", () => {
     expect(notificationPresentation("WAT").tone).toBe("neutral");
+  });
+});
+
+describe("Clear All functionality", () => {
+  it("shows Clear All button only when there are unread notifications", async () => {
+    const user = userEvent.setup();
+    api.getNotifications.mockResolvedValue(
+      page([
+        notification({ id: "n-1", readAt: null }),
+        notification({ id: "n-2", readAt: "2026-09-26T09:00:00.000Z" }),
+      ], 2),
+    );
+    renderBell();
+
+    await openPanel(user);
+
+    expect(screen.getByRole("button", { name: "Clear All" })).toBeTruthy();
+  });
+
+  it("does not show Clear All button when all notifications are read", async () => {
+    const user = userEvent.setup();
+    api.getNotifications.mockResolvedValue(
+      page([
+        notification({ id: "n-1", readAt: "2026-09-26T09:00:00.000Z" }),
+        notification({ id: "n-2", readAt: "2026-09-26T09:00:00.000Z" }),
+      ], 2),
+    );
+    renderBell();
+
+    await openPanel(user);
+
+    expect(screen.queryByRole("button", { name: "Clear All" })).toBeNull();
+  });
+
+  it("marks all unread notifications as read when Clear All is clicked", async () => {
+    const user = userEvent.setup();
+    api.getUnreadNotificationCount.mockResolvedValue(2);
+    api.getNotifications.mockResolvedValue(
+      page([
+        notification({ id: "n-1", title: "First", readAt: null }),
+        notification({ id: "n-2", title: "Second", readAt: null }),
+        notification({ id: "n-3", title: "Third", readAt: "2026-09-26T09:00:00.000Z" }),
+      ], 3),
+    );
+    api.markMultipleNotificationsRead.mockResolvedValue({
+      succeeded: ["n-1", "n-2"],
+      failed: [],
+    });
+    renderBell();
+
+    await openPanel(user);
+    
+    // Should have 2 unread initially
+    expect(screen.getAllByLabelText("Unread")).toHaveLength(2);
+    
+    await user.click(screen.getByRole("button", { name: "Clear All" }));
+
+    await waitFor(() => {
+      expect(api.markMultipleNotificationsRead).toHaveBeenCalledWith(["n-1", "n-2"]);
+    });
+    
+    // After successful clear, no unread notifications should remain
+    await waitFor(() => {
+      expect(screen.queryAllByLabelText("Unread")).toHaveLength(0);
+    });
+  });
+
+  it("shows 'Clearing...' text while clearing", async () => {
+    const user = userEvent.setup();
+    api.getNotifications.mockResolvedValue(
+      page([notification({ id: "n-1", readAt: null })], 1),
+    );
+    
+    // Slow resolution to catch the loading state
+    let resolveFn: ((value: { succeeded: string[]; failed: string[] }) => void) | undefined;
+    api.markMultipleNotificationsRead.mockReturnValue(
+      new Promise((resolve) => { resolveFn = resolve; }),
+    );
+    
+    renderBell();
+    await openPanel(user);
+    
+    // Click Clear All
+    await user.click(screen.getByRole("button", { name: "Clear All" }));
+    
+    // The button should disappear immediately after clearing (optimistic)
+    // because all unread notifications are now marked as read
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /Clear/ })).toBeNull();
+    });
+    
+    // Resolve the mock
+    if (resolveFn) {
+      resolveFn({ succeeded: ["n-1"], failed: [] });
+    }
+  });
+
+  it("rolls back on failure and shows error message", async () => {
+    const user = userEvent.setup();
+    // Start with badge showing 2 unread
+    api.getUnreadNotificationCount.mockResolvedValue(2);
+    api.getNotifications.mockResolvedValue(
+      page([
+        notification({ id: "n-1", title: "First", readAt: null }),
+        notification({ id: "n-2", title: "Second", readAt: null }),
+      ], 2),
+    );
+    api.markMultipleNotificationsRead.mockResolvedValue({
+      succeeded: ["n-1"],
+      failed: ["n-2"],
+    });
+    
+    renderBell();
+    await openPanel(user);
+    
+    // Should have 2 unread initially
+    expect(screen.getAllByLabelText("Unread")).toHaveLength(2);
+    
+    await user.click(screen.getByRole("button", { name: "Clear All" }));
+
+    // Wait for the operation to complete and error to show
+    await waitFor(() => {
+      const errorElement = screen.queryByText(/Failed to mark 1 notification/);
+      expect(errorElement).toBeTruthy();
+    }, { timeout: 3000 });
+    
+    // One notification should still be unread (the failed one)
+    await waitFor(() => {
+      expect(screen.getAllByLabelText("Unread")).toHaveLength(1);
+    }, { timeout: 3000 });
   });
 });

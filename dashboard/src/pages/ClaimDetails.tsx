@@ -8,6 +8,7 @@ import {
   getClaimExportStatus,
   startClaimReview,
   type ClaimDecision,
+  type DecideClaimPayload,
 } from "../api/claims.service";
 import { getApiErrorMessage } from "../api/client";
 import type { ClaimDetails as ClaimDetailsType } from "../types";
@@ -19,6 +20,8 @@ import ClaimDetailHeader from "../components/claim-details/ClaimDetailHeader";
 import ClaimInfoSections from "../components/claim-details/ClaimInfoSections";
 import ClaimTimeline from "../components/claim-details/ClaimTimeline";
 import PendingAcceptanceBanner from "../components/claim-details/PendingAcceptanceBanner";
+import CurrentStepBanner from "../components/claim-details/CurrentStepBanner";
+import DecisionDialog from "../components/claim-details/DecisionDialog";
 import { toast } from "../contexts/ToastContext";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -79,18 +82,18 @@ export default function ClaimDetails() {
     }
   }
 
-  async function handleDecide() {
-    if (!claimId || !pendingDecision) return;
+  async function handleDecide(payload: DecideClaimPayload) {
+    if (!claimId) return;
 
     setDeciding(true);
 
     try {
-      await decideClaim(claimId, pendingDecision);
+      await decideClaim(claimId, payload);
       await loadClaim();
 
       toast(
         "success",
-        pendingDecision === "APPROVED"
+        payload.decision === "APPROVED"
           ? "تم قبول المطالبة."
           : "تم رفض المطالبة.",
       );
@@ -165,6 +168,9 @@ export default function ClaimDetails() {
 
       {claim.status === "PENDING_ACCEPTANCE" && <PendingAcceptanceBanner />}
 
+      {/* Current Step Banner - explains why the claim is in this state */}
+      <CurrentStepBanner status={claim.status} />
+
       <ClaimInfoSections
         claim={claim}
         canAssign={canAssign}
@@ -188,18 +194,16 @@ export default function ClaimDetails() {
         loading={reviewing}
       />
 
-      <ConfirmDialog
-        isOpen={pendingDecision !== null}
-        onCancel={() => setPendingDecision(null)}
-        onConfirm={() => void handleDecide()}
-        title={
-          pendingDecision === "APPROVED" ? "Approve claim?" : "Reject claim?"
-        }
-        message={`This will change the claim status from UNDER_REVIEW to ${pendingDecision}.`}
-        confirmLabel={pendingDecision === "APPROVED" ? "Approve" : "Reject"}
-        cancelLabel="Cancel"
-        loading={deciding}
-      />
+      {pendingDecision !== null && (
+        <DecisionDialog
+          isOpen
+          onCancel={() => setPendingDecision(null)}
+          onConfirm={(payload) => void handleDecide(payload)}
+          decision={pendingDecision}
+          claim={claim}
+          loading={deciding}
+        />
+      )}
 
       {showAssignModal && claimId && (
         <AssignClaimModal

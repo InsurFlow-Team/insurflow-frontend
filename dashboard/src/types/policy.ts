@@ -33,13 +33,28 @@ export interface PolicyVerificationRequest {
 
 export interface PolicyVerificationResponse {
   isEligible: boolean;
+  eligibilityHint?: string; // NEW: explanation for ineligibility or special cases
   policy: {
     id: string;
     policyNumber: string;
     status: PolicyStatus;
     startDate: string;
     expiryDate: string;
+    policyType?: string; // NEW: e.g., "COMPREHENSIVE", "THIRD_PARTY"
+    coveredPerils?: string[]; // NEW: e.g., ["COLLISION", "THEFT", "FIRE"]
+    deductibleAmount?: number; // NEW: deductible amount in policy currency
   };
+  // NEW: detailed coverage information - can be null if unavailable
+  coverage?: {
+    policyType: string;
+    effectiveFrom: string;
+    effectiveTo: string;
+    deductible: number;
+    incidents: Array<{
+      code: string; // e.g., "COLLISION", "THEFT"
+      covered: boolean; // true if this incident type is covered
+    }>;
+  } | null;
   vehicle: {
     id: string;
     plateNumber: string;

@@ -77,7 +77,7 @@ function NotificationRow({ notification, onOpen, buttonRef }: NotificationRowPro
 }
 
 export default function NotificationBell() {
-  const { count, items, total, loadingList, error, open, setOpen, markRead, refresh } =
+  const { count, items, total, loadingList, clearingAll, error, open, setOpen, markRead, clearAll, refresh } =
     useNotifications();
   const containerRef = useRef<HTMLDivElement>(null);
   const firstItemRef = useRef<HTMLButtonElement>(null);
@@ -129,6 +129,7 @@ export default function NotificationBell() {
   }
 
   const hasMore = total > items.length;
+  const hasUnread = items.some((item) => item.readAt === null);
 
   return (
     <div className="relative" ref={containerRef}>
@@ -156,13 +157,26 @@ export default function NotificationBell() {
         >
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <h2 className="text-sm font-semibold text-text">Notifications</h2>
-            <button
-              type="button"
-              onClick={refresh}
-              className="text-xs font-medium text-info hover:underline"
-            >
-              Refresh
-            </button>
+            <div className="flex items-center gap-2">
+              {hasUnread && (
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  disabled={clearingAll}
+                  className="text-xs font-medium text-danger hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Mark all as read"
+                >
+                  {clearingAll ? "Clearing..." : "Clear All"}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={refresh}
+                className="text-xs font-medium text-info hover:underline"
+              >
+                Refresh
+              </button>
+            </div>
           </div>
 
           <div className="max-h-96 overflow-y-auto">

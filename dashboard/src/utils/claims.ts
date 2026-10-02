@@ -128,3 +128,99 @@ export function getDateCutoff(range: DateRangeFilter): Date | null {
       return null;
   }
 }
+
+/**
+ * Returns a clear Arabic explanation of what each status means and why
+ * the claim is in this state. Used in CurrentStepBanner and other places
+ * to help users understand the current stage.
+ */
+export function getStatusDescription(status: ClaimStatus): {
+  title: string;
+  description: string;
+  tone: "info" | "warning" | "success" | "danger" | "neutral";
+} {
+  switch (status) {
+    case "NEW":
+      return {
+        title: "مطالبة جديدة",
+        description: "المطالبة تم تسجيلها وتحتاج إلى تعيين معاين ميداني.",
+        tone: "info",
+      };
+
+    case "PENDING_ACCEPTANCE":
+      return {
+        title: "بانتظار استلام المعاين",
+        description:
+          "تم تعيين المعاين الميداني وبانتظار قبوله للمهمة من تطبيق الجوال.",
+        tone: "warning",
+      };
+
+    case "ASSIGNED":
+      return {
+        title: "تم التعيين",
+        description:
+          "المعاين قبل المهمة وبانتظار بدء المعاينة الميدانية.",
+        tone: "info",
+      };
+
+    case "IN_PROGRESS":
+      return {
+        title: "المعاينة جارية",
+        description:
+          "المعاين الميداني يقوم حالياً بفحص المركبة وجمع الأدلة.",
+        tone: "info",
+      };
+
+    case "SUBMITTED":
+      return {
+        title: "تم إرسال المعاينة",
+        description:
+          "المعاين أرسل تقرير المعاينة والأدلة، وبانتظار بدء المراجعة.",
+        tone: "warning",
+      };
+
+    case "UNDER_REVIEW":
+      return {
+        title: "قيد المراجعة",
+        description:
+          "تقرير المعاينة قيد المراجعة من قبل قسم المطالبات، وبانتظار اتخاذ القرار.",
+        tone: "warning",
+      };
+
+    case "CORRECTION_REQUIRED":
+      return {
+        title: "تحتاج تصحيح",
+        description:
+          "المعاينة تحتاج إلى استكمال أو تصحيح بعض البيانات من المعاين.",
+        tone: "danger",
+      };
+
+    case "APPROVED":
+      return {
+        title: "تم الموافقة",
+        description: "تم الموافقة على المطالبة وإجراءات الصرف قيد التنفيذ.",
+        tone: "success",
+      };
+
+    case "REJECTED":
+      return {
+        title: "تم الرفض",
+        description: "تم رفض المطالبة بناءً على المراجعة والتقييم.",
+        tone: "danger",
+      };
+
+    case "CLOSED":
+      return {
+        title: "مغلقة",
+        description: "تم إغلاق المطالبة بعد إتمام جميع الإجراءات.",
+        tone: "neutral",
+      };
+
+    default:
+      return {
+        title: "حالة غير معروفة",
+        description: "حالة المطالبة غير محددة.",
+        tone: "neutral",
+      };
+  }
+}

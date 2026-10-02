@@ -1,4 +1,14 @@
-# InsurFlow — Claims Queue Dashboard Design
+# صون (Soun) — Claims Queue Dashboard Design
+
+> **STATUS — decided, NOT yet implemented (2026-09-29).**
+> Arabic + RTL + the صون (Soun) name are now the agreed direction
+> (§1, §2, §11). The codebase is still English/LTR/"InsurFlow", so
+> this document describes the *target*, not the current state. The
+> RTL migration is a separate, large pass — `dir="rtl"`, logical CSS
+> properties, Arabic font stack, and string translation. Nothing in
+> the app has been converted yet; treat the Arabic sections below as
+> the spec to build against, and do not infer that the UI already
+> matches.
 
 ## 1. Purpose
 
@@ -6,13 +16,15 @@ Design a professional B2B SaaS dashboard page for managing
 vehicle insurance claims.
 
 The page represents the Claims Queue / Claims Triage workflow
-inside the existing InsurFlow application.
+inside the existing صون (Soun) application.
 
-The existing product name MUST remain:
+The product name is:
 
-InsurFlow
+صون (Soun)
 
-Do not rename the product to ClaimCore RMS.
+This supersedes the earlier "InsurFlow" placeholder name and the
+earlier English/LTR draft of this document. Arabic content and RTL
+layout are now the product direction — see §2 and §11.
 
 ---
 
@@ -30,7 +42,7 @@ Style:
 - Minimal decoration
 - Strong visual hierarchy
 - Comfortable spacing
-- LTR layout
+- RTL layout (`dir="rtl"`, logical CSS properties, icons that flip)
 
 The interface should feel appropriate for a serious insurance
 operations environment.
@@ -508,10 +520,12 @@ Card Background:
 
 ## 11. Typography
 
-Use a modern sans-serif font:
+Use a modern sans-serif font with solid Arabic coverage, so Arabic
+and Latin render from one stack:
 
-- Inter
-- SF Pro
+- IBM Plex Sans Arabic
+- Noto Sans Arabic
+- Inter (Latin fallback)
 - System UI
 
 Hierarchy:
@@ -527,6 +541,16 @@ Regular
 
 Secondary information:
 Smaller gray text
+
+Notes:
+
+- Arabic and Latin must sit on the same baseline grid; avoid a font
+  stack where Arabic falls back to a different family mid-string.
+- Mixed Arabic/Latin lines (policy numbers, plate numbers, `SAR`)
+  are expected — keep them inside a single `<bdi>` element so
+  bidi ordering does not scramble them in an RTL container.
+- Numerals stay Western (`2026`, `500`) unless a section explicitly
+  asks otherwise.
 
 ---
 

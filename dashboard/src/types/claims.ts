@@ -59,13 +59,13 @@ export interface CreateClaimDraft {
   incidentDate: string; // YYYY-MM-DD
   latitude?: string; // Form value (string), converted to number in the service
   longitude?: string; // Form value (string), converted to number in the service
+  description?: string; // NEW: optional incident description
   // Legacy fields - kept for backward compatibility but not used in new flow
   customerName?: string;
   customerPhone?: string;
   initialPlateNumber?: string;
   accidentDate?: string;
   accidentTime?: string;
-  description?: string;
   damageDescription?: string;
   address?: string;
   insurancePolicyNumber?: string;
@@ -76,6 +76,33 @@ export interface CreateClaimDraft {
   adjusterId?: string;
   priority?: ClaimPriority;
   assignmentNotes?: string;
+}
+
+// ─── Coverage Snapshot (NEW) ──────────────────────────────────────────────────
+
+/**
+ * Coverage snapshot captured at the time of claim creation.
+ * This is a frozen copy of the policy's coverage at the moment of the incident,
+ * so it doesn't change even if the policy is later modified.
+ */
+export interface CoverageSnapshot {
+  policyType: string;
+  coveredPerils: string[];
+  deductibleAmount: number;
+  capturedAt: string; // ISO timestamp
+}
+
+// ─── Loss Assessment (NEW) ────────────────────────────────────────────────────
+
+/**
+ * Financial assessment of the claim damage.
+ * Submitted by Claims Officer/Admin when approving a claim.
+ */
+export interface LossAssessment {
+  estimatedPartsCost: number;
+  laborCost: number;
+  deductibleApplied: number;
+  deductibleOverrideReason?: string; // Required if deductible differs from policy
 }
 
 // ─── Claim details (GET /claims/:claimId) ─────────────────────────────────────
@@ -187,6 +214,16 @@ export interface ClaimDetailsResponse {
 
   timeline: TimelineItem[];
   createdBy: UserSummary | null;
+
+  // NEW: Tracking for customer self-service
+  trackingToken?: string; // Unique token for public tracking
+  trackingUrl?: string; // Full URL for customer tracking page
+
+  // NEW: Coverage snapshot at time of claim creation
+  coverageSnapshot?: CoverageSnapshot | null;
+
+  // NEW: Loss assessment (populated after approval)
+  lossAssessment?: LossAssessment | null;
 }
 
 // Backwards-compatible name kept for the existing page/components/imports.
