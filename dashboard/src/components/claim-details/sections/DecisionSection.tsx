@@ -2,7 +2,7 @@ import Button from "../../ui/Button";
 import DetailSection from "../DetailSection";
 import InfoGrid from "../InfoGrid";
 import InfoRow from "../InfoRow";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle, DollarSign, Wrench, MinusCircle, AlertTriangle } from "lucide-react";
 import { formatDateTime } from "../../../utils/claims";
 import type { ClaimDetails } from "../../../types";
 
@@ -21,7 +21,7 @@ export default function DecisionSection({
   onApprove,
   onReject,
 }: DecisionSectionProps) {
-  const { status, decisionNotes, closedBy, closedAt, closingNotes } = claim;
+  const { status, decisionNotes, closedBy, closedAt, closingNotes, lossAssessment, coverageSnapshot } = claim;
 
   const isClosed = Boolean(closedAt || closedBy || closingNotes);
 
@@ -88,6 +88,21 @@ export default function DecisionSection({
 
   const approved = status === "APPROVED";
 
+  // Calculate payable amount if loss assessment exists
+  let totalDamage = 0;
+  let amountAfterDeductible = 0;
+  let isDeductibleOverridden = false;
+
+  if (lossAssessment) {
+    totalDamage = lossAssessment.estimatedPartsCost + lossAssessment.laborCost;
+    amountAfterDeductible = Math.max(0, totalDamage - lossAssessment.deductibleApplied);
+    
+    // Check if deductible was overridden
+    const defaultDeductible = coverageSnapshot?.deductibleAmount || 0;
+    isDeductibleOverridden = 
+      lossAssessment.deductibleApplied !== defaultDeductible && defaultDeductible > 0;
+  }
+
   return (
     <DetailSection title="Decision / Closing">
       <div className="flex items-center gap-2">
@@ -101,10 +116,79 @@ export default function DecisionSection({
         </p>
       </div>
 
+      {/* Loss Assessment Display (Approval only) */}
+      {approved && lossAssessment && (
+        <div className="mt-4 space-y-4">
+          {/* Financial Details */}
+          <div>
+            <div className="mb-3 flex items-center gap-2 border-b border-border pb-2">
+              <DollarSign size={16} className="text-text-muted" />
+              <h4 className="text-sm font-semibold text-text">تقييم الخسارة المالية</h4>
+            </div>
+            
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-text-muted">
+                  <Wrench size={14} />
+                  تكلفة القطع:
+                </span>
+                <span className="font-medium text-text">
+                  {lossAssessment.estimatedPartsCost.toFixed(2)} ₪
+                </span>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-text-muted">
+                  <DollarSign size={14} />
+                  تكلفة العمالة:
+                </span>
+                <span className="font-medium text-text">
+                  {lossAssessment.laborCost.toFixed(2)} ₪
+                </span>
+              </div>
+              
+              <div className="flex justify-between border-t border-border pt-2">
+                <span className="text-text-muted">إجمالي الضرر:</span>
+                <span className="font-medium text-text">
+                  {totalDamage.toFixed(2)} ₪
+                </span>
+              </div>
+              
+              <div className="flex items-center justify-between text-danger">
+                <span className="flex items-center gap-1.5">
+                  <MinusCircle size={14} />
+                  التحمل:
+                </span>
+                <span className="font-medium">
+                  - {lossAssessment.deductibleApplied.toFixed(2)} ₪
+                </span>
+              </div>
+              
+              {isDeductibleOverridden && lossAssessment.deductibleOverrideReason && (
+                <div className="flex items-start gap-2 rounded bg-warning-bg p-2 text-xs">
+                  <AlertTriangle size={14} className="mt-0.5 shrink-0 text-warning" />
+                  <div>
+                    <p className="font-medium text-warning">تم تعديل التحمل:</p>
+                    <p className="mt-0.5 text-text-muted">{lossAssessment.deductibleOverrideReason}</p>
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex justify-between border-t-2 border-border pt-2 text-base font-bold">
+                <span className="text-text">المبلغ المستحق:</span>
+                <span className="text-success-strong">
+                  {amountAfterDeductible.toFixed(2)} ₪
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {decisionNotes && (
         <div className="mt-3">
-          <InfoGrid columns="2">
-            <InfoRow label="Decision Notes" value={decisionNotes} />
+          <InfoGrid columns="1">
+            <InfoRow label="ملاحظات القرار" value={decisionNotes} />
           </InfoGrid>
         </div>
       )}

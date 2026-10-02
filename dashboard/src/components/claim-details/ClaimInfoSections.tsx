@@ -9,6 +9,9 @@ import InspectionLocationSection from "./sections/InspectionLocationSection";
 import EvidenceSection from "./sections/EvidenceSection";
 import SignatureSection from "./sections/SignatureSection";
 import DecisionSection from "./sections/DecisionSection";
+import ClaimReadinessSection from "./sections/ClaimReadinessSection";
+import CoverageSnapshotSection from "./sections/CoverageSnapshotSection";
+import TrackingInfoSection from "./sections/TrackingInfoSection";
 import type { ClaimDetails } from "../../types";
 
 interface ClaimInfoSectionsProps {
@@ -33,6 +36,15 @@ export default function ClaimInfoSections({
   return (
     <div className="space-y-6">
       <ClaimOverviewSection claim={claim} />
+
+      {/* Claim Readiness - Shows what's completed and what's missing */}
+      <ClaimReadinessSection claim={claim} />
+
+      {/* Coverage Snapshot - Frozen coverage at time of incident (if available) */}
+      <CoverageSnapshotSection claim={claim} />
+
+      {/* Tracking Info - Customer self-service link (if available) */}
+      <TrackingInfoSection claim={claim} />
 
       <AssignmentSection
         claim={claim}
