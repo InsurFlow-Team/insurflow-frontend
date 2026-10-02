@@ -27,7 +27,7 @@ function App() {
   return (
     <ToastProvider>
       <Routes>
-        <Route path="/" element= {<} />
+        {/* <Route path="/" element= {<} /> */}
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
 
