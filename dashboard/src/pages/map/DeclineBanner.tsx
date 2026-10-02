@@ -9,10 +9,12 @@ export default function DeclineBanner({ decline }: DeclineBannerProps) {
   return (
     <div className="p-3 rounded-lg bg-danger-bg border border-danger/20 text-danger text-xs flex items-start gap-2">
       <AlertTriangle size={16} className="text-danger shrink-0 mt-0.5" />
-      <div>
-        <p className="font-bold text-danger">
-          ⚠️ Re-dispatch Needed (تم الرفض سابقاً)
-        </p>
+      <div className="flex items-start gap-2">
+        <AlertTriangle size={18} className="shrink-0 text-danger mt-0.5" />
+        <div>
+          <p className="font-bold text-danger">
+            Re-dispatch Needed (تم الرفض سابقاً)
+          </p>
         <p className="mt-0.5 text-text">
           Refused by:{" "}
           <span className="font-semibold">
@@ -24,6 +26,7 @@ export default function DeclineBanner({ decline }: DeclineBannerProps) {
             Reason: "{decline.reason}"
           </p>
         )}
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { UserCheck } from "lucide-react";
+import { UserCheck, AlertTriangle } from "lucide-react";
 import type { Column } from "../ui/DataTable";
 import StatusBadge from "../ui/StatusBadge";
 import { formatDate } from "../../utils/claims";
@@ -56,7 +56,8 @@ export function buildClaimColumns(
           <StatusBadge status={claim.status} />
           {claim.status === "NEW" && claim.lastDecline && (
             <span className="inline-flex items-center gap-1 rounded border border-warning-border-strong bg-warning-bg px-1.5 py-0.5 text-[10px] font-semibold text-warning-deep">
-              ⚠️ Re-dispatch Needed
+              <AlertTriangle size={10} />
+              Re-dispatch Needed
             </span>
           )}
         </div>

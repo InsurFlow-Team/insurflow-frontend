@@ -1,4 +1,4 @@
-import { MapPin } from "lucide-react";
+import { MapPin, AlertTriangle } from "lucide-react";
 import { claimCoordinates } from "../../utils/map";
 import type { ClaimSummary } from "../../types";
 
@@ -62,8 +62,9 @@ export default function ClaimsQueuePanel({
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
                   {claim.lastDecline && (
-                    <span className="text-[10px] bg-danger-bg text-danger border border-danger/30 px-1.5 py-0.5 rounded font-bold shrink-0">
-                      ⚠️ Declined
+                    <span className="inline-flex items-center gap-1 text-[10px] bg-danger-bg text-danger border border-danger/30 px-1.5 py-0.5 rounded font-bold shrink-0">
+                      <AlertTriangle size={10} />
+                      Declined
                     </span>
                   )}
                   {!coords ? (

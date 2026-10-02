@@ -62,10 +62,14 @@ export default function DispatchPanel({
           <p>
             <span className="text-text-muted">Incident Location:</span>{" "}
             {coords ? (
-              <span className="font-medium text-success-strong">📍 Pin on map</span>
+              <span className="inline-flex items-center gap-1 font-medium text-success-strong">
+                <MapPin size={14} />
+                Pin on map
+              </span>
             ) : (
-              <span className="font-medium text-warning">
-                ⚠ Incident coordinates unavailable
+              <span className="inline-flex items-center gap-1 font-medium text-warning">
+                <AlertTriangle size={14} />
+                Incident coordinates unavailable
               </span>
             )}
           </p>
