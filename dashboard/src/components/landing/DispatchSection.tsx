@@ -46,11 +46,11 @@ export default function DispatchSection() {
           </div>
 
           {/* Visual: Real map screenshot */}
-          <div className="flex max-h-[420px] items-center justify-center overflow-hidden rounded-xl border border-border bg-surface shadow-lg">
+          <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-lg">
             <img
               src="/screenshots/dispatch-map.png"
               alt="خريطة التوزيع في صَوْن"
-              className="h-auto max-h-[420px] w-full object-contain"
+              className="h-auto w-full object-cover"
             />
           </div>
         </div>

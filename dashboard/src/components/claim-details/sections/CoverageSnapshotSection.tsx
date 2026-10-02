@@ -73,7 +73,7 @@ export default function CoverageSnapshotSection({
               <p className="text-xs font-medium text-text-muted">مبلغ التحمل</p>
             </div>
             <p className="text-sm font-semibold text-text">
-              {deductibleAmount} ريال
+              {deductibleAmount} ₪
             </p>
           </div>
         </div>

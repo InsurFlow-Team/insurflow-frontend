@@ -36,12 +36,12 @@ export default function ProductGallery() {
           {SCREENSHOTS.map((shot) => (
             <div key={shot.title} className="group">
               <div
-                className={`mb-4 flex items-center justify-center overflow-hidden rounded-xl border border-border bg-background p-2 shadow-sm ${shot.mobile ? "h-[300px] sm:h-[360px]" : "aspect-video"}`}
+                className={`mb-4 overflow-hidden rounded-xl border border-border bg-background shadow-sm ${shot.mobile ? "flex items-center justify-center h-[360px]" : ""}`}
               >
                 <img
                   src={shot.image}
                   alt={shot.title}
-                  className={`transition-transform duration-300 group-hover:scale-[1.02] ${shot.mobile ? "h-full w-auto max-w-full object-contain" : "h-full w-full object-contain"}`}
+                  className={`transition-transform duration-300 group-hover:scale-[1.02] ${shot.mobile ? "h-full w-auto max-w-full object-contain" : "h-auto w-full object-cover"}`}
                 />
               </div>
               <h3 className="text-lg font-bold text-text mb-1">{shot.title}</h3>

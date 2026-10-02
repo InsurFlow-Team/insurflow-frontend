@@ -44,11 +44,11 @@ export default function HeroSection() {
           {/* Visual: Dashboard + Mobile overlay */}
           <div className="relative">
             {/* Dashboard screenshot */}
-            <div className="flex max-h-[420px] items-center justify-center overflow-hidden rounded-xl border border-border bg-surface shadow-xl">
+            <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-xl">
               <img
                 src="/screenshots/dashboard.png"
                 alt="لوحة تحكم صَوْن"
-                className="h-auto max-h-[420px] w-full object-contain"
+                className="h-auto w-full object-cover"
               />
             </div>
 

@@ -125,7 +125,7 @@ export default function VerifiedPolicyResult({
             policy.deductibleAmount !== null && (
               <FieldRow
                 label="مبلغ التحمل:"
-                value={`${policy.deductibleAmount} ريال`}
+                value={`${policy.deductibleAmount} ₪`}
               />
             )}
         </FieldGroup>
@@ -149,7 +149,7 @@ export default function VerifiedPolicyResult({
               <div className="flex justify-between">
                 <span className="text-text-muted">التحمل:</span>
                 <span className="text-text font-medium">
-                  {coverage.deductible} ريال
+                  {coverage.deductible} ₪
                 </span>
               </div>
 

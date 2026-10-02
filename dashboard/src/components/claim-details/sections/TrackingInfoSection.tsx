@@ -1,4 +1,4 @@
-import { Link2, Copy, CheckCircle2 } from "lucide-react";
+import { Link2, Copy, CheckCircle2, Lightbulb } from "lucide-react";
 import { useState } from "react";
 import DetailSection from "../DetailSection";
 import Button from "../../ui/Button";
@@ -97,10 +97,13 @@ export default function TrackingInfoSection({
         )}
 
         {/* Usage note */}
-        <p className="text-xs text-text-subtle pt-2 border-t border-border">
-          💡 يمكن إرسال هذا الرابط للعميل عبر الرسائل القصيرة أو البريد
-          الإلكتروني لمتابعة حالة المطالبة.
-        </p>
+        <div className="flex items-start gap-2 pt-2 border-t border-border">
+          <Lightbulb size={14} className="mt-0.5 shrink-0 text-warning" />
+          <p className="text-xs text-text-subtle">
+            يمكن إرسال هذا الرابط للعميل عبر الرسائل القصيرة أو البريد
+            الإلكتروني لمتابعة حالة المطالبة.
+          </p>
+        </div>
       </div>
     </DetailSection>
   );
