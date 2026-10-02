@@ -1,61 +1,45 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import {
-  ArrowLeft,
-  ExternalLink,
-  PlayCircle,
-} from "lucide-react";
+import { useParams } from "react-router-dom";
 
 import {
+  decideClaim,
+  downloadClaimReport,
   getClaimById,
+  getClaimExportStatus,
   startClaimReview,
+  type ClaimDecision,
+  type DecideClaimPayload,
 } from "../api/claims.service";
 import { getApiErrorMessage } from "../api/client";
 import type { ClaimDetails as ClaimDetailsType } from "../types";
-import StatusBadge from "../components/ui/StatusBadge";
 import LoadingState from "../components/ui/LoadingState";
 import ErrorState from "../components/ui/ErrorState";
-import ConfirmationDialog from "../components/ui/ConfirmationDialog";
-
-function formatDate(value?: string | null) {
-  if (!value) return "—";
-
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
-
-function InfoRow({
-  label,
-  value,
-}: {
-  label: string;
-  value?: string | number | null;
-}) {
-  return (
-    <div>
-      <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
-        {label}
-      </p>
-
-      <p className="mt-1 text-sm text-text">
-        {value || "—"}
-      </p>
-    </div>
-  );
-}
+import ConfirmDialog from "../components/ui/ConfirmDialog";
+import AssignClaimModal from "../components/ui/AssignClaimModal";
+import ClaimDetailHeader from "../components/claim-details/ClaimDetailHeader";
+import ClaimInfoSections from "../components/claim-details/ClaimInfoSections";
+import ClaimTimeline from "../components/claim-details/ClaimTimeline";
+import PendingAcceptanceBanner from "../components/claim-details/PendingAcceptanceBanner";
+import CurrentStepBanner from "../components/claim-details/CurrentStepBanner";
+import DecisionDialog from "../components/claim-details/DecisionDialog";
+import { toast } from "../contexts/ToastContext";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function ClaimDetails() {
   const { claimId } = useParams<{ claimId: string }>();
 
+  const { user } = useAuth();
+
   const [claim, setClaim] = useState<ClaimDetailsType | null>(null);
   const [loading, setLoading] = useState(true);
   const [reviewing, setReviewing] = useState(false);
+  const [deciding, setDeciding] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [showReviewDialog, setShowReviewDialog] = useState(false);
+  const [pendingDecision, setPendingDecision] =
+    useState<ClaimDecision | null>(null);
+  const [showAssignModal, setShowAssignModal] = useState(false);
   const [error, setError] = useState("");
-  const [actionError, setActionError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
 
   const loadClaim = useCallback(async () => {
     if (!claimId) return;
@@ -81,21 +65,43 @@ export default function ClaimDetails() {
     if (!claimId) return;
 
     setReviewing(true);
-    setActionError("");
-    setSuccessMessage("");
 
     try {
       await startClaimReview(claimId);
       await loadClaim();
 
-      setSuccessMessage(
+      toast(
+        "success",
         "Claim review started successfully. Status changed to UNDER_REVIEW.",
       );
     } catch (requestError) {
-      setActionError(getApiErrorMessage(requestError));
+      toast("error", getApiErrorMessage(requestError));
     } finally {
       setReviewing(false);
       setShowReviewDialog(false);
+    }
+  }
+
+  async function handleDecide(payload: DecideClaimPayload) {
+    if (!claimId) return;
+
+    setDeciding(true);
+
+    try {
+      await decideClaim(claimId, payload);
+      await loadClaim();
+
+      toast(
+        "success",
+        payload.decision === "APPROVED"
+          ? "تم قبول المطالبة."
+          : "تم رفض المطالبة.",
+      );
+    } catch (requestError) {
+      toast("error", getApiErrorMessage(requestError));
+    } finally {
+      setDeciding(false);
+      setPendingDecision(null);
     }
   }
 
@@ -112,272 +118,74 @@ export default function ClaimDetails() {
     );
   }
 
-  const vehicle = claim.vehicle;
-
-  const accident = claim.accident as {
-    accidentType?: string;
-    accidentDate?: string;
-    accidentTime?: string;
-    description?: string;
-    damageDescription?: string;
-  } | null;
-
-  const location = claim.location as {
-    latitude?: number;
-    longitude?: number;
-    address?: string;
-  } | null;
-
-  const assignedTo = claim.assignment.assignedTo as {
-    name?: string;
-  } | null;
-
-  const sortedTimeline = [...claim.timeline].sort(
-    (firstEvent, secondEvent) =>
-      new Date(String(secondEvent.timestamp ?? "")).getTime() -
-      new Date(String(firstEvent.timestamp ?? "")).getTime(),
-  );
+  const canManageAssignment =
+    user?.role === "ADMIN" || user?.role === "CLAIMS_OFFICER";
 
   const canStartReview = claim.status === "SUBMITTED";
 
+  const canDecide = claim.status === "UNDER_REVIEW" && user?.role === "ADMIN";
+
+  const canAssign = claim.status === "NEW" && canManageAssignment;
+
+  const exportStatus = getClaimExportStatus(claim);
+
+  async function handleExportReport() {
+    if (!claimId || !claim || !exportStatus.exportable || exporting) return;
+
+    setExporting(true);
+
+    try {
+      await downloadClaimReport(claimId, claim.claimNumber);
+      toast("success", "تم تنزيل التقرير بنجاح.");
+    } catch (requestError) {
+      toast("error", getApiErrorMessage(requestError));
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  function handleAssigned() {
+    setShowAssignModal(false);
+    void loadClaim();
+    toast(
+      "success",
+      "Claim offered to the field adjuster. Awaiting their acceptance.",
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <Link
-        to="/claims"
-        className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-dark"
-      >
-        <ArrowLeft size={16} />
-        Back to claims
-      </Link>
+      <ClaimDetailHeader
+        claim={claim}
+        canStartReview={canStartReview}
+        reviewing={reviewing}
+        onStartReview={() => setShowReviewDialog(true)}
+        canExportReport={exportStatus.exportable}
+        exportDisabledReason={exportStatus.disabledReason}
+        exporting={exporting}
+        onExportReport={() => void handleExportReport()}
+      />
 
-      <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm text-text-muted">Claim number</p>
+      {claim.status === "PENDING_ACCEPTANCE" && <PendingAcceptanceBanner />}
 
-          <h1 className="mt-1 text-2xl font-bold text-text">
-            {claim.claimNumber}
-          </h1>
+      {/* Current Step Banner - explains why the claim is in this state */}
+      <CurrentStepBanner status={claim.status} />
 
-          <div className="mt-3">
-            <StatusBadge status={claim.status} />
-          </div>
-        </div>
+      <ClaimInfoSections
+        claim={claim}
+        canAssign={canAssign}
+        onAssign={() => setShowAssignModal(true)}
+        canDecide={canDecide}
+        deciding={deciding}
+        onApprove={() => setPendingDecision("APPROVED")}
+        onReject={() => setPendingDecision("REJECTED")}
+      />
 
-        {canStartReview && (
-          <button
-            type="button"
-            onClick={() => setShowReviewDialog(true)}
-            disabled={reviewing}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-dark px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <PlayCircle size={17} />
-            Start Review
-          </button>
-        )}
-      </div>
+      <ClaimTimeline timeline={claim.timeline} />
 
-      {successMessage && (
-        <div className="rounded-lg border border-primary/20 bg-primary-light px-4 py-3 text-sm font-medium text-primary-dark">
-          {successMessage}
-        </div>
-      )}
-
-      {actionError && (
-        <div className="rounded-lg border border-danger/20 bg-red-50 px-4 py-3 text-sm text-danger">
-          {actionError}
-        </div>
-      )}
-
-      <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-text">
-          Claim information
-        </h2>
-
-        <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <InfoRow label="Claim Number" value={claim.claimNumber} />
-          <InfoRow label="Claim Status" value={claim.status} />
-          <InfoRow
-            label="Submission Date"
-            value={formatDate(claim.createdAt)}
-          />
-          <InfoRow
-            label="Last Updated"
-            value={formatDate(claim.updatedAt)}
-          />
-          <InfoRow
-            label="Field Adjuster Name"
-            value={assignedTo?.name}
-          />
-        </div>
-      </section>
-
-      <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-text">
-          Vehicle information
-        </h2>
-
-        <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
-          <InfoRow label="Plate Number" value={vehicle.plateNumber} />
-          <InfoRow label="Vehicle Make" value={vehicle.make} />
-          <InfoRow label="Vehicle Model" value={vehicle.model} />
-          <InfoRow label="Vehicle Year" value={vehicle.year} />
-          <InfoRow label="Vehicle Color" value={vehicle.color} />
-        </div>
-      </section>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-text">
-            Customer information
-          </h2>
-
-          <div className="mt-5 grid gap-5 sm:grid-cols-2">
-            <InfoRow
-              label="Customer Name"
-              value={claim.customer.name}
-            />
-            <InfoRow
-              label="Phone Number"
-              value={claim.customer.phone}
-            />
-            <InfoRow
-              label="Customer Policy Number"
-              value={vehicle.policyId}
-            />
-          </div>
-        </section>
-
-        <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-text">
-            Policy information
-          </h2>
-
-          <div className="mt-5 grid gap-5 sm:grid-cols-2">
-            <InfoRow
-              label="Policy Number"
-              value={claim.policy?.policyNumber}
-            />
-            <InfoRow
-              label="Policy Status"
-              value={claim.policy?.status}
-            />
-            <InfoRow
-              label="Policy Start Date"
-              value={formatDate(claim.policy?.startDate)}
-            />
-            <InfoRow
-              label="Policy Expiry Date"
-              value={formatDate(claim.policy?.expiryDate)}
-            />
-          </div>
-        </section>
-      </div>
-
-      <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-text">
-          Accident information
-        </h2>
-
-        <div className="mt-5 grid gap-5 sm:grid-cols-2">
-          <InfoRow
-            label="Accident Type"
-            value={accident?.accidentType}
-          />
-          <InfoRow
-            label="Accident Date"
-            value={accident?.accidentDate}
-          />
-          <InfoRow
-            label="Accident Time"
-            value={accident?.accidentTime}
-          />
-          <InfoRow
-            label="Accident Description"
-            value={accident?.description}
-          />
-          <InfoRow
-            label="Damage Description"
-            value={accident?.damageDescription}
-          />
-        </div>
-      </section>
-
-      <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-text">
-          Location information
-        </h2>
-
-        <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          <InfoRow label="Street" value={location?.address} />
-          <InfoRow label="Area" value={claim.incidentLocation} />
-
-          <InfoRow
-            label="Coordinates"
-            value={
-              location?.latitude !== undefined &&
-              location?.longitude !== undefined
-                ? `${location.latitude}, ${location.longitude}`
-                : null
-            }
-          />
-        </div>
-
-        {location?.latitude !== undefined &&
-          location?.longitude !== undefined && (
-            <a
-              href={`https://www.google.com/maps?q=${location.latitude},${location.longitude}`}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary-dark"
-            >
-              <ExternalLink size={16} />
-              View on Map
-            </a>
-          )}
-      </section>
-
-      <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-text">
-          Claim Timeline
-        </h2>
-
-        {sortedTimeline.length === 0 ? (
-          <p className="mt-5 text-sm text-text-muted">
-            No timeline events available.
-          </p>
-        ) : (
-          <div className="mt-5 space-y-4">
-            {sortedTimeline.map((event, index) => {
-              const performedBy = event.performedBy as {
-                name?: string;
-              } | null;
-
-              return (
-                <div
-                  key={`${String(event.timestamp)}-${index}`}
-                  className="border-l-2 border-primary pl-4"
-                >
-                  <p className="text-sm font-semibold text-text">
-                    {String(event.action ?? "Unknown action")}
-                  </p>
-
-                  <p className="mt-1 text-xs text-text-muted">
-                    User: {performedBy?.name ?? "Unknown user"}
-                  </p>
-
-                  <p className="mt-1 text-xs text-text-muted">
-                    {formatDate(String(event.timestamp ?? ""))}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      <ConfirmationDialog
+      <ConfirmDialog
         isOpen={showReviewDialog}
-        onClose={() => setShowReviewDialog(false)}
+        onCancel={() => setShowReviewDialog(false)}
         onConfirm={() => void handleStartReview()}
         title="Start claim review?"
         message="This will change the claim status from SUBMITTED to UNDER_REVIEW."
@@ -385,6 +193,26 @@ export default function ClaimDetails() {
         cancelLabel="Cancel"
         loading={reviewing}
       />
+
+      {pendingDecision !== null && (
+        <DecisionDialog
+          isOpen
+          onCancel={() => setPendingDecision(null)}
+          onConfirm={(payload) => void handleDecide(payload)}
+          decision={pendingDecision}
+          claim={claim}
+          loading={deciding}
+        />
+      )}
+
+      {showAssignModal && claimId && (
+        <AssignClaimModal
+          isOpen
+          onClose={() => setShowAssignModal(false)}
+          claimId={claimId}
+          onAssigned={handleAssigned}
+        />
+      )}
     </div>
   );
 }

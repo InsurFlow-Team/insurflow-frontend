@@ -9,18 +9,28 @@ interface FormFieldProps {
 
 export default function FormField({
   label,
-  required,
+  required = false,
   error,
   children,
 }: FormFieldProps) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <label className="text-sm font-medium text-text">
+    <div>
+      <label className="block text-sm font-medium text-text mb-1.5">
         {label}
-        {required && <span className="text-danger ml-1">*</span>}
+        {required && (
+          <span className="text-danger ml-0.5" aria-hidden="true">
+            *
+          </span>
+        )}
       </label>
+
       {children}
-      {error && <p className="text-xs text-danger">{error}</p>}
+
+      {error && (
+        <p role="alert" className="mt-1.5 text-xs text-danger">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

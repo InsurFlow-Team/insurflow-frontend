@@ -1,44 +1,144 @@
 @import "tailwindcss";
 
 @theme {
-  /* Brand Colors */
-  --color-primary: #2d5d57;
-  --color-primary-dark: #214943;
-  --color-primary-light: #eaf4ef;
+  /* Brand (navy) */
+  --color-primary: #1e2a5e;
+  --color-primary-dark: #162048;
+  --color-primary-light: #eef1f8;
 
-  --color-accent: #d4902e;
-  --color-accent-light: #fff4df;
+  --color-accent: #d97706;
+  --color-accent-light: #fef3c7;
 
   /* Background */
-  --color-background: #f4f7f6;
+  --color-background: #f7f8fa;
   --color-surface: #ffffff;
-  --color-surface-soft: #f8faf9;
+  --color-surface-soft: #f9fafb;
 
   /* Text */
-  --color-text: #20302e;
-  --color-text-muted: #687774;
+  --color-text: #1f2937;
+  --color-text-muted: #6b7280;
 
   /* Status */
-  --color-success: #27845b;
-  --color-warning: #d4902e;
-  --color-danger: #c94a4a;
-  --color-info: #3678b8;
+  --color-success: #10b981;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+  --color-danger-bg: #fee2e2;
+  --color-info: #2563eb;
 
   /* Border */
-  --color-border: #dce7e3;
+  --color-border: #e5e7eb;
+}
+
+/* Design-system semantic extras (used by role/status badges) */
+@theme {
+  --color-admin: #7c3aed;
+  --color-admin-bg: #f3e8ff;
+  --color-claims: #2563eb;
+  --color-claims-bg: #dbeafe;
+  --color-field: #059669;
+  --color-field-bg: #d1fae5;
+}
+
+/*
+ * Feedback families — the single place any non-brand colour is defined.
+ * Every family has the same shape: `-bg` (surface), `-border` (outline),
+ * `-text` (icon/label on that surface). Deeper shades exist only where a
+ * design actually needs a stronger contrast step.
+ * Never write `bg-emerald-50` in a component: use `bg-success-bg`.
+ */
+@theme {
+  /* success */
+  --color-success-bg: #ecfdf5;
+  --color-success-border: #a7f3d0;
+  --color-success-strong: #059669;
+  --color-success-text: #047857;
+  --color-success-deep: #065f46;
+  --color-success-soft: #d1fae5;
+
+  /* warning */
+  --color-warning-bg: #fffbeb;
+  --color-warning-border: #fde68a;
+  --color-warning-border-strong: #fcd34d;
+  --color-warning-muted: #f59e0b;
+  --color-warning-text: #b45309;
+  --color-warning-deep: #92400e;
+  --color-warning-ink: #78350f;
+
+  /* danger */
+  --color-danger-border: #fecaca;
+  --color-danger-text: #b91c1c;
+
+  /* info */
+  --color-info-bg: #eff6ff;
+  --color-info-border: #bfdbfe;
+  --color-info-soft: #dbeafe;
+  --color-info-muted: #3b82f6;
+  --color-info-text: #1d4ed8;
+  --color-info-deep: #1e40af;
+
+  /* rose — a softer negative, used for CORRECTION_REQUIRED */
+  --color-rose-bg: #fff1f2;
+  --color-rose-soft: #ffe4e6;
+  --color-rose-border: #fecdd3;
+  --color-rose-strong: #e11d48;
+  --color-rose-text: #be123c;
+
+  /* violet — "assigned" work */
+  --color-violet-bg: #f5f3ff;
+  --color-violet-soft: #ede9fe;
+  --color-violet-border: #ddd6fe;
+  --color-violet-text: #6d28d9;
+
+  /* neutral steps, for when a surface is not a feedback family */
+  --color-surface-sunken: #f3f4f6;
+  --color-surface-disabled: #e5e7eb;
+  --color-text-subtle: #9ca3af;
+  --color-text-soft: #4b5563;
+}
+
+/* ─── Landing page theme ─────────────────────────────────────────────── */
+@theme {
+  --font-family-sans: "Tajawal", "IBM Plex Sans Arabic", "Cairo", Inter, Arial, Helvetica, sans-serif;
+
+  --color-navy-50: #eef1f8;
+  --color-navy-100: #d4d9e8;
+  --color-navy-200: #a9b3d1;
+  --color-navy-300: #7e8dba;
+  --color-navy-400: #5367a3;
+  --color-navy-500: #2e4380;
+  --color-navy-600: #1e2a5e;
+  --color-navy-700: #162048;
+  --color-navy-800: #0f1632;
+  --color-navy-900: #090d1f;
+
+  --color-amber-50: #fffbeb;
+  --color-amber-100: #fef3c7;
+  --color-amber-200: #fde68a;
+  --color-amber-300: #fcd34d;
+  --color-amber-400: #fbbf24;
+  --color-amber-500: #f59e0b;
+  --color-amber-600: #d97706;
+  --color-amber-700: #b45309;
+  --color-amber-800: #92400e;
+  --color-amber-900: #78350f;
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   background-color: var(--color-background);
   color: var(--color-text);
-  font-family: Inter, Arial, Helvetica, sans-serif;
-  line-height: 1.5;
+  font-family: var(--font-family-sans);
+  line-height: 1.8;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a {
@@ -48,4 +148,122 @@ a {
 
 h1, h2, h3, h4, p {
   margin-top: 0;
+}
+
+/* ─── Landing page animations ────────────────────────────────────────── */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out both;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out both;
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* Staggered animation delays */
+.animation-delay-100 { animation-delay: 100ms; }
+.animation-delay-200 { animation-delay: 200ms; }
+.animation-delay-300 { animation-delay: 300ms; }
+.animation-delay-400 { animation-delay: 400ms; }
+.animation-delay-500 { animation-delay: 500ms; }
+.animation-delay-600 { animation-delay: 600ms; }
+
+/* ─── Reduced motion ─────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .animate-fade-in-up,
+  .animate-fade-in,
+  .animate-pulse-dot {
+    animation: none;
+  }
+  .animation-delay-100,
+  .animation-delay-200,
+  .animation-delay-300,
+  .animation-delay-400,
+  .animation-delay-500,
+  .animation-delay-600 {
+    animation-delay: 0ms;
+  }
+}
+
+/* ─── Landing page utilities ─────────────────────────────────────────── */
+.landing-section {
+  padding-top: 5rem;
+  padding-bottom: 5rem;
+}
+
+.landing-container {
+  max-width: 80rem;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+
+.landing-card {
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05);
+}
+
+.landing-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  background: var(--color-primary);
+  color: white;
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  transition: background-color 150ms;
+  cursor: pointer;
+}
+
+.landing-btn-primary:hover {
+  background: var(--color-primary-dark);
+}
+
+.landing-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  transition: background-color 150ms;
+  cursor: pointer;
+}
+
+.landing-btn-secondary:hover {
+  background: var(--color-background);
 }

@@ -1,48 +1,93 @@
 import apiClient from "./client";
 import type { ApiResponse } from "./client";
-import type { User, CreateUserRequest } from "../types";
+import { normalizeGeoPoint } from "../utils/geo";
+import type {
+  Availability,
+  CreateUserRequest,
+  FieldAdjuster,
+  User,
+  UserStatus,
+} from "../types";
 
-const MOCK_USERS: User[] = [
-  {
-    id: "1",
-    name: "Ruba",
-    employeeCode: "AD-001",
-    role: "ADMIN",
-    organizationId: "org-1",
-    organizationName: "InsurFlow",
-    status: "ACTIVE",
-  },
-
-  {
-    id: "2",
-    name: "Alaa",
-    employeeCode: "AD-001",
-    role: "CLAIMS_OFFICER",
-    organizationId: "org-1",
-    organizationName: "InsurFlow",
-    status: "ACTIVE",
-  },
-  {
-    id: "3",
-    name: "Aya",
-    employeeCode: "AD-001",
-    role: "FIELD_ADJUSTER",
-    organizationId: "org-1",
-    organizationName: "InsurFlow",
-    status: "ACTIVE",
-  },
-];
+// The real /users response uses `_id` (Mongo) not `id`. Every users-described
+// service normalizes raw rows into the app's User shape so stable ids drive
+// DataTable keys and PATCH-by-id calls.
+function normalizeUser(raw: Record<string, unknown>): User {
+  return {
+    id:
+      typeof raw.id === "string" ? raw.id : typeof raw._id === "string" ? raw._id : "",
+    name: typeof raw.name === "string" ? raw.name : "",
+    employeeCode:
+      typeof raw.employeeCode === "string" ? raw.employeeCode : "",
+    role: raw.role as User["role"],
+    organizationId:
+      typeof raw.organizationId === "string" ? raw.organizationId : "",
+    organizationName:
+      typeof raw.organizationName === "string"
+        ? raw.organizationName
+        : "",
+    status: (raw.status as UserStatus) ?? "ACTIVE",
+  };
+}
 
 export async function getUsers(): Promise<User[]> {
-  try {
-    const response = await apiClient.get<ApiResponse<User[]>>("/users");
-    return response.data.data;
-  } catch {
-    return MOCK_USERS; // ← fallback حتى Sprint 2
-  }
+  const response = await apiClient.get<ApiResponse<Array<Record<string, unknown>>>>(
+    "/users",
+  );
+
+  return response.data.data.map(normalizeUser);
 }
 
 export async function createUser(userData: CreateUserRequest): Promise<User> {
-  const response = await apiClient.post<ApiResponse<User>>("/users", userData);
-  return response.data.data;
+  const response = await apiClient.post<ApiResponse<Record<string, unknown>>>(
+    "/users",
+    userData,
+  );
+
+  return normalizeUser(response.data.data);
+}
+
+export async function getFieldAdjusters(claimId?: string): Promise<FieldAdjuster[]> {
+  const response = await apiClient.get<
+    ApiResponse<Array<Record<string, unknown>>>
+  >("/users/adjusters", {
+    params: claimId ? { claimId } : undefined,
+  });
+
+  return response.data.data.map((adjuster) => ({
+    ...normalizeUser(adjuster),
+    status: (adjuster.status as UserStatus) ?? "ACTIVE",
+    availability: (adjuster.availability as Availability) ?? "AVAILABLE",
+    activeTasksCount:
+      typeof adjuster.activeTasksCount === "number"
+        ? adjuster.activeTasksCount
+        : 0,
+    capacityLimit:
+      typeof adjuster.capacityLimit === "number" ? adjuster.capacityLimit : null,
+    location: normalizeGeoPoint(adjuster.location),
+    distanceKm:
+      typeof adjuster.distanceKm === "number" ? adjuster.distanceKm : null,
+  }));
+}
+
+export async function getFieldAdjusterById(
+  adjusterId: string,
+): Promise<FieldAdjuster | null> {
+  const adjusters = await getFieldAdjusters();
+
+  return adjusters.find((adjuster) => adjuster.id === adjusterId) ?? null;
+}
+
+export async function updateUserStatus(
+  userId: string,
+  status: UserStatus,
+): Promise<void> {
+  await apiClient.patch(`/users/${userId}/status`, { status });
+}
+
+export async function resetUserPassword(
+  userId: string,
+  newPassword: string,
+): Promise<void> {
+  await apiClient.patch(`/users/${userId}/reset-password`, { newPassword });
 }

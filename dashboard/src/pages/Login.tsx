@@ -1,20 +1,32 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
-import { AlertCircle, Loader2, ShieldCheck } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { login } from "../api/auth.service";
 import { getApiErrorMessage } from "../api/client";
+import FormField from "../components/ui/FormField";
+import InlineError from "../components/ui/InlineError";
+import SuccessBanner from "../components/ui/SuccessBanner";
+
+const INPUT_CLASS =
+  "w-full px-4 py-2.5 rounded-lg border border-border bg-background text-text text-sm placeholder:text-text-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition disabled:opacity-60";
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { saveSession, logout } = useAuth();
+
+  const successMessage = (
+    location.state as { message?: string } | null
+  )?.message;
 
   const [organizationCode, setOrganizationCode] = useState("");
   const [employeeCode, setEmployeeCode] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -41,9 +53,7 @@ export default function Login() {
       }
 
       saveSession(accessToken, user);
-      navigate(user.role === "ADMIN" ? "/users" : "/dashboard", {
-        replace: true,
-      });
+      navigate("/dashboard", { replace: true });
     } catch (requestError) {
       setError(getApiErrorMessage(requestError));
     } finally {
@@ -52,17 +62,16 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8" dir="ltr">
       <div className="bg-surface rounded-2xl border border-border shadow-sm p-8 sm:p-10 w-full max-w-sm">
-        {/* Brand */}
         <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center shrink-0">
-            <ShieldCheck size={20} className="text-white" />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
+            <img src="/logo.jpeg" alt="صَوْن" className="w-full h-full object-cover" />
           </div>
 
           <div>
             <strong className="block text-base font-bold text-text leading-tight">
-              InsurFlow
+              صَوْن | SAWN
             </strong>
 
             <small className="text-text-muted text-xs">
@@ -78,15 +87,9 @@ export default function Login() {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Organization Code */}
-          <div>
-            <label
-              htmlFor="organizationCode"
-              className="block text-sm font-medium text-text mb-1.5"
-            >
-              Organization Code
-            </label>
+          {successMessage && <SuccessBanner message={successMessage} />}
 
+          <FormField label="Organization Code" required>
             <input
               id="organizationCode"
               type="text"
@@ -95,19 +98,11 @@ export default function Login() {
               placeholder="DEMO-INS"
               autoComplete="organization"
               disabled={isLoading}
-              className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-text text-sm placeholder:text-text-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition disabled:opacity-60"
+              className={INPUT_CLASS}
             />
-          </div>
+          </FormField>
 
-          {/* Employee Code */}
-          <div>
-            <label
-              htmlFor="employeeCode"
-              className="block text-sm font-medium text-text mb-1.5"
-            >
-              Employee Code
-            </label>
-
+          <FormField label="Employee Code" required>
             <input
               id="employeeCode"
               type="text"
@@ -116,43 +111,37 @@ export default function Login() {
               placeholder="CO-001"
               autoComplete="username"
               disabled={isLoading}
-              className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-text text-sm placeholder:text-text-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition disabled:opacity-60"
+              className={INPUT_CLASS}
             />
-          </div>
+          </FormField>
 
-          {/* Password */}
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-text mb-1.5"
-            >
-              Password
-            </label>
-
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="••••••••"
-              autoComplete="current-password"
-              disabled={isLoading}
-              className="w-full px-4 py-2.5 rounded-lg border border-border bg-background text-text text-sm placeholder:text-text-muted/50 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition disabled:opacity-60"
-            />
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <div
-              role="alert"
-              className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2.5 text-sm text-danger"
-            >
-              <AlertCircle size={17} className="mt-0.5 shrink-0" />
-              <span>{error}</span>
+          <FormField label="Password" required>
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                disabled={isLoading}
+                className={`${INPUT_CLASS} pr-11`}
+              />
+              <button
+                type="button"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                title={showPassword ? "Hide password" : "Show password"}
+                onClick={() => setShowPassword((visible) => !visible)}
+                disabled={isLoading}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text transition-colors disabled:opacity-50"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
-          )}
+          </FormField>
 
-          {/* Submit */}
+          {error && <InlineError message={error} />}
+
           <button
             type="submit"
             disabled={isLoading}

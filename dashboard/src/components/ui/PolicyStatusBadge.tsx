@@ -8,9 +8,9 @@ const policyStatusConfig: Record<
   PolicyStatus,
   { label: string; classes: string }
 > = {
-  ACTIVE:    { label: "Active",    classes: "bg-primary-light text-primary-dark border-primary/20" },
-  EXPIRED:   { label: "Expired",   classes: "bg-gray-100 text-text-muted border-border" },
-  CANCELLED: { label: "Cancelled", classes: "bg-red-50 text-danger border-danger/20" },
+  ACTIVE:    { label: "Active",    classes: "bg-success-bg text-success-strong border-success-border" },
+  EXPIRED:   { label: "Expired",   classes: "bg-surface-sunken text-text-muted border-border" },
+  CANCELLED: { label: "Cancelled", classes: "bg-danger-bg text-danger border-danger/20" },
   SUSPENDED: { label: "Suspended", classes: "bg-accent-light text-accent border-accent/20" },
 };
 

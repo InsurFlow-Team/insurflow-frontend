@@ -1,30 +1,17 @@
-import apiClient from "./client";
-import type { ApiResponse } from "./client";
-import type { ClaimDetails, ClaimStatus, ClaimSummary } from "../types";
-
-export async function getClaims(status?: ClaimStatus) {
-  const response = await apiClient.get<ApiResponse<ClaimSummary[]>>(
-    "/claims",
-    {
-      params: status ? { status } : undefined,
-    },
-  );
-
-  return response.data.data;
-}
-
-export async function getClaimById(claimId: string) {
-  const response = await apiClient.get<ApiResponse<ClaimDetails>>(
-    `/claims/${claimId}`,
-  );
-
-  return response.data.data;
-}
-
-export async function startClaimReview(claimId: string) {
-  const response = await apiClient.post<
-    ApiResponse<{ status: ClaimStatus }>
-  >(`/claims/${claimId}/review/start`);
-
-  return response.data.data;
-}
+// Public claims API surface. Each operation lives in a focused module; this
+// barrel keeps the import site stable for pages, hooks, and tests.
+export { getAdjusterWorkHistory } from "./adjusterHistory";
+export type { AssignClaimResult } from "./claims.assign";
+export { assignClaim } from "./claims.assign";
+export type { CreateClaimRequest } from "./claims.create";
+export { createClaim, toCreateClaimRequest } from "./claims.create";
+export type { ClaimDecision, DecideClaimPayload } from "./claims.decision";
+export { decideClaim } from "./claims.decision";
+export { getClaims, getClaimById } from "./claims.read";
+export {
+  canExportClaimReport,
+  downloadClaimReport,
+  getClaimExportStatus,
+} from "./claims.report";
+export { startClaimReview } from "./claims.review";
+export { toClaimSummary } from "./claims.transform";

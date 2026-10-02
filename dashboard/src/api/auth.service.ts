@@ -21,3 +21,15 @@ export async function login(credentials: LoginCredentials) {
 
   return response.data.data;
 }
+
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+) {
+  const response = await apiClient.put<ApiResponse<unknown>>(
+    "/auth/change-password",
+    { currentPassword, newPassword },
+  );
+
+  return response.data.data;
+}

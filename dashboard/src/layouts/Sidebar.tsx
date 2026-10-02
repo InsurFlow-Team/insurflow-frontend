@@ -1,55 +1,19 @@
-import React from "react";
-import { NavLink, useNavigate } from "react-router-dom";
-import {
-  LayoutDashboard,
-  FileText,
-  Users,
-  Settings,
-  LogOut,
-  ShieldCheck,
-  X,
-} from "lucide-react";
-import type { Role } from "../types";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { X } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
-
-interface NavigationItem {
-  label: string;
-  path: string;
-  icon: React.ReactNode;
-  roles: Role[];
-}
+import NavItem from "./sidebar/NavItem";
+import SidebarUserCard from "./sidebar/SidebarUserCard";
+import {
+  navigationItems,
+  settingsChildren,
+  settingsParent,
+} from "./sidebar/navigation.tsx";
 
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
 }
-
-const navigationItems: NavigationItem[] = [
-  {
-    label: "Dashboard",
-    path: "/dashboard",
-    icon: <LayoutDashboard size={18} />,
-    roles: ["ADMIN", "CLAIMS_OFFICER"],
-  },
-  {
-    label: "Claims",
-    path: "/claims",
-    icon: <FileText size={18} />,
-    roles: ["ADMIN", "CLAIMS_OFFICER"],
-  },
-  {
-    label: "Users",
-    path: "/users",
-    icon: <Users size={18} />,
-    roles: ["ADMIN", "CLAIMS_OFFICER"],
-  },
-  {
-    label: "Settings",
-    path: "/settings",
-    icon: <Settings size={18} />,
-    roles: ["ADMIN"],
-  },
-];
 
 export default function Sidebar({
   isOpen = false,
@@ -58,36 +22,58 @@ export default function Sidebar({
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
+  // Escape closes the mobile drawer.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [isOpen, onClose]);
+
   const handleLogout = () => {
     logout();
     onClose();
     navigate("/login", { replace: true });
   };
 
+  const visibleNavigationItems = navigationItems.filter(
+    (item) => user && item.roles.includes(user.role),
+  );
+
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-40 w-64 bg-primary-dark text-white flex flex-col h-screen shrink-0 transform transition-transform duration-200 lg:static lg:translate-x-0 ${
-        isOpen ? "translate-x-0" : "-translate-x-full"
+      aria-label="Primary navigation"
+      className={`fixed inset-y-0 left-0 z-40 w-[280px] bg-surface border-r border-border flex flex-col h-screen shrink-0 transform transition-[transform,visibility] duration-200 lg:static lg:translate-x-0 lg:visible ${
+        isOpen ? "translate-x-0 visible" : "-translate-x-full invisible"
       }`}
     >
-      {/* Logo */}
-      <div className="px-6 py-5 border-b border-white/10">
+      {/* Product header */}
+      <div className="px-5 py-6 border-b border-border">
         <div className="flex items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 bg-accent rounded-lg flex items-center justify-center shrink-0">
-              <ShieldCheck size={18} className="text-white" />
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+              <img src="/logo.jpeg" alt="صَوْن" className="w-full h-full object-cover" />
             </div>
 
-            <span className="text-base font-bold tracking-wider text-white">
-              INSURFLOW
-            </span>
+            <div className="min-w-0">
+              <span className="block text-base font-bold text-text tracking-tight leading-tight">
+                صَوْن | SAWN
+              </span>
+              <span className="block text-xs text-text-muted">
+                Enterprise Operations
+              </span>
+            </div>
           </div>
 
           <button
             type="button"
             onClick={onClose}
             aria-label="Close sidebar"
-            className="p-1.5 rounded-lg text-white/60 hover:bg-white/10 hover:text-white lg:hidden"
+            className="p-1.5 rounded-lg text-text-muted hover:bg-surface-soft hover:text-text lg:hidden"
           >
             <X size={20} />
           </button>
@@ -95,39 +81,42 @@ export default function Sidebar({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-5 space-y-1">
-        {navigationItems
-          .filter((item) => user && item.roles.includes(user.role))
-          .map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              onClick={onClose}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
-                  isActive
-                    ? "bg-white/15 text-white"
-                    : "text-white/60 hover:bg-white/10 hover:text-white"
-                }`
-              }
-            >
-              {item.icon}
-              <span>{item.label}</span>
-            </NavLink>
+      <nav className="flex-1 px-3 py-5 overflow-y-auto">
+        <div className="space-y-1">
+          {visibleNavigationItems.map((item) => (
+            <NavItem key={item.path} item={item} onNavigate={onClose} />
           ))}
+        </div>
+
+        {user && settingsParent.roles.includes(user.role) && (
+          <div className="mt-6">
+            <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+              Settings
+            </p>
+
+            <NavItem item={settingsParent} onNavigate={onClose} />
+
+            <div className="mt-1 ml-3 border-l border-border pl-1.5 space-y-1">
+              {settingsChildren
+                .filter((item) => item.roles.includes(user.role))
+                .map((item) => (
+                  <NavItem
+                    key={item.path}
+                    item={item}
+                    onNavigate={onClose}
+                    indent
+                  />
+                ))}
+            </div>
+          </div>
+        )}
       </nav>
 
-      {/* Logout */}
-      <div className="px-3 py-4 border-t border-white/10">
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/60 hover:bg-danger/80 hover:text-white transition-all duration-150 w-full"
-        >
-          <LogOut size={18} />
-          <span>Logout</span>
-        </button>
-      </div>
+      <SidebarUserCard
+        userName={user?.name ?? "User"}
+        userRole={user?.role ?? "—"}
+        onLogout={handleLogout}
+      />
     </aside>
   );
 }

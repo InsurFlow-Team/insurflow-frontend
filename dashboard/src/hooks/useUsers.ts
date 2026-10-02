@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
-import type { User, CreateUserRequest } from "../types";
-import { getUsers, createUser } from "../api/users.service";
+import type { User, CreateUserRequest, UserStatus } from "../types";
+import {
+  getUsers,
+  createUser,
+  updateUserStatus,
+  resetUserPassword,
+} from "../api/users.service";
 import { getApiErrorMessage } from "../api/client";
 
 export function useUsers() {
@@ -10,13 +15,15 @@ export function useUsers() {
   const [addUserLoading, setAddUserLoading] = useState(false);
   const [addUserError, setAddUserError] = useState<string | null>(null);
   const [addUserSuccess, setAddUserSuccess] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [isActionPending, setIsActionPending] = useState(false);
 
   useEffect(() => {
     loadUsers();
   }, []);
   function loadUsers() {
     setLoading(true);
-    getUsers()
+    return getUsers()
       .then((data) => setUsers(data))
       .catch((error) => setError(getApiErrorMessage(error)))
       .finally(() => setLoading(false));
@@ -40,6 +47,78 @@ export function useUsers() {
         setAddUserLoading(false);
       });
   }
+
+// Optimistic status toggle backed by PATCH /users/:id/status. On failure the
+// row is reverted to its previous state so the UI never lies about the
+// backend. Returns true when the backend accepted the change.
+  async function setUserStatus(id: string, status: UserStatus) {
+    if (!id) {
+      setActionError("Missing user id — cannot update this user.");
+      return false;
+    }
+
+    const previous = users.find((user) => user.id === id)?.status;
+
+    setActionError(null);
+    setIsActionPending(true);
+    setUsers((prev) =>
+      prev.map((user) => (user.id === id ? { ...user, status } : user)),
+    );
+
+    try {
+      await updateUserStatus(id, status);
+      return true;
+    } catch (statusError) {
+      setActionError(getApiErrorMessage(statusError));
+      setUsers((prev) =>
+        prev.map((user) =>
+          user.id === id ? { ...user, status: previous ?? user.status } : user,
+        ),
+      );
+      return false;
+    } finally {
+      setIsActionPending(false);
+    }
+  }
+
+  // PATCH /users/:id/reset-password then refresh so the list reflects reality.
+  async function resetPassword(id: string, newPassword: string) {
+    if (!id) {
+      setActionError("Missing user id — cannot reset this user's password.");
+      return false;
+    }
+
+    setActionError(null);
+    setIsActionPending(true);
+
+    try {
+      await resetUserPassword(id, newPassword);
+      await loadUsers();
+      return true;
+    } catch (passwordError) {
+      setActionError(getApiErrorMessage(passwordError));
+      return false;
+    } finally {
+      setIsActionPending(false);
+    }
+  }
+
+  // TEMPORARY frontend-only mutation (no API call).
+  // Replaced by PATCH /users/:id when the backend supports editing/status changes.
+  function updateUserLocal(
+    id: string,
+    patch: Partial<Pick<User, "name" | "employeeCode" | "role" | "status">>,
+  ) {
+    if (!id) return;
+    setUsers((prev) =>
+      prev.map((user) => (user.id === id ? { ...user, ...patch } : user)),
+    );
+  }
+
+  function clearActionError() {
+    setActionError(null);
+  }
+
   return {
     users,
     loading,
@@ -48,5 +127,11 @@ export function useUsers() {
     addUserError,
     addUser,
     addUserSuccess,
+    setUserStatus,
+    resetPassword,
+    actionError,
+    clearActionError,
+    isActionPending,
+    updateUserLocal,
   };
 }

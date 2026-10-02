@@ -1,132 +1,71 @@
-import { useEffect, useState } from "react";
-import {
-  AlertCircle,
-  CheckCircle,
-  FileText,
-  RefreshCw,
-} from "lucide-react";
+import { useMemo } from "react";
+import { RefreshCw } from "lucide-react";
 
+import { useDashboardStats } from "../hooks/useDashboardStats";
+import { useDashboardTeam } from "../hooks/useDashboardTeam";
+import { RECENT_CLAIMS_COUNT } from "../components/dashboard/dashboardConstants";
+import ClaimStatsGrid from "../components/claims/ClaimStatsGrid";
+import NeedsAttentionSection from "../components/dashboard/NeedsAttentionSection";
+import RecentClaimsTable from "../components/dashboard/RecentClaimsTable";
+import TeamCapacityCard from "../components/dashboard/TeamCapacityCard";
 import ErrorState from "../components/ui/ErrorState";
-import EmptyState from "../components/ui/EmptyState";
-import LoadingState from "../components/ui/LoadingState";
-
-interface ClaimStats {
-  total: number;
-  submitted: number;
-  underReview: number;
-}
-
-const mockStats: ClaimStats = {
-  total: 12,
-  submitted: 5,
-  underReview: 7,
-};
-
-const statisticCards = [
-  {
-    key: "total",
-    label: "Total Claims",
-    icon: FileText,
-    color: "border-primary bg-primary-light text-primary-dark",
-    iconColor: "text-primary",
-  },
-  {
-    key: "submitted",
-    label: "Submitted Claims",
-    icon: CheckCircle,
-    color: "border-info bg-blue-50 text-info",
-    iconColor: "text-info",
-  },
-  {
-    key: "underReview",
-    label: "Under Review Claims",
-    icon: AlertCircle,
-    color: "border-warning bg-accent-light text-accent",
-    iconColor: "text-accent",
-  },
-] as const;
+import Button from "../components/ui/Button";
 
 export default function Dashboard() {
-  const [stats, setStats] = useState<ClaimStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { claims, loading, error, load } = useDashboardStats();
+  const team = useDashboardTeam();
 
-  function loadStats() {
-    setLoading(true);
-    setError("");
-
-    // Temporary mock response.
-    // Replace this block with GET /claims/stats when the API is ready.
-    window.setTimeout(() => {
-      setStats(mockStats);
-      setLoading(false);
-    }, 300);
-  }
-
-  useEffect(() => {
-    loadStats();
-  }, []);
-
-  if (loading) {
-    return <LoadingState message="Loading dashboard statistics..." />;
-  }
+  const recentClaims = useMemo(
+    () =>
+      [...claims]
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )
+        .slice(0, RECENT_CLAIMS_COUNT),
+    [claims],
+  );
 
   if (error) {
-    return <ErrorState message={error} onRetry={loadStats} />;
-  }
-
-  if (!stats) {
-    return <EmptyState message="No claim statistics available." />;
+    return <ErrorState message={error} onRetry={() => void load()} />;
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
+      {/* Page header */}
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-text">Dashboard</h1>
-          <p className="mt-1 text-sm text-text-muted">
-            Overview of the organization&apos;s insurance claims.
+          <h1 className="text-2xl lg:text-3xl font-bold text-text">
+            Overview
+          </h1>
+          <p className="mt-1 text-sm text-text-muted max-w-2xl">
+            Real-time claim statistics and recent activity from your
+            organization&apos;s backend.
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={loadStats}
-          className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-text hover:bg-background"
+        <Button
+          variant="secondary"
+          icon={<RefreshCw size={15} />}
+          onClick={() => void load()}
+          loading={loading}
         >
-          <RefreshCw size={16} />
           Refresh
-        </button>
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {statisticCards.map((stat) => {
-          const Icon = stat.icon;
+      <ClaimStatsGrid claims={claims} loading={loading} />
 
-          return (
-            <article
-              key={stat.key}
-              className={`rounded-xl border border-l-4 bg-surface p-5 shadow-sm ${stat.color}`}
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <span className="text-sm font-medium">{stat.label}</span>
-                <Icon size={20} className={stat.iconColor} />
-              </div>
+      <NeedsAttentionSection claims={claims} loading={loading} />
 
-              <strong className="block text-3xl font-bold">
-                {stats[stat.key]}
-              </strong>
-            </article>
-          );
-        })}
-      </div>
+      <TeamCapacityCard
+        adjusters={team.adjusters}
+        claims={claims}
+        loading={team.loading}
+        error={team.error}
+      />
 
-      <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
-        <h2 className="mb-4 text-base font-semibold text-text">
-          Recent Claims
-        </h2>
-        <EmptyState message="No recent claims available." />
-      </section>
+      <RecentClaimsTable claims={recentClaims} loading={loading} />
     </div>
   );
 }

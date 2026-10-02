@@ -1,5 +1,7 @@
 import axios from "axios";
 
+import { mockAdapter } from "./mock/adapter";
+
 export const TOKEN_STORAGE_KEY = "insurflow_access_token";
 export const USER_STORAGE_KEY = "insurflow_user";
 
@@ -23,8 +25,21 @@ const apiClient = axios.create({
     import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000/api/v1",
   headers: {
     "Content-Type": "application/json",
+    ...(import.meta.env.VITE_NGROK_SKIP_WARNING === "true"
+      ? { "ngrok-skip-browser-warning": "true" }
+      : {}),
   },
 });
+
+// Development escape hatch while the real backend tunnel is down: with
+// VITE_USE_MOCK_API=true every request is served from localStorage (auth,
+// claims, users) by a custom axios adapter, so no service file changes.
+// `import.meta.env.DEV` is deliberate: vitest runs with mode "test" and
+// production builds are DEV=false, so neither can ever pick up mock responses.
+// See src/api/mock/seed.ts for the dev-only warning and the credentials.
+if (import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_API === "true") {
+  apiClient.defaults.adapter = mockAdapter;
+}
 
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem(TOKEN_STORAGE_KEY);
@@ -39,12 +54,24 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    // A 401 on the change-password endpoint with INVALID_CREDENTIALS means the
+    // CURRENT password was wrong (per the backend contract) — the session is
+    // still valid and must NOT be destroyed. Every other 401 destroys it.
     if (error.response?.status === 401) {
-      localStorage.removeItem(TOKEN_STORAGE_KEY);
-      localStorage.removeItem(USER_STORAGE_KEY);
+      const url = error.config?.url ?? "";
+      const isInvalidCurrentPassword =
+        url.includes("/auth/change-password") &&
+        (error.response.data?.errors ?? []).some(
+          (entry: { code?: string }) => entry.code === "INVALID_CREDENTIALS",
+        );
 
-      if (window.location.pathname !== "/login") {
-        window.location.replace("/login");
+      if (!isInvalidCurrentPassword) {
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
+        localStorage.removeItem(USER_STORAGE_KEY);
+
+        if (window.location.pathname !== "/login") {
+          window.location.replace("/login");
+        }
       }
     }
 
@@ -61,13 +88,35 @@ export function getApiErrorMessage(error: unknown) {
       );
     }
 
+    const data = error.response?.data;
+    const details = (data?.errors ?? [])
+      .map((e) => e.details ?? e.code)
+      .filter((detail): detail is string => Boolean(detail));
+
+    if (details.length) {
+      // Avoid "message: message" duplication when the backend repeats the same
+      // text in both fields (e.g. 409 EMPLOYEE_CODE_TAKEN).
+      const joined = details.join(" | ");
+      if (data?.message && joined !== data.message) {
+        return `${data.message}: ${joined}`;
+      }
+      return data?.message ?? joined;
+    }
+
     return (
-      error.response?.data?.message ??
-      "Unable to connect to the server. Please try again."
+      data?.message ?? "Unable to connect to the server. Please try again."
     );
   }
 
   return "Something went wrong. Please try again.";
+}
+
+export function getApiErrorCode(error: unknown) {
+  if (axios.isAxiosError<ApiErrorResponse>(error)) {
+    return error.response?.data?.errors?.[0]?.code ?? null;
+  }
+
+  return null;
 }
 
 export default apiClient;
