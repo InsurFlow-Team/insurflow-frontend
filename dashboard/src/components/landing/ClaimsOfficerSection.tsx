@@ -15,11 +15,11 @@ export default function ClaimsOfficerSection() {
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Visual: Real dashboard screenshot */}
           <div className="order-2 lg:order-1">
-            <div className="flex max-h-[320px] items-center justify-center overflow-hidden rounded-xl border border-border bg-surface shadow-lg">
+            <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-lg">
               <img
                 src="/screenshots/claims-dashboard.png"
                 alt="لوحة المطالبات في صَوْن"
-                className="h-auto max-h-[320px] w-full object-contain"
+                className="h-auto w-full object-cover"
               />
             </div>
           </div>

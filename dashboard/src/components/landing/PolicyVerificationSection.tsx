@@ -45,11 +45,11 @@ export default function PolicyVerificationSection() {
           </div>
 
           {/* Visual: Real verification screenshot */}
-          <div className="flex max-h-[420px] items-center justify-center overflow-hidden rounded-xl border border-border bg-background p-3 shadow-lg">
+          <div className="flex items-center justify-center rounded-xl border border-border bg-background p-6 shadow-lg">
             <img
               src="/screenshots/policy-verification.png"
               alt="التحقق من الوثيقة في صَوْن"
-              className="h-auto max-h-[396px] w-full object-contain"
+              className="w-full max-w-sm h-auto object-contain drop-shadow-md"
             />
           </div>
         </div>

@@ -42,7 +42,7 @@ export default function FieldAdjusterSection() {
                   <img
                     src={screen.image}
                     alt={screen.title}
-                    className="h-full w-full object-contain"
+                    className="h-full w-full object-cover"
                   />
                 </div>
 
