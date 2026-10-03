@@ -29,6 +29,7 @@ export interface FieldAdjuster extends User {
   capacityLimit?: number | null;
   location?: GeoPoint | null;
   distanceKm?: number | null;
+  locationStale?: boolean | null;
 }
 
 export interface UserSummary {

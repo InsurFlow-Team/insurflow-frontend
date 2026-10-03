@@ -67,6 +67,8 @@ export async function getFieldAdjusters(claimId?: string): Promise<FieldAdjuster
     location: normalizeGeoPoint(adjuster.location),
     distanceKm:
       typeof adjuster.distanceKm === "number" ? adjuster.distanceKm : null,
+    locationStale:
+      typeof adjuster.locationStale === "boolean" ? adjuster.locationStale : null,
   }));
 }
 
