@@ -60,10 +60,10 @@ export function useMapData() {
     [],
   );
 
-  const loadClaimAdjusters = useCallback(async () => {
+  const loadClaimAdjusters = useCallback(async (claimId: string) => {
     setClaimAdjustersLoading(true);
     try {
-      const adjustersData = await getFieldAdjusters();
+      const adjustersData = await getFieldAdjusters(claimId);
       setClaimAdjusters(adjustersData);
     } catch (requestError) {
       console.error("Failed to load adjusters:", requestError);
@@ -76,7 +76,7 @@ export function useMapData() {
     setSelectedClaim(claim);
     if (claim) {
       void loadClaimDetails(claim.id);
-      void loadClaimAdjusters();
+      void loadClaimAdjusters(claim.id);
     } else {
       setSelectedClaimDetails(null);
       setClaimAdjusters([]);
