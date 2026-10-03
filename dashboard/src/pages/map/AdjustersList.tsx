@@ -38,13 +38,12 @@ function AdjusterRow({
       <div className="flex items-center justify-between text-text-muted text-[11px]">
         <span>Tasks: {formatCapacitySummary(adjuster) ?? "0"}</span>
         {typeof adjuster.distanceKm === "number" ? (
-          <span className="font-medium text-primary">
+          <span className={`font-medium ${adjuster.locationStale ? "text-warning" : "text-primary"}`}>
             {adjuster.distanceKm.toFixed(2)} km
+            {adjuster.locationStale ? " · موقع قديم" : ""}
             {demo ? " · DEMO" : ""}
           </span>
         ) : (
-          // No live coordinates yet (backend location null) → the adjuster has
-          // no map marker; the list still shows them with an explicit note.
           <span className="text-text-muted">الموقع غير متوفر</span>
         )}
       </div>
