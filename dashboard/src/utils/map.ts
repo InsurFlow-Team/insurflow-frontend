@@ -53,6 +53,8 @@ export function toMapCoordinates(
   const lng = Number(longitude);
 
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  // Reject 0,0 — the "null island" coordinate that means no real location
+  if (lat === 0 && lng === 0) return null;
   if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
 
   return { latitude: lat, longitude: lng };

@@ -18,7 +18,9 @@ export function normalizeGeoPoint(value: unknown): GeoPoint | null {
         ? point.updatedAt
         : null;
 
-  if (latitude === null && longitude === null && capturedAt === null) {
+  // If both coordinates are missing there is no usable location — return null
+  // so callers (e.g. adjusterCoordinates) don't try to render a pin.
+  if (latitude === null && longitude === null) {
     return null;
   }
 
