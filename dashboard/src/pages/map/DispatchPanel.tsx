@@ -1,4 +1,4 @@
-import { UserCheck } from "lucide-react";
+import { UserCheck, MapPin } from "lucide-react";
 import { claimCoordinates } from "../../utils/map";
 import type { ClaimSummary, FieldAdjuster } from "../../types";
 import Button from "../../components/ui/Button";
