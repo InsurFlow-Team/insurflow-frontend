@@ -66,8 +66,8 @@ export default function AdjusterPin({
             </p>
           )}
           {lastUpdated && (
-            <p className="text-[11px] text-text-muted">
-              Last location update: {lastUpdated}
+            <p className={`text-[11px] ${adjuster.locationStale ? "text-warning font-medium" : "text-text-muted"}`}>
+              {adjuster.locationStale ? "⚠ موقع قديم · " : ""}Last update: {lastUpdated}
             </p>
           )}
           {onSelectAdjuster && (
