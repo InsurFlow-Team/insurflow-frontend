@@ -1,4 +1,4 @@
-import { CheckCircle2, AlertTriangle, Shield, Calendar, DollarSign } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Shield, Calendar } from "lucide-react";
 import Button from "../Button";
 import type { PolicyVerificationResponse } from "../../../types";
 

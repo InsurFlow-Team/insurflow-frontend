@@ -187,9 +187,7 @@ export default function DecisionSection({
 
       {decisionNotes && (
         <div className="mt-3">
-          <InfoGrid columns="1">
-            <InfoRow label="ملاحظات القرار" value={decisionNotes} />
-          </InfoGrid>
+          <InfoRow label="ملاحظات القرار" value={decisionNotes} />
         </div>
       )}
     </DetailSection>

@@ -1,4 +1,4 @@
-import { Shield, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { Shield, Clock, CheckCircle2 } from "lucide-react";
 import DetailSection from "../DetailSection";
 import type { ClaimDetails } from "../../../types";
 

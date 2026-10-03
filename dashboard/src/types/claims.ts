@@ -228,3 +228,18 @@ export interface ClaimDetailsResponse {
 
 // Backwards-compatible name kept for the existing page/components/imports.
 export type ClaimDetails = ClaimDetailsResponse;
+
+// ─── Decision types ───────────────────────────────────────────────────────────
+
+export type ClaimDecision = "APPROVED" | "REJECTED";
+
+export interface DecideClaimPayload {
+  decision: ClaimDecision;
+  notes?: string;
+  lossAssessment?: {
+    estimatedPartsCost: number;
+    laborCost: number;
+    deductibleApplied: number;
+    deductibleOverrideReason?: string;
+  };
+}
