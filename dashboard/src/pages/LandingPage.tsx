@@ -1,20 +1,16 @@
+import "../styles/landing.css";
+
 import LandingNavbar from "../components/landing/LandingNavbar";
 import HeroSection from "../components/landing/HeroSection";
+import AudienceSection from "../components/landing/AudienceSection";
 import ProblemSection from "../components/landing/ProblemSection";
 import ClaimJourney from "../components/landing/ClaimJourney";
-import PolicyVerificationSection from "../components/landing/PolicyVerificationSection";
-import ClaimsOfficerSection from "../components/landing/ClaimsOfficerSection";
-import DispatchSection from "../components/landing/DispatchSection";
-import FieldAdjusterSection from "../components/landing/FieldAdjusterSection";
-import TraceabilitySection from "../components/landing/TraceabilitySection";
-import ReviewDecisionSection from "../components/landing/ReviewDecisionSection";
-import BusinessValueSection from "../components/landing/BusinessValueSection";
-import AudienceSection from "../components/landing/AudienceSection";
-import ProductGallery from "../components/landing/ProductGallery";
-import CompleteJourneySection from "../components/landing/CompleteJourneySection";
-import AboutSection from "../components/landing/AboutSection";
+import ProductShowcase from "../components/landing/ProductShowcase";
+import OutcomesSection from "../components/landing/OutcomesSection";
+import ProductValidationSection from "../components/landing/ProductValidationSection";
 import FinalCTA from "../components/landing/FinalCTA";
 import LandingFooter from "../components/landing/LandingFooter";
+import ScrollToTop from "../components/landing/ScrollToTop";
 
 export default function LandingPage() {
   return (
@@ -22,22 +18,16 @@ export default function LandingPage() {
       <LandingNavbar />
       <main>
         <HeroSection />
+        <AudienceSection />
         <ProblemSection />
         <ClaimJourney />
-        <PolicyVerificationSection />
-        <ClaimsOfficerSection />
-        <DispatchSection />
-        <FieldAdjusterSection />
-        <TraceabilitySection />
-        <ReviewDecisionSection />
-        <BusinessValueSection />
-        <AudienceSection />
-        <ProductGallery />
-        <CompleteJourneySection />
-        <AboutSection />
+        <ProductShowcase />
+        <OutcomesSection />
+        <ProductValidationSection />
         <FinalCTA />
       </main>
       <LandingFooter />
+      <ScrollToTop />
     </div>
   );
 }

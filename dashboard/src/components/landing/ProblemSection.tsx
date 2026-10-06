@@ -1,73 +1,66 @@
-import { RefreshCw, Database, Users, Search } from "lucide-react";
+import { ArrowDown, Eye, RefreshCw, Users } from "lucide-react";
 
-const PROBLEMS = [
-  {
-    icon: RefreshCw,
-    title: "متابعة متكررة",
-    description: "اتصالات ومتابعات متفرقة بين الأطراف لمعرفة حالة المطالبة.",
-  },
-  {
-    icon: Database,
-    title: "بيانات متفرقة",
-    description: "معلومات المطالبة موزعة بين أنظمة وسجلات مختلفة.",
-  },
+import Reveal from "./Reveal";
+
+const PAINS = [
   {
     icon: Users,
-    title: "صعوبة التنسيق",
-    description:
-      "تنسيق المعاينة الميدانية بين المعاين وشركة التأمين يتطلب جهدًا يدويًا.",
+    title: "أشخاص",
+    description: "أكثر من شخص يتعامل مع المطالبة في مراحل مختلفة.",
   },
   {
-    icon: Search,
-    title: "صعوبة التتبع",
-    description: "صعوبة معرفة ماذا حدث للمطالبة ومتى ومن اتخذ كل إجراء.",
+    icon: RefreshCw,
+    title: "عمليات متقطعة",
+    description: "اتصالات وملفات وأدوات متعددة تجعل المتابعة أصعب.",
+  },
+  {
+    icon: Eye,
+    title: "غياب الرؤية",
+    description: "صعوبة معرفة أين وصلت المطالبة وما الخطوة التالية.",
   },
 ];
 
 export default function ProblemSection() {
   return (
-    <section className="py-20 lg:py-28 bg-surface">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-navy-700 leading-tight mb-6">
-            المشكلة ليست في وجود البيانات.
-            <br />
-            المشكلة في تشتت رحلة المطالبة.
+    <section id="problem" className="bg-surface py-16 lg:py-24">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <Reveal className="mx-auto mb-10 max-w-3xl text-center lg:mb-14">
+          <h2 className="text-2xl leading-tight font-black text-navy-700 sm:text-3xl lg:text-4xl">
+            رحلة المطالبة لا يجب أن تكون موزعة بين الأشخاص والأدوات.
           </h2>
-          <p className="text-lg text-text-muted leading-relaxed">
-            عندما تقع حادثة، تبدأ رحلة المطالبة بين العميل، شركة التأمين، موظف
-            المطالبات والمعاين الميداني. وكل طرف يحتاج إلى جزء مختلف من
-            المعلومات، والمتابعة بين هذه الأطراف قد تصبح معقدة وبطيئة.
-          </p>
-        </div>
+        </Reveal>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {PROBLEMS.map((problem) => {
-            const Icon = problem.icon;
+        <div className="grid gap-8 sm:grid-cols-3 sm:gap-10">
+          {PAINS.map((pain, index) => {
+            const Icon = pain.icon;
             return (
-              <div
-                key={problem.title}
-                className="rounded-xl border border-border bg-surface p-6 shadow-sm hover:shadow-md transition-shadow"
+              <Reveal
+                key={pain.title}
+                delay={index * 130}
+                className="border-t-2 border-danger/25 pt-5"
               >
-                <div className="w-12 h-12 rounded-lg bg-danger-bg flex items-center justify-center mb-4">
-                  <Icon size={22} className="text-danger" />
-                </div>
-                <h3 className="text-lg font-bold text-text mb-2">
-                  {problem.title}
+                <span className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-danger-bg">
+                  <Icon size={19} className="text-danger" />
+                </span>
+                <h3 className="mb-2 text-base font-black text-text lg:text-lg">
+                  {pain.title}
                 </h3>
-                <p className="text-sm text-text-muted leading-relaxed">
-                  {problem.description}
+                <p className="text-sm leading-relaxed text-text-muted lg:text-base">
+                  {pain.description}
                 </p>
-              </div>
+              </Reveal>
             );
           })}
         </div>
 
-        <div className="text-center mt-12">
-          <p className="text-xl font-bold text-primary">
-            صون تجمع هذه الرحلة في مسار واحد.
+        <Reveal delay={160} className="mt-12 text-center lg:mt-16">
+          <p className="text-lg font-black text-primary sm:text-xl">
+            صَوْن تجمع هذه الرحلة في مسار واحد.
           </p>
-        </div>
+          <span className="mt-3 inline-flex h-10 w-10 items-center justify-center rounded-full border border-primary/20 bg-primary-light text-primary">
+            <ArrowDown size={18} aria-hidden="true" />
+          </span>
+        </Reveal>
       </div>
     </section>
   );
