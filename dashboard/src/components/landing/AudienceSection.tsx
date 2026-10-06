@@ -1,72 +1,74 @@
-import { Building2, FileText, MapPin, User } from "lucide-react";
+import { Eye, FileText, MapPin } from "lucide-react";
 
-const AUDIENCES = [
-  {
-    icon: Building2,
-    title: "شركات التأمين",
-    description: "إدارة ومتابعة دورة المطالبة من مكان واحد.",
-    primary: true,
-  },
+import Reveal from "./Reveal";
+
+const ROLES = [
   {
     icon: FileText,
-    title: "موظفو المطالبات",
-    description: "إدارة المطالبات والتعيينات والمراجعة ضمن رحلة واضحة.",
-    primary: true,
+    title: "فريق المطالبات",
+    description: "إدارة المطالبات ومتابعة حالتها.",
+    tag: "مستخدم أساسي",
   },
   {
     icon: MapPin,
     title: "المعاينون الميدانيون",
-    description: "استقبال المهام وتوثيق المعاينة والأدلة من الميدان.",
-    primary: true,
+    description: "استلام المهام وتنفيذ المعاينة وتوثيق الأضرار.",
+    tag: "مستخدم أساسي",
   },
   {
-    icon: User,
-    title: "العميل",
-    description: "تجربة أوضح ومتابعة أكثر تنظيمًا لرحلة المطالبة.",
-    primary: false,
+    icon: Eye,
+    title: "الإدارة",
+    description: "رؤية أوضح لسير المطالبات والأداء التشغيلي.",
+    tag: "مستخدم ثانوي",
   },
 ];
 
 export default function AudienceSection() {
   return (
-    <section className="py-20 lg:py-28 bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-navy-700 leading-tight mb-6">
-            مصممة لكل طرف في رحلة المطالبة.
+    <section id="audience" className="bg-background py-16 lg:py-24">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <Reveal className="mx-auto mb-10 max-w-3xl text-center lg:mb-14">
+          <h2 className="text-2xl leading-tight font-black text-navy-700 sm:text-3xl lg:text-4xl">
+            صَوْن مصممة لشركات التأمين، ولكل شخص في رحلة المطالبة.
           </h2>
-        </div>
+        </Reveal>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {AUDIENCES.map((audience) => {
-            const Icon = audience.icon;
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+          {ROLES.map((role, index) => {
+            const Icon = role.icon;
             return (
-              <div
-                key={audience.title}
-                className={`rounded-xl border p-6 shadow-sm hover:shadow-md transition-shadow ${
-                  audience.primary
-                    ? "border-primary/20 bg-surface"
-                    : "border-border bg-surface-soft"
-                }`}
+              <Reveal
+                key={role.title}
+                delay={index * 110}
+                className="rounded-xl border border-border bg-surface p-5 shadow-sm lg:p-6"
               >
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 ${
-                  audience.primary ? "bg-primary-light" : "bg-surface-sunken"
-                }`}>
-                  <Icon size={22} className={audience.primary ? "text-primary" : "text-text-muted"} />
-                </div>
-                <h3 className="text-lg font-bold text-text mb-2">{audience.title}</h3>
-                <p className="text-sm text-text-muted leading-relaxed">{audience.description}</p>
-                {!audience.primary && (
-                  <span className="inline-block mt-3 rounded-full bg-surface-sunken px-2.5 py-0.5 text-xs text-text-muted">
-                    مستفيد غير مباشر
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary-light">
+                    <Icon size={20} className="text-primary" />
                   </span>
-                )}
-              </div>
+                  <span className="rounded-full bg-surface-sunken px-2.5 py-0.5 text-xs font-bold text-text-muted">
+                    {role.tag}
+                  </span>
+                </div>
+                <h3 className="mb-1.5 text-lg font-bold text-text">
+                  {role.title}
+                </h3>
+                <p className="text-sm leading-relaxed text-text-muted">
+                  {role.description}
+                </p>
+              </Reveal>
             );
           })}
         </div>
+
+        <Reveal
+          delay={120}
+          className="mx-auto mt-8 max-w-3xl rounded-lg border border-border bg-surface px-5 py-4 text-center text-sm leading-relaxed text-text-soft lg:mt-10"
+        >
+          شركة التأمين هي العميل، وفريق المطالبات والمعاينون هم المستخدمون
+          الأساسيون.
+        </Reveal>
       </div>
     </section>
   );
 }
-

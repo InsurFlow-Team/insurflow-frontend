@@ -1,0 +1,122 @@
+/*
+ * Landing page styles — isolated from the dashboard.
+ * Imported only by src/pages/LandingPage.tsx.
+ *
+ * Everything here is progressive: content is only hidden while JS runs the
+ * IntersectionObserver, and every rule collapses to "fully visible, no
+ * motion" under prefers-reduced-motion.
+ */
+
+:root {
+  --landing-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Anchored sections have to clear the fixed navbar */
+main section[id] {
+  scroll-margin-top: 5rem;
+}
+
+/* ─── Scroll reveal ─────────────────────────────────────────────────── */
+.landing-reveal {
+  opacity: 0;
+  transform: translate3d(0, 20px, 0);
+  transition:
+    opacity 900ms var(--landing-ease),
+    transform 900ms var(--landing-ease);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+.landing-reveal--scale {
+  transform: translate3d(0, 14px, 0) scale(0.985);
+}
+
+.landing-reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ─── Claim journey ─────────────────────────────────────────────────── */
+.journey-stage {
+  position: relative;
+}
+
+.journey-track {
+  position: absolute;
+  background: var(--color-border);
+  transition: transform 1000ms var(--landing-ease) 120ms;
+  pointer-events: none;
+}
+
+.journey-track--h {
+  height: 1px;
+  inset-inline: 7%;
+  top: 1.75rem;
+  transform: scaleX(0);
+  transform-origin: right center;
+}
+
+.journey-track--v {
+  width: 1px;
+  inset-block: 1.5rem;
+  inset-inline-end: 1.5rem;
+  transform: scaleY(0);
+  transform-origin: center top;
+}
+
+.journey-reveal.is-revealed .journey-track--h {
+  transform: scaleX(1);
+}
+
+.journey-reveal.is-revealed .journey-track--v {
+  transform: scaleY(1);
+}
+
+/* ─── Product showcase ──────────────────────────────────────────────── */
+@keyframes landing-panel-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.showcase-panel {
+  animation: landing-panel-in 550ms var(--landing-ease) both;
+}
+
+/* ─── Hero parallax (set from JS, desktop + motion allowed only) ────── */
+.hero-parallax {
+  transform: translate3d(0, var(--hero-shift, 0px), 0);
+}
+
+/* ─── Larger primary CTA (final section) ────────────────────────────── */
+.landing-btn-lg {
+  padding: 1rem 2rem;
+  font-size: 1.0625rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-reveal,
+  .landing-reveal--scale {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .journey-track--h,
+  .journey-track--v {
+    transform: none;
+    transition: none;
+  }
+
+  .showcase-panel {
+    animation: none;
+  }
+
+  .hero-parallax {
+    transform: none;
+  }
+}
