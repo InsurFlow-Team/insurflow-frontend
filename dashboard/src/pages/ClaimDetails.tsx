@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { CheckCircle2, XCircle } from "lucide-react";
 
 import {
   decideClaim,
@@ -167,6 +168,37 @@ export default function ClaimDetails() {
       />
 
       {claim.status === "PENDING_ACCEPTANCE" && <PendingAcceptanceBanner />}
+
+      {/* Decision Result Banner - shown to Claims Officer when decision is made */}
+      {(claim.status === "APPROVED" || claim.status === "REJECTED") &&
+        user?.role === "CLAIMS_OFFICER" && (
+          <div
+            className={`flex items-start gap-3 rounded-xl border p-4 ${
+              claim.status === "APPROVED"
+                ? "border-success-border bg-success-bg"
+                : "border-danger-border bg-danger-bg"
+            }`}
+            role="alert"
+          >
+            {claim.status === "APPROVED" ? (
+              <CheckCircle2 size={22} className="mt-0.5 shrink-0 text-success-strong" />
+            ) : (
+              <XCircle size={22} className="mt-0.5 shrink-0 text-danger" />
+            )}
+            <div>
+              <p className={`font-semibold text-sm ${claim.status === "APPROVED" ? "text-success-strong" : "text-danger"}`}>
+                {claim.status === "APPROVED"
+                  ? "✅ تم قبول هذه المطالبة من قِبل الإدارة"
+                  : "❌ تم رفض هذه المطالبة من قِبل الإدارة"}
+              </p>
+              {claim.decisionNotes && (
+                <p className="mt-1 text-sm text-text-muted">
+                  ملاحظات القرار: {claim.decisionNotes}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
       {/* Current Step Banner - explains why the claim is in this state */}
       <CurrentStepBanner status={claim.status} />
