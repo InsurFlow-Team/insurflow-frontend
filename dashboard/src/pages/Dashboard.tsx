@@ -1,19 +1,30 @@
 import { useMemo } from "react";
 import { RefreshCw } from "lucide-react";
 
+import { useAuth } from "../contexts/AuthContext";
+import { useTranslation } from "../i18n/context";
+import type { MessageKey } from "../i18n/messages.en";
 import { useDashboardStats } from "../hooks/useDashboardStats";
 import { useDashboardTeam } from "../hooks/useDashboardTeam";
 import { RECENT_CLAIMS_COUNT } from "../components/dashboard/dashboardConstants";
-import ClaimStatsGrid from "../components/claims/ClaimStatsGrid";
-import NeedsAttentionSection from "../components/dashboard/NeedsAttentionSection";
+import OverviewMetrics from "../components/dashboard/OverviewMetrics";
+import NeedsAttentionSection from "../components/NeedsAttention/NeedsAttentionSection";
 import RecentClaimsTable from "../components/dashboard/RecentClaimsTable";
 import TeamCapacityCard from "../components/dashboard/TeamCapacityCard";
 import ErrorState from "../components/ui/ErrorState";
 import Button from "../components/ui/Button";
 
+function greetingKeyFor(hour: number): MessageKey {
+  if (hour < 12) return "overview.greeting.morning";
+  if (hour < 17) return "overview.greeting.afternoon";
+  return "overview.greeting.evening";
+}
+
 export default function Dashboard() {
   const { claims, loading, error, load } = useDashboardStats();
   const team = useDashboardTeam();
+  const { user } = useAuth();
+  const { t } = useTranslation();
 
   const recentClaims = useMemo(
     () =>
@@ -26,6 +37,10 @@ export default function Dashboard() {
     [claims],
   );
 
+  const greeting = user?.name
+    ? t(greetingKeyFor(new Date().getHours()), { name: user.name })
+    : t("overview.title");
+
   if (error) {
     return <ErrorState message={error} onRetry={() => void load()} />;
   }
@@ -33,14 +48,13 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Page header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
           <h1 className="text-2xl lg:text-3xl font-bold text-text">
-            Overview
+            {greeting}
           </h1>
           <p className="mt-1 text-sm text-text-muted max-w-2xl">
-            Real-time claim statistics and recent activity from your
-            organization&apos;s backend.
+            {t("overview.subtitle")}
           </p>
         </div>
 
@@ -50,13 +64,17 @@ export default function Dashboard() {
           onClick={() => void load()}
           loading={loading}
         >
-          Refresh
+          {t("overview.refresh")}
         </Button>
       </div>
 
-      <ClaimStatsGrid claims={claims} loading={loading} />
+      <OverviewMetrics claims={claims} loading={loading} />
 
-      <NeedsAttentionSection claims={claims} loading={loading} />
+      <NeedsAttentionSection
+        claims={claims}
+        loading={loading}
+        role={user?.role ?? null}
+      />
 
       <TeamCapacityCard
         adjusters={team.adjusters}

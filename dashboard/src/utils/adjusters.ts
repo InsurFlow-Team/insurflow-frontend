@@ -80,9 +80,17 @@ export const SORT_OPTIONS: { value: AdjusterSortValue; label: string }[] = [
 // "unavailable" answer is never a surprise: e.g. "Ahmed (FA-001) — Available · 2/3".
 // Capacity stays a soft guardrail — the user may still assign beyond it via the
 // Capacity Override confirmation, exactly as agreed.
-export function formatAdjusterSelectLabel(adjuster: FieldAdjuster): string {
+export function formatAdjusterSelectLabel(
+  adjuster: FieldAdjuster,
+  stateLabels: { available: string; busy: string } = {
+    available: "Available",
+    busy: "Busy",
+  },
+): string {
   const state =
-    adjuster.availability === "AVAILABLE" ? "Available" : "Busy";
+    adjuster.availability === "AVAILABLE"
+      ? stateLabels.available
+      : stateLabels.busy;
 
   const load =
     typeof adjuster.capacityLimit === "number"

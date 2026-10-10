@@ -6,6 +6,7 @@ import { useDecisionForm } from "../../hooks/useDecisionForm";
 import LossAssessmentFields from "./decision/LossAssessmentFields";
 import CalculationPreview from "./decision/CalculationPreview";
 import type { ClaimDecision, DecideClaimPayload, ClaimDetails } from "../../types";
+import { useTranslation } from "../../i18n/context";
 
 interface DecisionDialogProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ export default function DecisionDialog({
   claim,
   loading,
 }: DecisionDialogProps) {
+  const { t } = useTranslation();
   const {
     notes,
     setNotes,
@@ -53,7 +55,9 @@ export default function DecisionDialog({
           ) : (
             <XCircle size={20} className="text-danger" />
           )}
-          <span>{isApproval ? "قبول المطالبة" : "رفض المطالبة"}</span>
+          <span>
+            {isApproval ? t("action.APPROVE_CLAIM") : t("action.REJECT_CLAIM")}
+          </span>
         </div>
       }
     >
@@ -63,9 +67,11 @@ export default function DecisionDialog({
           <div className="flex gap-3 rounded-lg bg-warning-bg p-4">
             <AlertTriangle size={18} className="mt-0.5 shrink-0 text-warning-strong" />
             <div className="text-sm">
-              <p className="font-medium text-warning-strong">تأكيد الرفض</p>
+              <p className="font-medium text-warning-strong">
+                {t("decision.rejectWarningTitle")}
+              </p>
               <p className="mt-1 text-warning">
-                هذا الإجراء سيغيّر حالة المطالبة إلى <strong>REJECTED</strong> ولا يمكن التراجع عنه.
+                {t("decision.rejectWarning")}
               </p>
             </div>
           </div>
@@ -77,7 +83,7 @@ export default function DecisionDialog({
             <div className="flex items-center gap-2 border-b border-border pb-2">
               <DollarSign size={18} className="text-text-muted" />
               <h3 className="text-sm font-semibold text-text">
-                تقييم الخسارة المالية
+                {t("decision.financialAssessment")}
               </h3>
             </div>
 
@@ -101,16 +107,24 @@ export default function DecisionDialog({
 
         {/* Decision Notes */}
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-text">
-            ملاحظات القرار {!isApproval && "(يُفضّل)"}
+          <label
+            htmlFor="decisionNotes"
+            className="mb-1.5 block text-sm font-medium text-text"
+          >
+            {t(
+              isApproval
+                ? "decision.notesOptional"
+                : "decision.notesRecommended",
+            )}
           </label>
           <Textarea
+            id="decisionNotes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder={
               isApproval
-                ? "أي ملاحظات إضافية عن القرار..."
-                : "سبب رفض المطالبة..."
+                ? t("decision.notesPlaceholder.approve")
+                : t("decision.notesPlaceholder.reject")
             }
             rows={3}
             error={errors.notes}
@@ -123,15 +137,19 @@ export default function DecisionDialog({
         {/* Actions */}
         <div className="flex justify-end gap-3 border-t border-border pt-4">
           <Button onClick={onCancel} variant="secondary" disabled={loading}>
-            إلغاء
+            {t("common.cancel")}
           </Button>
           <Button
             onClick={handleSubmit}
-            variant={isApproval ? "primary" : "danger"}
+            variant={isApproval ? "primary" : "destructive"}
             disabled={loading}
             icon={isApproval ? <CheckCircle2 size={17} /> : <XCircle size={17} />}
           >
-            {loading ? "جارٍ الحفظ..." : isApproval ? "قبول المطالبة" : "رفض المطالبة"}
+            {loading
+              ? t("common.saving")
+              : isApproval
+                ? t("action.APPROVE_CLAIM")
+                : t("action.REJECT_CLAIM")}
           </Button>
         </div>
       </div>

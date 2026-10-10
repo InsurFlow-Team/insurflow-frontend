@@ -4,6 +4,7 @@ import { render, cleanup, fireEvent } from "@testing-library/react";
 import { screen, waitFor } from "@testing-library/dom";
 import type { ClaimSummary, PolicyVerificationResponse } from "../../types";
 import { fillClaimForm, setupUserEvent } from "../../test/test-utils";
+import I18nProvider from "../../i18n/I18nProvider";
 
 vi.setConfig({ testTimeout: 20000 });
 
@@ -73,6 +74,9 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
+  document.documentElement.dir = "ltr";
+  document.documentElement.lang = "en";
 });
 
 function renderModal(verifiedPolicy: PolicyVerificationResponse | null) {
@@ -280,7 +284,17 @@ describe("AddClaimModal", () => {
 
   it("blocks submission when no verified policy is present (never posts an empty policyId)", async () => {
     const user = setupUserEvent();
-    const { container } = renderModal(null);
+    window.localStorage.setItem("sawn.locale", "ar");
+    const { container } = render(
+      <I18nProvider>
+        <AddClaimModal
+          isOpen
+          onClose={onClose}
+          onSubmit={onSubmit}
+          verifiedPolicy={null}
+        />
+      </I18nProvider>,
+    );
 
     await fillClaimForm(container);
     await user.click(screen.getByRole("button", { name: "Create Claim" }));

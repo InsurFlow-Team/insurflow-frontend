@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { useTranslation } from "../../i18n/context";
 import type { NavigationItem } from "./navigation";
 
 interface NavItemProps {
@@ -13,6 +14,8 @@ export default function NavItem({
   onNavigate,
   indent = false,
 }: NavItemProps) {
+  const { t } = useTranslation();
+
   return (
     <NavLink
       to={item.path}
@@ -29,7 +32,7 @@ export default function NavItem({
       {({ isActive }) => (
         <>
           {isActive && (
-            <span className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-1 bg-primary rounded-r-full" />
+            <span className="absolute start-0 top-1/2 -translate-y-1/2 h-5 w-1 bg-primary rounded-e-full" />
           )}
           {indent ? (
             <span className="w-[18px] shrink-0 flex justify-center">
@@ -38,7 +41,7 @@ export default function NavItem({
           ) : (
             item.icon
           )}
-          <span>{item.label}</span>
+          <span>{t(item.labelKey)}</span>
         </>
       )}
     </NavLink>

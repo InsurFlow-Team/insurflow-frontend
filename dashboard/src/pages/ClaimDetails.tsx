@@ -18,6 +18,8 @@ import ErrorState from "../components/ui/ErrorState";
 import ConfirmDialog from "../components/ui/ConfirmDialog";
 import AssignClaimModal from "../components/ui/AssignClaimModal";
 import ClaimDetailHeader from "../components/claim-details/ClaimDetailHeader";
+import ClaimStageTimeline from "../components/claim-details/ClaimStageTimeline";
+import NextActionPanel from "../components/claim-details/NextActionPanel";
 import ClaimInfoSections from "../components/claim-details/ClaimInfoSections";
 import ClaimTimeline from "../components/claim-details/ClaimTimeline";
 import PendingAcceptanceBanner from "../components/claim-details/PendingAcceptanceBanner";
@@ -25,11 +27,13 @@ import CurrentStepBanner from "../components/claim-details/CurrentStepBanner";
 import DecisionDialog from "../components/claim-details/DecisionDialog";
 import { toast } from "../contexts/ToastContext";
 import { useAuth } from "../contexts/AuthContext";
+import { useTranslation } from "../i18n/context";
 
 export default function ClaimDetails() {
   const { claimId } = useParams<{ claimId: string }>();
 
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const [claim, setClaim] = useState<ClaimDetailsType | null>(null);
   const [loading, setLoading] = useState(true);
@@ -71,10 +75,7 @@ export default function ClaimDetails() {
       await startClaimReview(claimId);
       await loadClaim();
 
-      toast(
-        "success",
-        "Claim review started successfully. Status changed to UNDER_REVIEW.",
-      );
+      toast("success", t("toast.reviewStarted"));
     } catch (requestError) {
       toast("error", getApiErrorMessage(requestError));
     } finally {
@@ -95,8 +96,8 @@ export default function ClaimDetails() {
       toast(
         "success",
         payload.decision === "APPROVED"
-          ? "تم قبول المطالبة."
-          : "تم رفض المطالبة.",
+          ? t("toast.decisionApproved")
+          : t("toast.decisionRejected"),
       );
     } catch (requestError) {
       toast("error", getApiErrorMessage(requestError));
@@ -107,13 +108,13 @@ export default function ClaimDetails() {
   }
 
   if (loading) {
-    return <LoadingState message="Loading claim details..." />;
+    return <LoadingState message={t("claim.loading")} />;
   }
 
   if (error || !claim) {
     return (
       <ErrorState
-        message={error || "Claim not found."}
+        message={error || t("claim.notFound")}
         onRetry={() => void loadClaim()}
       />
     );
@@ -121,8 +122,6 @@ export default function ClaimDetails() {
 
   const canManageAssignment =
     user?.role === "ADMIN" || user?.role === "CLAIMS_OFFICER";
-
-  const canStartReview = claim.status === "SUBMITTED";
 
   const canDecide = claim.status === "UNDER_REVIEW" && user?.role === "ADMIN";
 
@@ -137,7 +136,7 @@ export default function ClaimDetails() {
 
     try {
       await downloadClaimReport(claimId, claim.claimNumber);
-      toast("success", "تم تنزيل التقرير بنجاح.");
+      toast("success", t("toast.reportDownloaded"));
     } catch (requestError) {
       toast("error", getApiErrorMessage(requestError));
     } finally {
@@ -148,19 +147,19 @@ export default function ClaimDetails() {
   function handleAssigned() {
     setShowAssignModal(false);
     void loadClaim();
-    toast(
-      "success",
-      "Claim offered to the field adjuster. Awaiting their acceptance.",
-    );
+    toast("success", t("toast.offeredToAdjuster"));
+  }
+
+  function handleMakeDecision() {
+    document
+      .getElementById("decision-section")
+      ?.scrollIntoView?.({ block: "start" });
   }
 
   return (
     <div className="space-y-6">
       <ClaimDetailHeader
         claim={claim}
-        canStartReview={canStartReview}
-        reviewing={reviewing}
-        onStartReview={() => setShowReviewDialog(true)}
         canExportReport={exportStatus.exportable}
         exportDisabledReason={exportStatus.disabledReason}
         exporting={exporting}
@@ -188,17 +187,30 @@ export default function ClaimDetails() {
             <div>
               <p className={`font-semibold text-sm ${claim.status === "APPROVED" ? "text-success-strong" : "text-danger"}`}>
                 {claim.status === "APPROVED"
-                  ? "✅ تم قبول هذه المطالبة من قِبل الإدارة"
-                  : "❌ تم رفض هذه المطالبة من قِبل الإدارة"}
+                  ? t("claim.decisionBanner.approved")
+                  : t("claim.decisionBanner.rejected")}
               </p>
               {claim.decisionNotes && (
                 <p className="mt-1 text-sm text-text-muted">
-                  ملاحظات القرار: {claim.decisionNotes}
+                  {`${t("claim.decisionBanner.notes")} ${claim.decisionNotes}`}
                 </p>
               )}
             </div>
           </div>
         )}
+
+      {/* Where the claim stands in the lifecycle (backend-available stages). */}
+      <ClaimStageTimeline status={claim.status} />
+
+      {/* Who owns it, the SLA, and the single next action for this state. */}
+      <NextActionPanel
+        claim={claim}
+        role={user?.role ?? null}
+        reviewing={reviewing}
+        onAssign={() => setShowAssignModal(true)}
+        onStartReview={() => setShowReviewDialog(true)}
+        onMakeDecision={handleMakeDecision}
+      />
 
       {/* Current Step Banner - explains why the claim is in this state */}
       <CurrentStepBanner status={claim.status} />
@@ -219,10 +231,10 @@ export default function ClaimDetails() {
         isOpen={showReviewDialog}
         onCancel={() => setShowReviewDialog(false)}
         onConfirm={() => void handleStartReview()}
-        title="Start claim review?"
-        message="This will change the claim status from SUBMITTED to UNDER_REVIEW."
-        confirmLabel="Start Review"
-        cancelLabel="Cancel"
+        title={t("claim.startReviewTitle")}
+        message={t("claim.startReviewMessage")}
+        confirmLabel={t("action.START_REVIEW")}
+        cancelLabel={t("common.cancel")}
         loading={reviewing}
       />
 
@@ -242,6 +254,7 @@ export default function ClaimDetails() {
           isOpen
           onClose={() => setShowAssignModal(false)}
           claimId={claimId}
+          claimNumber={claim.claimNumber}
           onAssigned={handleAssigned}
         />
       )}

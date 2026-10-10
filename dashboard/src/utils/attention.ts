@@ -6,22 +6,25 @@ import {
 } from "lucide-react";
 
 import type { ClaimStatus, ClaimSummary, FieldAdjuster } from "../types";
+import { claimStaleThresholdDays } from "../domain/sla";
 
 /**
  * A claim sitting in one of these states is waiting on somebody. The dashboard
  * groups them so an operator can see WHO is blocking each claim instead of
  * reading a raw status count.
  *
- * `waitingOn` is the whole point of the group: "you" = the claims officer
- * looking at the dashboard, "adjuster" = chase the field adjuster, "admin" =
- * only an ADMIN can clear it.
+ * `waitingOn` is the whole point of the group, and it always names the ROLE
+ * that must act next: "officer" = the claims officer queue (assign / start
+ * review), "adjuster" = chase the field adjuster, "admin" = only an ADMIN can
+ * clear it. Never the viewer's "you" — the label has to stay true for whoever
+ * is looking.
  */
 export interface AttentionGroupDefinition {
   key: string;
   status: ClaimStatus;
   label: string;
   caption: string;
-  waitingOn: "you" | "adjuster" | "admin";
+  waitingOn: "officer" | "adjuster" | "admin";
   icon: LucideIcon;
 }
 
@@ -31,7 +34,7 @@ export const ATTENTION_GROUPS: readonly AttentionGroupDefinition[] = [
     status: "NEW",
     label: "Needs Assignment",
     caption: "Waiting to be assigned to an adjuster",
-    waitingOn: "you",
+    waitingOn: "officer",
     icon: UserPlus,
   },
   {
@@ -47,7 +50,7 @@ export const ATTENTION_GROUPS: readonly AttentionGroupDefinition[] = [
     status: "SUBMITTED",
     label: "Ready for Review",
     caption: "Inspection reported, needs Start Review",
-    waitingOn: "you",
+    waitingOn: "officer",
     icon: ClipboardCheck,
   },
   {
@@ -68,8 +71,20 @@ export const ATTENTION_GROUPS: readonly AttentionGroupDefinition[] = [
   },
 ] as const;
 
-/** A claim is flagged overdue from this age. */
-export const STALE_AFTER_DAYS = 3;
+/** Statuses that mean "somebody is blocked on a person" — the attention set. */
+export const ATTENTION_STATUSES: readonly ClaimStatus[] = ATTENTION_GROUPS.map(
+  (group) => group.status,
+);
+
+/**
+ * A claim is flagged overdue from this age.
+ *
+ * The number lives in `domain/sla.ts` (SLA_RULES.claimStale) so there is one
+ * source of truth for the only live SLA rule in the product. Value is
+ * unchanged: 3 days. The other product SLA rules are declared there as
+ * pending (no backend deadline exists), so they never flag anything here.
+ */
+export const STALE_AFTER_DAYS = claimStaleThresholdDays();
 
 const MS_PER_DAY = 86_400_000;
 

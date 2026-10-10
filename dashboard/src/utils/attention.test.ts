@@ -142,9 +142,9 @@ describe("buildAttentionGroups", () => {
     );
     const byStatus = Object.fromEntries(groups.map((g) => [g.status, g.waitingOn]));
 
-    expect(byStatus.NEW).toBe("you");
+    expect(byStatus.NEW).toBe("officer");
     expect(byStatus.PENDING_ACCEPTANCE).toBe("adjuster");
-    expect(byStatus.SUBMITTED).toBe("you");
+    expect(byStatus.SUBMITTED).toBe("officer");
     expect(byStatus.CORRECTION_REQUIRED).toBe("adjuster");
     expect(byStatus.UNDER_REVIEW).toBe("admin");
   });

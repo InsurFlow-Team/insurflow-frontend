@@ -11,9 +11,11 @@ import AdjustersFilterBar from "../components/adjusters/AdjustersFilterBar";
 import AdjustersTable from "../components/adjusters/AdjustersTable";
 import { buildAdjusterColumns } from "../components/adjusters/adjustersColumns";
 import type { Column } from "../components/ui/DataTable";
+import { useTranslation } from "../i18n/context";
 
 export default function AdjustersDirectory() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const {
     adjusters,
@@ -37,8 +39,9 @@ export default function AdjustersDirectory() {
     () =>
       buildAdjusterColumns({
         onView: (adjuster) => navigate(`/adjusters/${adjuster.id}`),
+        t,
       }),
-    [navigate],
+    [navigate, t],
   );
 
   return (
@@ -76,8 +79,8 @@ export default function AdjustersDirectory() {
         onRetry={() => void reload()}
         emptyMessage={
           directory.hasActiveFilters
-            ? "No adjusters match the current filters."
-            : "No field adjusters available."
+            ? t("adjusters.empty.withFilters")
+            : t("adjusters.empty.noFilters")
         }
         rowsPerPage={directory.rowsPerPage}
         currentPage={directory.currentPage}

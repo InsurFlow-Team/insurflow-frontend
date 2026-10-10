@@ -5,6 +5,7 @@ import Select from "../Select";
 import Button from "../Button";
 import InlineError from "../InlineError";
 import { formatAdjusterSelectLabel } from "../../../utils/adjusters";
+import { useTranslation } from "../../../i18n/context";
 import type { FieldAdjuster } from "../../../types";
 
 interface AdjusterSelectFieldProps {
@@ -30,14 +31,16 @@ export default function AdjusterSelectField({
   fieldError,
   onRetry,
 }: AdjusterSelectFieldProps) {
+  const { t } = useTranslation();
+
   return (
-    <FormField label="Field Adjuster" required error={fieldError}>
+    <FormField label={t("assign.fieldAdjuster")} required error={fieldError}>
       {loading ? (
         <Select
           name="adjusterId"
           value={value}
           disabled
-          placeholder="Loading field adjusters..."
+          placeholder={t("assign.loadingAdjusters")}
           options={[]}
         />
       ) : loadError ? (
@@ -45,7 +48,7 @@ export default function AdjusterSelectField({
           <InlineError message={loadError} />
           <Button type="button" variant="secondary" onClick={onRetry}>
             <RefreshCw size={15} />
-            Retry
+            {t("common.retry")}
           </Button>
         </div>
       ) : !hasAdjusters ? (
@@ -53,8 +56,7 @@ export default function AdjusterSelectField({
           role="status"
           className="rounded-lg border border-border bg-surface-soft px-3 py-2.5 text-sm text-text-muted"
         >
-          No available field adjusters. This claim can be assigned later once
-          an adjuster becomes available.
+          {t("assign.noAdjusters")}
         </div>
       ) : (
         <Select
@@ -63,10 +65,13 @@ export default function AdjusterSelectField({
           onChange={onChange}
           disabled={disabled}
           error={fieldError}
-          placeholder="Select field adjuster"
+          placeholder={t("assign.selectAdjuster")}
           options={adjusters.map((adjuster) => ({
             value: adjuster.id,
-            label: formatAdjusterSelectLabel(adjuster),
+            label: formatAdjusterSelectLabel(adjuster, {
+              available: t("map.available"),
+              busy: t("map.busy"),
+            }),
           }))}
         />
       )}

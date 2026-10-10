@@ -1,56 +1,97 @@
 import type { SelectHTMLAttributes } from "react";
+import { forwardRef } from "react";
 import { ChevronDown } from "lucide-react";
 
-interface SelectOption {
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface SelectOption {
   value: string;
   label: string;
+  disabled?: boolean;
 }
 
-interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
+export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   options: SelectOption[];
+  /** Placeholder option rendered at position 0, value="" */
   placeholder?: string;
+  /** Validation error — adds danger border + ring */
   error?: string;
 }
 
-export default function Select({
-  options,
-  placeholder,
-  error,
-  className = "",
-  ...props
-}: SelectProps) {
-  return (
-    <div className="relative">
-      <select
-        {...props}
-        className={`
-          w-full rounded-lg border bg-background text-sm text-text
-          px-4 py-2.5 pr-9 appearance-none
-          focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary
-          disabled:opacity-50 disabled:cursor-not-allowed
-          transition duration-150
-          ${error ? "border-danger focus:ring-danger/40 focus:border-danger" : "border-border"}
-          ${className}
-        `}
-      >
-        {placeholder && (
-          <option value="" disabled>
-            {placeholder}
-          </option>
-        )}
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+// ─── Base classes ─────────────────────────────────────────────────────────────
 
-      <ChevronDown
-        size={16}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
-      />
+const BASE =
+  "w-full appearance-none rounded-lg border bg-background text-sm text-text " +
+  "ps-4 pe-9 py-2.5 " +
+  "transition-colors duration-150 " +
+  "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary " +
+  "disabled:opacity-50 disabled:cursor-not-allowed";
 
-      {error && <p className="mt-1 text-xs text-danger">{error}</p>}
-    </div>
-  );
-}
+const BORDER_NORMAL = "border-border hover:border-primary/40";
+const BORDER_ERROR = "border-danger focus-visible:ring-danger/30 focus-visible:border-danger";
+
+// ─── Select ───────────────────────────────────────────────────────────────────
+
+/**
+ * Select
+ *
+ * Styled native `<select>`. Always pair with `<FormField>` for labels and
+ * error messages.
+ *
+ * RTL: `ps-` / `pe-` ensure the chevron sits on the correct end and the
+ * text starts on the correct side in both LTR and RTL layouts.
+ *
+ * Usage:
+ *   <FormField label="Priority" required error={errors.priority}>
+ *     <Select
+ *       value={priority}
+ *       onChange={(e) => setPriority(e.target.value)}
+ *       placeholder="Select priority"
+ *       options={[
+ *         { value: "LOW", label: "Low" },
+ *         { value: "HIGH", label: "High" },
+ *       ]}
+ *     />
+ *   </FormField>
+ */
+const Select = forwardRef<HTMLSelectElement, SelectProps>(
+  ({ options, placeholder, error, className = "", ...props }, ref) => {
+    return (
+      <div className="relative">
+        <select
+          ref={ref}
+          aria-invalid={error ? "true" : undefined}
+          className={[
+            BASE,
+            error ? BORDER_ERROR : BORDER_NORMAL,
+            className,
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          {...props}
+        >
+          {placeholder && (
+            <option value="" disabled>
+              {placeholder}
+            </option>
+          )}
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value} disabled={opt.disabled}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+
+        {/* Custom chevron — sits at the logical end so it is correct in RTL */}
+        <ChevronDown
+          size={15}
+          aria-hidden="true"
+          className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-text-muted"
+        />
+      </div>
+    );
+  },
+);
+
+Select.displayName = "Select";
+export default Select;

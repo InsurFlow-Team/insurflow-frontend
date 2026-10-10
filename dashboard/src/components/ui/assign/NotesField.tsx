@@ -1,5 +1,6 @@
 import FormField from "../FormField";
 import type { ChangeEvent } from "react";
+import { useTranslation } from "../../../i18n/context";
 
 interface NotesFieldProps {
   value: string;
@@ -12,13 +13,15 @@ export default function NotesField({
   onChange,
   disabled = false,
 }: NotesFieldProps) {
+  const { t } = useTranslation();
+
   return (
-    <FormField label="Assignment Notes">
+    <FormField label={t("assign.notes.label")}>
       <textarea
         name="notes"
         value={value}
         onChange={onChange}
-        placeholder="e.g., Please inspect this as soon as possible"
+        placeholder={t("assign.notes.placeholder")}
         rows={3}
         maxLength={300}
         disabled={disabled}

@@ -13,6 +13,13 @@ export interface LossAssessmentCalculation {
   isDeductibleOverridden: boolean;
 }
 
+export type DecisionValidationErrorKey =
+  | "partsCostRequired"
+  | "laborCostRequired"
+  | "deductibleRequired"
+  | "deductibleOverrideReasonRequired"
+  | "rejectionReasonRecommended";
+
 /**
  * Calculate loss assessment amounts
  */
@@ -53,8 +60,8 @@ export function validateDecisionForm(
   notes: string,
   isDeductibleOverridden: boolean,
   deductibleOverrideReason: string,
-): Record<string, string> {
-  const errors: Record<string, string> = {};
+): Record<string, DecisionValidationErrorKey> {
+  const errors: Record<string, DecisionValidationErrorKey> = {};
 
   if (isApproval) {
     // Loss assessment is required for approval
@@ -63,23 +70,23 @@ export function validateDecisionForm(
     const deductible = parseFloat(deductibleApplied);
 
     if (!estimatedPartsCost || partsCost < 0) {
-      errors.estimatedPartsCost = "يجب إدخال تكلفة القطع";
+      errors.estimatedPartsCost = "partsCostRequired";
     }
     if (!laborCost || labor < 0) {
-      errors.laborCost = "يجب إدخال تكلفة العمالة";
+      errors.laborCost = "laborCostRequired";
     }
     if (deductibleApplied === "" || deductible < 0) {
-      errors.deductibleApplied = "يجب إدخال التحمل";
+      errors.deductibleApplied = "deductibleRequired";
     }
 
     // If deductible was overridden, reason is required
     if (isDeductibleOverridden && !deductibleOverrideReason.trim()) {
-      errors.deductibleOverrideReason = "يجب توضيح سبب تغيير التحمل";
+      errors.deductibleOverrideReason = "deductibleOverrideReasonRequired";
     }
   } else {
     // Rejection notes are recommended but not required
     if (!notes.trim()) {
-      errors.notes = "يُفضّل كتابة سبب الرفض";
+      errors.notes = "rejectionReasonRecommended";
     }
   }
 

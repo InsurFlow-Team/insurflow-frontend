@@ -64,6 +64,7 @@ vi.mock("leaflet", () => ({
 
 import { getClaims, getClaimById, assignClaim } from "../api/claims.service";
 import { getFieldAdjusters } from "../api/users.service";
+import I18nProvider from "../i18n/I18nProvider";
 import MapPage from "./MapPage";
 import type { ClaimSummary, ClaimDetails, FieldAdjuster } from "../types";
 
@@ -178,14 +179,19 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
+  document.documentElement.dir = "ltr";
+  document.documentElement.lang = "en";
 });
 
-async function renderPage() {
-  render(
+async function renderPage(options: { locale?: "ar" } = {}) {
+  const ui = (
     <MemoryRouter>
       <MapPage />
-    </MemoryRouter>,
+    </MemoryRouter>
   );
+
+  render(options.locale ? <I18nProvider>{ui}</I18nProvider> : ui);
 }
 
 describe("MapPage", () => {
@@ -261,7 +267,7 @@ describe("MapPage", () => {
       await screen.findByDisplayValue("Select field adjuster"),
       LOCATED_ADJUSTER.id,
     );
-    await user.click(screen.getByRole("button", { name: "Save Assignment" }));
+    await user.click(screen.getByRole("button", { name: "Confirm assignment" }));
 
     expect(assignClaim).toHaveBeenCalledWith(LOCATED_CLAIM.id, {
       adjusterId: LOCATED_ADJUSTER.id,
@@ -270,6 +276,8 @@ describe("MapPage", () => {
     });
 
     expect(getClaims).toHaveBeenCalledTimes(2);
+    expect(await screen.findByText("Awaiting Reply")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Back to claim" })).toBeTruthy();
   });
 
   it("hides Assign button from FIELD_ADJUSTER viewer", async () => {
@@ -370,7 +378,7 @@ describe("MapPage", () => {
     // The assign modal opens with that EXACT adjuster preselected.
     expect(await screen.findByDisplayValue(/Aya.*FA-001/)).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: "Save Assignment" }));
+    await user.click(screen.getByRole("button", { name: "Confirm assignment" }));
 
     expect(assignClaim).toHaveBeenCalledTimes(1);
     expect(assignClaim).toHaveBeenCalledWith(LOCATED_CLAIM.id, {
@@ -435,7 +443,11 @@ describe("MapPage", () => {
   });
 
   it("deep-link from the claims list: /map?claim=<id> selects the claim WITHOUT auto-opening the assign form", async () => {
-    vi.mocked(getClaims).mockResolvedValue([LOCATED_CLAIM]);
+    const unrelatedClaim = makeClaim({
+      claimNumber: "CLM-UNRELATED",
+      incidentCoordinates: { latitude: 25, longitude: 45 },
+    });
+    vi.mocked(getClaims).mockResolvedValue([LOCATED_CLAIM, unrelatedClaim]);
     vi.mocked(getFieldAdjusters).mockResolvedValue([LOCATED_ADJUSTER]);
 
     render(
@@ -446,6 +458,11 @@ describe("MapPage", () => {
 
     // Claim selected directly with its claim-scoped adjusters (nearest list)…
     expect(await screen.findByText("Selected Claim")).toBeTruthy();
+    expect(screen.queryByText("CLM-UNRELATED")).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: /NEW Claims Queue/i }),
+    ).toBeNull();
+    expect(screen.getAllByTestId("marker")).toHaveLength(2);
     // The adjuster request is a separate effect from the claim list, so it may
     // still be in flight when the claim panel renders — wait for the call.
     await waitFor(() =>
@@ -478,5 +495,52 @@ describe("MapPage", () => {
     expect(
       screen.queryByRole("heading", { name: "Assign Field Adjuster" }),
     ).toBeNull();
+  });
+
+  // ─── Assignment context + return path ─────────────────────────────────────
+
+  it("offers a return path to the claim details from the selected claim header", async () => {
+    vi.mocked(getClaims).mockResolvedValue([LOCATED_CLAIM]);
+    vi.mocked(getFieldAdjusters).mockResolvedValue([LOCATED_ADJUSTER]);
+
+    render(
+      <MemoryRouter initialEntries={["/?claim=id-CLM-PIN-1"]}>
+        <MapPage />
+      </MemoryRouter>,
+    );
+
+    const backLink = await screen.findByRole("link", {
+      name: "Back to claim",
+    });
+    expect(backLink.getAttribute("href")).toBe("/claims/id-CLM-PIN-1");
+  });
+
+  it("renders the dispatch workspace in Arabic with RTL", async () => {
+    vi.mocked(getClaims).mockResolvedValue([LOCATED_CLAIM]);
+    vi.mocked(getFieldAdjusters).mockResolvedValue([LOCATED_ADJUSTER]);
+    window.localStorage.setItem("sawn.locale", "ar");
+
+    const user = setupUserEvent();
+    await renderPage({ locale: "ar" });
+
+    expect(
+      await screen.findByRole("heading", { name: "خريطة الإسناد" }),
+    ).toBeTruthy();
+    expect(document.documentElement.dir).toBe("rtl");
+    expect(screen.getByText("العمليات")).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: /قائمة المطالبات الجديدة/ }),
+    ).toBeTruthy();
+
+    const claimElements = await screen.findAllByText("CLM-PIN-1");
+    await user.click(claimElements[0]);
+
+    expect(await screen.findByText("المطالبة المحددة")).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "العودة إلى المطالبة" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "إسناد معاين ميداني" }),
+    ).toBeTruthy();
   });
 });

@@ -8,6 +8,9 @@ import StatusBadge from "../ui/StatusBadge";
 import EmptyState from "../ui/EmptyState";
 import { formatDate, formatDateTime } from "../../utils/claims";
 import { formatDuration, summarizeWorkHistory } from "../../utils/adjusterHistory";
+import { useTranslation } from "../../i18n/context";
+import type { I18nContextValue } from "../../i18n/context";
+import type { MessageKey } from "../../i18n/messages.en";
 import type {
   AdjusterWorkHistory,
   AdjusterWorkHistoryEntry,
@@ -38,64 +41,75 @@ function MetricTile({
   );
 }
 
-const historyColumns: Column<AdjusterWorkHistoryEntry>[] = [
-  {
-    key: "claimNumber",
-    header: "Claim Number",
-    render: (entry) => (
-      <Link
-        to={`/claims/${entry.claimId}`}
-        className="text-sm font-semibold text-primary hover:text-primary-dark transition-colors"
-      >
-        {entry.claimNumber}
-      </Link>
-    ),
-  },
-  {
-    key: "customer",
-    header: "Customer",
-    render: (entry) => (
-      <span className="text-sm text-text">
-        {entry.customerName || "—"}
-        {entry.plateNumber && (
-          <span className="ml-2 text-xs text-text-muted">
-            {entry.plateNumber}
-          </span>
-        )}
-      </span>
-    ),
-  },
-  {
-    key: "status",
-    header: "Outcome",
-    render: (entry) => <StatusBadge status={entry.status} />,
-  },
-  {
-    key: "inspections",
-    header: "Inspections",
-    render: (entry) => (
-      <span className="text-sm font-medium text-text">
-        {entry.inspectionCount ?? "—"}
-      </span>
-    ),
-  },
-  {
-    key: "duration",
-    header: "Turnaround",
-    render: (entry) => (
-      <span className="text-sm text-text">{formatDuration(entry.durationHours)}</span>
-    ),
-  },
-  {
-    key: "completedAt",
-    header: "Completed",
-    render: (entry) => (
-      <span className="text-sm text-text">
-        {formatDateTime(entry.completedAt)}
-      </span>
-    ),
-  },
-];
+function buildHistoryColumns(
+  t: I18nContextValue["t"],
+): Column<AdjusterWorkHistoryEntry>[] {
+  return [
+    {
+      key: "claimNumber",
+      header: t("workHistory.col.claimNumber"),
+      render: (entry) => (
+        <Link
+          to={`/claims/${entry.claimId}`}
+          className="text-sm font-semibold text-primary hover:text-primary-dark transition-colors"
+        >
+          {entry.claimNumber}
+        </Link>
+      ),
+    },
+    {
+      key: "customer",
+      header: t("workHistory.col.customer"),
+      render: (entry) => (
+        <span className="text-sm text-text">
+          {entry.customerName || "—"}
+          {entry.plateNumber && (
+            <span className="ml-2 text-xs text-text-muted">
+              {entry.plateNumber}
+            </span>
+          )}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: t("workHistory.col.outcome"),
+      render: (entry) => (
+        <StatusBadge
+          status={entry.status}
+          label={t(`claimStatus.${entry.status}` as MessageKey)}
+        />
+      ),
+    },
+    {
+      key: "inspections",
+      header: t("workHistory.col.inspections"),
+      render: (entry) => (
+        <span className="text-sm font-medium text-text">
+          {entry.inspectionCount ?? "—"}
+        </span>
+      ),
+    },
+    {
+      key: "duration",
+      header: t("workHistory.col.turnaround"),
+      render: (entry) => (
+        <span className="text-sm text-text">
+          {formatDuration(entry.durationHours)}
+        </span>
+      ),
+    },
+    {
+      key: "completedAt",
+      header: t("workHistory.col.completed"),
+      render: (entry) => (
+        <span className="text-sm text-text">
+          {formatDateTime(entry.completedAt)}
+        </span>
+      ),
+    },
+  ];
+}
 
 interface WorkHistorySectionProps {
   history: AdjusterWorkHistory | null;
@@ -110,6 +124,8 @@ export default function WorkHistorySection({
   error,
   onRetry,
 }: WorkHistorySectionProps) {
+  const { t } = useTranslation();
+
   if (loading) {
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -135,43 +151,42 @@ export default function WorkHistorySection({
           onClick={onRetry}
           className="font-medium text-primary hover:text-primary-dark underline"
         >
-          Retry
+          {t("workHistory.retry")}
         </button>
       </p>
     );
   }
 
   if (!history || history.entries.length === 0) {
-    return (
-      <EmptyState message="This adjuster has no completed claims yet." />
-    );
+    return <EmptyState message={t("workHistory.empty")} />;
   }
 
   const totals = summarizeWorkHistory(history.entries, history.totalCompleted);
+  const historyColumns = buildHistoryColumns(t);
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricTile
-          label="Completed claims"
+          label={t("workHistory.metric.completed")}
           value={String(totals.completedCount)}
           icon={ListChecks}
           iconClass="text-success-strong"
         />
         <MetricTile
-          label="Total inspections"
+          label={t("workHistory.metric.inspections")}
           value={String(totals.totalInspections ?? "—")}
           icon={ClipboardCheck}
           iconClass="text-info-muted"
         />
         <MetricTile
-          label="Avg. turnaround"
+          label={t("workHistory.metric.avgTurnaround")}
           value={formatDuration(totals.averageDurationHours)}
           icon={Clock}
           iconClass="text-warning-muted"
         />
         <MetricTile
-          label="Last completed"
+          label={t("workHistory.metric.lastCompleted")}
           value={formatDate(totals.lastCompletedAt)}
           icon={CalendarCheck}
           iconClass="text-primary"
@@ -182,13 +197,15 @@ export default function WorkHistorySection({
         columns={historyColumns}
         data={history.entries}
         keyExtractor={(entry) => entry.claimId}
-        emptyMessage="This adjuster has no completed claims yet."
+        emptyMessage={t("workHistory.empty")}
       />
 
       {history.truncated && (
         <p className="text-xs text-text-muted">
-          Showing the {history.entries.length} most recent completed claims out
-          of {history.totalCompleted}.
+          {t("workHistory.truncatedNote", {
+            count: history.entries.length,
+            total: history.totalCompleted,
+          })}
         </p>
       )}
     </div>

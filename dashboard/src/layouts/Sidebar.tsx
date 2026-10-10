@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useTranslation } from "../i18n/context";
 import NavItem from "./sidebar/NavItem";
 import SidebarUserCard from "./sidebar/SidebarUserCard";
 import {
@@ -21,6 +22,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { dir, t } = useTranslation();
 
   // Escape closes the mobile drawer.
   useEffect(() => {
@@ -46,9 +48,13 @@ export default function Sidebar({
 
   return (
     <aside
-      aria-label="Primary navigation"
-      className={`fixed inset-y-0 left-0 z-40 w-[280px] bg-surface border-r border-border flex flex-col h-screen shrink-0 transform transition-[transform,visibility] duration-200 lg:static lg:translate-x-0 lg:visible ${
-        isOpen ? "translate-x-0 visible" : "-translate-x-full invisible"
+      aria-label={t("nav.primaryAria")}
+      className={`fixed inset-y-0 start-0 z-40 w-[280px] bg-surface border-e border-border flex flex-col h-screen shrink-0 transform transition-[transform,visibility] duration-200 lg:static lg:translate-x-0 lg:visible ${
+        isOpen
+          ? "translate-x-0 visible"
+          : dir === "rtl"
+            ? "translate-x-full invisible"
+            : "-translate-x-full invisible"
       }`}
     >
       {/* Product header */}
@@ -64,7 +70,7 @@ export default function Sidebar({
                 صَوْن | SAWN
               </span>
               <span className="block text-xs text-text-muted">
-                Enterprise Operations
+                {t("nav.tagline")}
               </span>
             </div>
           </div>
@@ -72,7 +78,7 @@ export default function Sidebar({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close sidebar"
+            aria-label={t("nav.closeSidebar")}
             className="p-1.5 rounded-lg text-text-muted hover:bg-surface-soft hover:text-text lg:hidden"
           >
             <X size={20} />
@@ -91,12 +97,12 @@ export default function Sidebar({
         {user && settingsParent.roles.includes(user.role) && (
           <div className="mt-6">
             <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wide text-text-muted">
-              Settings
+              {t("nav.settings")}
             </p>
 
             <NavItem item={settingsParent} onNavigate={onClose} />
 
-            <div className="mt-1 ml-3 border-l border-border pl-1.5 space-y-1">
+            <div className="mt-1 ms-3 border-s border-border ps-1.5 space-y-1">
               {settingsChildren
                 .filter((item) => item.roles.includes(user.role))
                 .map((item) => (
@@ -114,7 +120,7 @@ export default function Sidebar({
 
       <SidebarUserCard
         userName={user?.name ?? "User"}
-        userRole={user?.role ?? "—"}
+        userRole={user?.role ?? null}
         onLogout={handleLogout}
       />
     </aside>

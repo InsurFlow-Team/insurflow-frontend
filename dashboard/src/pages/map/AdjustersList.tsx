@@ -1,5 +1,6 @@
 import { Users } from "lucide-react";
 import { formatCapacitySummary } from "../../utils/adjusters";
+import { useTranslation } from "../../i18n/context";
 import type { FieldAdjuster } from "../../types";
 
 interface AdjustersListProps {
@@ -16,6 +17,7 @@ function AdjusterRow({
   adjuster: FieldAdjuster;
   demo?: boolean;
 }) {
+  const { t } = useTranslation();
   const busy = adjuster.availability === "UNAVAILABLE";
 
   return (
@@ -31,20 +33,22 @@ function AdjusterRow({
               : "bg-success-bg text-success-text border border-success-border"
           }`}
         >
-          {busy ? "Busy" : "Available"}
+          {busy ? t("map.busy") : t("map.available")}
         </span>
       </div>
 
       <div className="flex items-center justify-between text-text-muted text-[11px]">
-        <span>Tasks: {formatCapacitySummary(adjuster) ?? "0"}</span>
+        <span>
+          {t("map.tasks")}: {formatCapacitySummary(adjuster) ?? "0"}
+        </span>
         {typeof adjuster.distanceKm === "number" ? (
           <span className={`font-medium ${adjuster.locationStale ? "text-warning" : "text-primary"}`}>
             {adjuster.distanceKm.toFixed(2)} km
-            {adjuster.locationStale ? " · موقع قديم" : ""}
+            {adjuster.locationStale ? ` · ${t("map.staleLocation")}` : ""}
             {demo ? " · DEMO" : ""}
           </span>
         ) : (
-          <span className="text-text-muted">الموقع غير متوفر</span>
+          <span className="text-text-muted">{t("map.noLocation")}</span>
         )}
       </div>
     </div>
@@ -56,6 +60,8 @@ export default function AdjustersList({
   loading,
   demo,
 }: AdjustersListProps) {
+  const { t } = useTranslation();
+
   // Nearest first where a distance exists (real or DEMO); adjusters without a
   // distance are kept after them, in their original order.
   const sortedAdjusters = [...adjusters].sort((a, b) => {
@@ -69,11 +75,11 @@ export default function AdjustersList({
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs font-semibold text-text flex items-center gap-1">
           <Users size={14} className="text-primary" />
-          Active Adjusters ({adjusters.length})
+          {`${t("map.adjustersTitle")} (${adjusters.length})`}
         </p>
         {loading ? (
           <span className="text-[10px] text-text-muted animate-pulse">
-            Sorting by proximity...
+            {t("map.sortingByProximity")}
           </span>
         ) : demo ? (
           <span className="rounded border border-warning-border bg-accent-light px-1.5 py-0.5 text-[10px] font-bold text-warning-deep">
@@ -82,10 +88,10 @@ export default function AdjustersList({
         ) : null}
       </div>
 
-      <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
+      <div className="max-h-48 overflow-y-auto space-y-2 pe-1">
         {sortedAdjusters.length === 0 ? (
           <p className="text-xs text-text-muted italic">
-            No active adjusters available.
+            {t("map.noAdjusters")}
           </p>
         ) : (
           sortedAdjusters.map((adj) => (

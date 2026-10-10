@@ -61,6 +61,7 @@ vi.mock("../api/policy.service", () => ({
 
 import { getClaims, createClaim } from "../api/claims.service";
 import { verifyPolicy } from "../api/policy.service";
+import I18nProvider from "../i18n/I18nProvider";
 import ClaimsList from "./ClaimsList";
 import type { ClaimStatus, ClaimSummary, PolicyVerificationResponse } from "../types";
 
@@ -128,6 +129,9 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
+  document.documentElement.dir = "ltr";
+  document.documentElement.lang = "en";
 });
 
 function DetailsStub() {
@@ -142,17 +146,32 @@ function MapStub() {
   return <div>map-stub:{location.pathname}{location.search}</div>;
 }
 
-async function renderPage() {
+const daysAgo = (days: number) =>
+  new Date(Date.now() - days * 86_400_000).toISOString();
+
+async function renderPage(options: { locale?: "ar" } = {}) {
   const utils = render(
     <MemoryRouter initialEntries={["/claims"]}>
-      <Routes>
-        <Route path="/claims" element={<ClaimsList />} />
-        <Route path="/claims/:claimId" element={<DetailsStub />} />
-        <Route path="/map" element={<MapStub />} />
-      </Routes>
+      {options.locale ? (
+        <I18nProvider>
+          <RoutesWithStubs />
+        </I18nProvider>
+      ) : (
+        <RoutesWithStubs />
+      )}
     </MemoryRouter>,
   );
   return utils;
+}
+
+function RoutesWithStubs() {
+  return (
+    <Routes>
+      <Route path="/claims" element={<ClaimsList />} />
+      <Route path="/claims/:claimId" element={<DetailsStub />} />
+      <Route path="/map" element={<MapStub />} />
+    </Routes>
+  );
 }
 
 async function renderPageAt(path: string) {
@@ -196,7 +215,8 @@ describe("ClaimsList", () => {
     expect(await screen.findByText(CLAIM_NUMBER_TEXT)).toBeTruthy();
     expect(screen.getByText("Ahmed Ibrahim")).toBeTruthy();
     expect(screen.getByText("ABC-1234")).toBeTruthy();
-    expect(screen.getAllByRole("link", { name: /View Details/i }).length).toBe(1);
+    expect(screen.getAllByRole("link", { name: /View Claim/i }).length).toBe(1);
+    expect(screen.getByRole("button", { name: /Assign/i })).toBeTruthy();
   });
 
   it("after creating a claim, navigates directly to its details page using the created id", async () => {
@@ -517,5 +537,127 @@ describe("ClaimsList", () => {
     );
 
     expect(await screen.findByText("CLM-R1")).toBeTruthy();
+  });
+
+  it("applies ?sla=overdue from the URL so the Overview metric drill-down works", async () => {
+    vi.mocked(getClaims).mockResolvedValue([
+      { ...makeRow("clm-od", "CLM-OD", "NEW"), createdAt: daysAgo(7) },
+      { ...makeRow("clm-fresh", "CLM-FRESH", "NEW"), createdAt: daysAgo(0) },
+      { ...makeRow("clm-closed", "CLM-CLOSED", "CLOSED"), createdAt: daysAgo(30) },
+    ]);
+
+    await renderPageAt("/claims?sla=overdue");
+
+    expect(await screen.findByText("CLM-OD")).toBeTruthy();
+    // A fresh claim is inside the 3-day threshold…
+    expect(screen.queryByText("CLM-FRESH")).toBeNull();
+    // …and a final status is never "overdue", however old it is.
+    expect(screen.queryByText("CLM-CLOSED")).toBeNull();
+  });
+
+  it("ignores an unknown ?sla= instead of rendering an empty table", async () => {
+    vi.mocked(getClaims).mockResolvedValue([
+      makeRow("clm-n1", "CLM-N1", "NEW"),
+      makeRow("clm-r1", "CLM-R1", "UNDER_REVIEW"),
+    ]);
+
+    await renderPageAt("/claims?sla=whatever");
+
+    expect(await screen.findByText("CLM-N1")).toBeTruthy();
+    expect(screen.getByText("CLM-R1")).toBeTruthy();
+  });
+
+  it("toggles the stale-only chip on and off without losing the data", async () => {
+    vi.mocked(getClaims).mockResolvedValue([
+      { ...makeRow("clm-od", "CLM-OD", "NEW"), createdAt: daysAgo(7) },
+      { ...makeRow("clm-fresh", "CLM-FRESH", "NEW"), createdAt: daysAgo(0) },
+    ]);
+
+    const user = setupUserEvent();
+    await renderPage();
+
+    expect(await screen.findByText("CLM-FRESH")).toBeTruthy();
+
+    const chip = screen.getByRole("button", {
+      name: "Stale only (3+ days old)",
+    });
+    expect(chip.getAttribute("aria-pressed")).toBe("false");
+
+    await user.click(chip);
+
+    expect(screen.queryByText("CLM-FRESH")).toBeNull();
+    expect(screen.getByText("CLM-OD")).toBeTruthy();
+    expect(
+      screen
+        .getByRole("button", { name: "Stale only (3+ days old)" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+
+    await user.click(
+      screen.getByRole("button", { name: "Stale only (3+ days old)" }),
+    );
+
+    expect(await screen.findByText("CLM-FRESH")).toBeTruthy();
+  });
+
+  it("offers each row its next workflow action for a CLAIMS_OFFICER", async () => {
+    authRole.value = "CLAIMS_OFFICER";
+    vi.mocked(getClaims).mockResolvedValue([
+      makeRow("clm-new", "CLM-NEW", "NEW"),
+      makeRow("clm-sub", "CLM-SUB", "SUBMITTED"),
+      makeRow("clm-ur", "CLM-UR", "UNDER_REVIEW"),
+    ]);
+
+    await renderPage();
+
+    expect(await screen.findByText("CLM-SUB")).toBeTruthy();
+
+    // NEW → assign on the dispatch map.
+    expect(screen.getByRole("button", { name: "Assign Adjuster" })).toBeTruthy();
+    // SUBMITTED → start the review from the claim details page.
+    expect(
+      screen.getByRole("link", { name: "Start Review" }).getAttribute("href"),
+    ).toBe("/claims/clm-sub");
+    // UNDER_REVIEW → a CO cannot decide; only View Claim is offered.
+    expect(screen.queryByText("Make Decision")).toBeNull();
+    expect(
+      screen.getAllByRole("link", { name: "View Claim" }).length,
+    ).toBe(3);
+  });
+
+  it("offers Make Decision to an ADMIN on an UNDER_REVIEW row", async () => {
+    authRole.value = "ADMIN";
+    vi.mocked(getClaims).mockResolvedValue([
+      makeRow("clm-ur", "CLM-UR", "UNDER_REVIEW"),
+    ]);
+
+    await renderPage();
+
+    expect(
+      (await screen.findByRole("link", { name: "Make Decision" })).getAttribute(
+        "href",
+      ),
+    ).toBe("/claims/clm-ur");
+  });
+
+  it("renders the filters, columns and badges in Arabic with RTL", async () => {
+    authRole.value = "CLAIMS_OFFICER";
+    window.localStorage.setItem("sawn.locale", "ar");
+    vi.mocked(getClaims).mockResolvedValue([FULL_ROW]);
+
+    await renderPage({ locale: "ar" });
+
+    expect(await screen.findByText("رقم المطالبة")).toBeTruthy();
+    expect(document.documentElement.dir).toBe("rtl");
+    expect(screen.getByLabelText("تصفية حسب الحالة")).toBeTruthy();
+    expect(screen.getByText("كل الحالات")).toBeTruthy();
+    // Once in the status <select>, once in the row's status badge.
+    expect(screen.getAllByText("جديدة").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByRole("link", { name: "عرض المطالبة" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: "المتقادمة فقط (3 أيام فأكثر)",
+      }),
+    ).toBeTruthy();
   });
 });

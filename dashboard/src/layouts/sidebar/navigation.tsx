@@ -7,10 +7,11 @@ import {
   UserRound,
   Users,
 } from "lucide-react";
+import type { MessageKey } from "../../i18n/messages.en";
 import type { Role } from "../../types";
 
 export interface NavigationItem {
-  label: string;
+  labelKey: MessageKey;
   path: string;
   icon: React.ReactNode;
   roles: Role[];
@@ -19,31 +20,31 @@ export interface NavigationItem {
 
 export const navigationItems: NavigationItem[] = [
   {
-    label: "Overview",
+    labelKey: "nav.overview",
     path: "/dashboard",
     icon: <LayoutDashboard size={18} />,
     roles: ["ADMIN", "CLAIMS_OFFICER"],
   },
   {
-    label: "Claims Queue",
+    labelKey: "claims.header.queue",
     path: "/claims",
     icon: <FileText size={18} />,
     roles: ["ADMIN", "CLAIMS_OFFICER"],
   },
   {
-    label: "Field Adjusters",
+    labelKey: "nav.fieldAdjusters",
     path: "/adjusters",
     icon: <MapPin size={18} />,
     roles: ["ADMIN", "CLAIMS_OFFICER"],
   },
   {
-    label: "Map Dispatch",
+    labelKey: "map.title",
     path: "/map",
     icon: <Map size={18} />,
     roles: ["ADMIN", "CLAIMS_OFFICER"],
   },
   {
-    label: "Profile",
+    labelKey: "nav.profile",
     path: "/profile",
     icon: <UserRound size={18} />,
     roles: ["ADMIN", "CLAIMS_OFFICER"],
@@ -51,7 +52,7 @@ export const navigationItems: NavigationItem[] = [
 ];
 
 export const settingsParent: NavigationItem = {
-  label: "Settings",
+  labelKey: "nav.settings",
   path: "/settings",
   icon: <Settings size={18} />,
   roles: ["ADMIN"],
@@ -60,7 +61,7 @@ export const settingsParent: NavigationItem = {
 
 export const settingsChildren: NavigationItem[] = [
   {
-    label: "User Management",
+    labelKey: "nav.userManagement",
     path: "/settings/users",
     icon: <Users size={18} />,
     roles: ["ADMIN"],

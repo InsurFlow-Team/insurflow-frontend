@@ -1,4 +1,5 @@
 import Button from "../Button";
+import { useTranslation } from "../../../i18n/context";
 
 interface AssignmentActionsProps {
   submitting: boolean;
@@ -11,6 +12,8 @@ export default function AssignmentActions({
   canSubmit,
   onCancel,
 }: AssignmentActionsProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="flex gap-3 pt-2">
       <Button
@@ -20,7 +23,7 @@ export default function AssignmentActions({
         onClick={onCancel}
         disabled={submitting}
       >
-        Cancel
+        {t("common.cancel")}
       </Button>
       <Button
         type="submit"
@@ -28,7 +31,7 @@ export default function AssignmentActions({
         loading={submitting}
         disabled={!canSubmit}
       >
-        Save Assignment
+        {t("assign.confirm")}
       </Button>
     </div>
   );

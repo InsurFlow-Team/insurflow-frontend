@@ -12,13 +12,16 @@ import ErrorState from "../components/ui/ErrorState";
 import ActiveTasksCell from "../components/adjusters/ActiveTasksCell";
 import WorkHistorySection from "../components/adjusters/WorkHistorySection";
 import { avatarClasses, userInitials } from "../utils/user";
+import { useTranslation } from "../i18n/context";
 
 function InfoRow({
   label,
   value,
+  roleLabel,
 }: {
   label: string;
   value?: string | null;
+  roleLabel?: string;
 }) {
   return (
     <div>
@@ -27,7 +30,7 @@ function InfoRow({
       </p>
 
       <p className="mt-1 text-sm text-text">
-        {value || "—"}
+        {roleLabel ?? (value || "—")}
       </p>
     </div>
   );
@@ -35,6 +38,7 @@ function InfoRow({
 
 export default function AdjusterDetails() {
   const { adjusterId } = useParams<{ adjusterId: string }>();
+  const { t } = useTranslation();
 
   const [adjuster, setAdjuster] = useState<FieldAdjuster | null>(null);
   const [loading, setLoading] = useState(true);
@@ -83,13 +87,13 @@ export default function AdjusterDetails() {
   }, [loadAdjuster, loadHistory]);
 
   if (loading) {
-    return <LoadingState message="Loading adjuster details..." />;
+    return <LoadingState message={t("adjuster.loading")} />;
   }
 
   if (error || !adjuster) {
     return (
       <ErrorState
-        message={error || "Field adjuster not found."}
+        message={error || t("adjuster.notFound")}
         onRetry={() => void loadAdjuster()}
       />
     );
@@ -102,7 +106,7 @@ export default function AdjusterDetails() {
         className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-dark"
       >
         <ArrowLeft size={16} />
-        Back to adjusters
+        {t("adjuster.backToList")}
       </Link>
 
       <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
@@ -122,15 +126,31 @@ export default function AdjusterDetails() {
             </div>
 
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <StatusBadge status={adjuster.availability} />
-              <StatusBadge status={adjuster.status} />
+              <StatusBadge
+                status={adjuster.availability}
+                label={t(
+                  adjuster.availability === "AVAILABLE"
+                    ? "adjusters.availability.available"
+                    : "adjusters.availability.unavailable",
+                )}
+              />
+              <StatusBadge
+                status={adjuster.status}
+                label={t(
+                  adjuster.status === "ACTIVE"
+                    ? "adjusters.status.active"
+                    : "adjusters.status.inactive",
+                )}
+              />
             </div>
           </div>
         </div>
       </div>
 
       <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-text">Active workload</h2>
+        <h2 className="text-lg font-semibold text-text">
+          {t("adjuster.section.workload.title")}
+        </h2>
 
         <div className="mt-5 max-w-md">
           <ActiveTasksCell
@@ -142,15 +162,19 @@ export default function AdjusterDetails() {
 
       <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-text">
-          Adjuster information
+          {t("adjuster.section.info.title")}
         </h2>
 
         <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <InfoRow label="Employee ID" value={adjuster.employeeCode} />
-          <InfoRow label="Role" value={adjuster.role} />
-          <InfoRow label="Organization" value={adjuster.organizationName} />
+          <InfoRow label={t("adjuster.field.employeeId")} value={adjuster.employeeCode} />
           <InfoRow
-            label="Active Tasks"
+            label={t("adjuster.field.role")}
+            value={adjuster.role}
+            roleLabel={t("role.fieldAdjuster")}
+          />
+          <InfoRow label={t("adjuster.field.organization")} value={adjuster.organizationName} />
+          <InfoRow
+            label={t("adjuster.field.activeTasks")}
             value={String(adjuster.activeTasksCount)}
           />
         </div>
@@ -158,12 +182,11 @@ export default function AdjusterDetails() {
 
       <section className="rounded-xl border border-border bg-surface p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-text">
-          Work history
+          {t("adjuster.section.history.title")}
         </h2>
 
         <p className="mt-1 text-sm text-text-muted">
-          Claims this adjuster finished, with the inspections performed and how
-          long each one took.
+          {t("adjuster.section.history.subtitle")}
         </p>
 
         <div className="mt-5">

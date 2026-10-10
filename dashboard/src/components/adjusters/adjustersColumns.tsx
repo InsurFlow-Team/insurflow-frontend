@@ -4,18 +4,21 @@ import StatusBadge from "../ui/StatusBadge";
 import { avatarClasses, userInitials } from "../../utils/user";
 import ActiveTasksCell from "./ActiveTasksCell";
 import type { FieldAdjuster } from "../../types";
+import type { I18nContextValue } from "../../i18n/context";
 
 interface AdjusterColumnsHandlers {
   onView: (adjuster: FieldAdjuster) => void;
+  t: I18nContextValue["t"];
 }
 
 export function buildAdjusterColumns({
   onView,
+  t,
 }: AdjusterColumnsHandlers): Column<FieldAdjuster>[] {
   return [
     {
       key: "name",
-      header: "Adjuster",
+      header: t("adjusters.col.adjuster"),
       render: (adjuster) => (
         <button
           type="button"
@@ -32,7 +35,7 @@ export function buildAdjusterColumns({
               {adjuster.name}
             </span>
             <span className="block text-xs text-text-muted truncate">
-              Field Adjuster
+              {t("adjusters.col.roleLabel")}
             </span>
           </span>
         </button>
@@ -40,7 +43,7 @@ export function buildAdjusterColumns({
     },
     {
       key: "employeeCode",
-      header: "Employee Code",
+      header: t("adjusters.col.employeeCode"),
       render: (adjuster) => (
         <span className="inline-block rounded-md bg-surface-sunken px-2 py-0.5 text-xs font-medium text-text-soft">
           {adjuster.employeeCode}
@@ -49,7 +52,7 @@ export function buildAdjusterColumns({
     },
     {
       key: "organizationName",
-      header: "Organization",
+      header: t("adjusters.col.organization"),
       render: (adjuster) => (
         <span className="text-sm text-text line-clamp-2">
           {adjuster.organizationName}
@@ -58,7 +61,7 @@ export function buildAdjusterColumns({
     },
     {
       key: "activeTasksCount",
-      header: "Active Tasks / Limit",
+      header: t("adjusters.col.activeTasks"),
       render: (adjuster) => (
         <ActiveTasksCell
           activeTasksCount={adjuster.activeTasksCount}
@@ -68,17 +71,35 @@ export function buildAdjusterColumns({
     },
     {
       key: "availability",
-      header: "Availability",
-      render: (adjuster) => <StatusBadge status={adjuster.availability} />,
+      header: t("adjusters.col.availability"),
+      render: (adjuster) => (
+        <StatusBadge
+          status={adjuster.availability}
+          label={
+            adjuster.availability === "AVAILABLE"
+              ? t("adjusters.availability.available")
+              : t("adjusters.availability.unavailable")
+          }
+        />
+      ),
     },
     {
       key: "status",
-      header: "Status",
-      render: (adjuster) => <StatusBadge status={adjuster.status} />,
+      header: t("adjusters.col.status"),
+      render: (adjuster) => (
+        <StatusBadge
+          status={adjuster.status}
+          label={
+            adjuster.status === "ACTIVE"
+              ? t("adjusters.status.active")
+              : t("adjusters.status.inactive")
+          }
+        />
+      ),
     },
     {
       key: "actions",
-      header: "Actions",
+      header: t("adjusters.col.actions"),
       render: (adjuster) => (
         <button
           type="button"
@@ -86,7 +107,7 @@ export function buildAdjusterColumns({
           className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors"
         >
           <Eye size={14} />
-          View
+          {t("adjusters.action.view")}
         </button>
       ),
     },

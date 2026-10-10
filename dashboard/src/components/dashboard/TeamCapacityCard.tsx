@@ -6,6 +6,7 @@ import {
   summarizeTeamCapacity,
   type CapacityHeadroom,
 } from "../../utils/attention";
+import { useTranslation } from "../../i18n/context";
 import type { ClaimSummary, FieldAdjuster } from "../../types";
 
 const TONE: Record<
@@ -42,27 +43,38 @@ export default function TeamCapacityCard({
   loading,
   error = "",
 }: TeamCapacityCardProps) {
+  const { t, tp } = useTranslation();
   const capacity = summarizeTeamCapacity(adjusters);
   const headroom = capacityHeadroom(capacity, claims);
   const tone = TONE[headroom.level];
   const Icon = tone.icon;
 
+  const headroomText =
+    headroom.level === "over"
+      ? tp("capacity.over", headroom.shortfall)
+      : headroom.level === "tight"
+        ? t("capacity.tight", {
+            claims: tp("capacity.claimN", headroom.awaitingAssignment),
+            slots: tp("capacity.slotN", capacity.spare),
+          })
+        : t("capacity.ok");
+
   return (
     <section className="space-y-3">
       <div>
-        <h2 className="text-base font-semibold text-text">Adjuster Capacity</h2>
+        <h2 className="text-base font-semibold text-text">
+          {t("capacity.title")}
+        </h2>
         <p className="mt-0.5 text-xs text-text-muted">
-          Free inspection slots versus claims waiting to be assigned.
+          {t("capacity.subtitle")}
         </p>
       </div>
 
       <div className={`rounded-xl border p-4 ${tone.border}`}>
         {error ? (
-          <p className="text-sm text-text-muted">
-            Adjuster capacity is unavailable right now.
-          </p>
+          <p className="text-sm text-text-muted">{t("capacity.error")}</p>
         ) : loading ? (
-          <p className="text-sm text-text-muted">Loading roster capacity…</p>
+          <p className="text-sm text-text-muted">{t("capacity.loading")}</p>
         ) : (
           <>
             <div className="flex flex-wrap items-end justify-between gap-4">
@@ -71,22 +83,22 @@ export default function TeamCapacityCard({
                   {capacity.spare}
                 </p>
                 <p className="mt-1.5 text-xs font-medium text-text-muted">
-                  spare inspection {capacity.spare === 1 ? "slot" : "slots"}
+                  {tp("capacity.spare", capacity.spare)}
                 </p>
               </div>
 
-              <dl className="flex gap-5 text-right">
+              <dl className="flex flex-wrap gap-5 text-end">
                 <div>
                   <dt className="text-[11px] uppercase tracking-wide text-text-muted">
-                    Team
+                    {t("capacity.team")}
                   </dt>
                   <dd className="mt-0.5 text-sm font-semibold text-text">
-                    {capacity.total} adjuster{capacity.total === 1 ? "" : "s"}
+                    {tp("capacity.adjusters", capacity.total)}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-[11px] uppercase tracking-wide text-text-muted">
-                    Available now
+                    {t("capacity.availableNow")}
                   </dt>
                   <dd className="mt-0.5 text-sm font-semibold text-text">
                     {capacity.availableNow}
@@ -94,7 +106,7 @@ export default function TeamCapacityCard({
                 </div>
                 <div>
                   <dt className="text-[11px] uppercase tracking-wide text-text-muted">
-                    Active tasks
+                    {t("capacity.activeTasks")}
                   </dt>
                   <dd className="mt-0.5 text-sm font-semibold text-text">
                     {capacity.activeTasks}
@@ -105,7 +117,7 @@ export default function TeamCapacityCard({
 
             <p className="mt-3.5 flex items-start gap-2 border-t border-black/5 pt-3.5 text-sm text-text">
               <Icon size={15} className={`mt-0.5 shrink-0 ${tone.text}`} />
-              <span>{headroom.message}</span>
+              <span>{headroomText}</span>
             </p>
 
             {headroom.level !== "ok" && (
@@ -114,14 +126,13 @@ export default function TeamCapacityCard({
                 className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-2.5 py-1.5 text-xs font-semibold text-text hover:bg-background transition-colors"
               >
                 <UserCheck size={13} />
-                Assign the waiting claims
+                {t("capacity.assignWaiting")}
               </Link>
             )}
 
             {capacity.hasUncappedAdjusters && (
               <p className="mt-2 text-[11px] text-text-muted">
-                Some adjusters have no capacity limit set, so they are not counted
-                in the spare slots.
+                {t("capacity.uncappedNote")}
               </p>
             )}
           </>

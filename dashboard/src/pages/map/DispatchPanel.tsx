@@ -1,5 +1,6 @@
 import { UserCheck, MapPin, AlertTriangle } from "lucide-react";
 import { claimCoordinates } from "../../utils/map";
+import { useTranslation } from "../../i18n/context";
 import type { ClaimSummary, FieldAdjuster } from "../../types";
 import Button from "../../components/ui/Button";
 import SelectedClaimHeader from "./SelectedClaimHeader";
@@ -30,6 +31,7 @@ export default function DispatchPanel({
   detailsLoading,
   demo,
 }: DispatchPanelProps) {
+  const { t } = useTranslation();
   const coords = claimCoordinates(claim);
 
   // Nearest adjuster by distance — real (backend) in normal mode, simulated
@@ -50,26 +52,28 @@ export default function DispatchPanel({
 
         <div className="text-xs space-y-1 text-text">
           <p>
-            <span className="text-text-muted">Customer:</span>{" "}
+            <span className="text-text-muted">{t("map.customer")}</span>{" "}
             <span className="font-medium">{claim.customerName}</span>
           </p>
           <p>
-            <span className="text-text-muted">Vehicle Plate:</span>{" "}
+            <span className="text-text-muted">{t("map.vehiclePlate")}</span>{" "}
             <span className="font-medium">
-              {claim.initialPlateNumber || "N/A"}
+              {claim.initialPlateNumber || t("map.noPlate")}
             </span>
           </p>
           <p>
-            <span className="text-text-muted">Incident Location:</span>{" "}
+            <span className="text-text-muted">
+              {t("map.incidentLocation")}
+            </span>{" "}
             {coords ? (
               <span className="inline-flex items-center gap-1 font-medium text-success-strong">
                 <MapPin size={14} />
-                Pin on map
+                {t("map.pinOnMap")}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 font-medium text-warning">
                 <AlertTriangle size={14} />
-                Incident coordinates unavailable
+                {t("map.noCoordinates")}
               </span>
             )}
           </p>
@@ -77,13 +81,13 @@ export default function DispatchPanel({
           {incidentLocation ? (
             <p className="text-xs text-text">
               <span className="text-text-muted">
-                Reported location (موقع الحادث):
+                {t("map.reportedLocation")}
               </span>{" "}
               <span className="font-medium">{incidentLocation}</span>
             </p>
           ) : !coords && detailsLoading ? (
             <p className="text-[11px] text-text-muted animate-pulse">
-              Loading incident details...
+              {t("map.loadingDetails")}
             </p>
           ) : null}
         </div>
@@ -92,7 +96,7 @@ export default function DispatchPanel({
           <div className="flex items-center justify-between gap-2 rounded-lg border border-primary/20 bg-primary/5 px-2.5 py-1.5">
             <p className="text-xs text-text">
               <span className="text-text-muted">
-                Nearest Adjuster (أقرب معاين):
+                {`${t("map.nearestAdjuster")}:`}
               </span>{" "}
               <span className="font-semibold text-primary">
                 {nearest.name} ({nearest.employeeCode}) ·{" "}
@@ -120,7 +124,7 @@ export default function DispatchPanel({
             icon={<UserCheck size={16} />}
             onClick={() => onAssign(claim)}
           >
-            Assign Field Adjuster
+            {t("map.assignFieldAdjuster")}
           </Button>
         )}
       </div>

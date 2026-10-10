@@ -65,13 +65,16 @@ export default function ClaimInfoSections({
 
       <EvidenceSection claim={claim} />
       <SignatureSection claim={claim} />
-      <DecisionSection
-        claim={claim}
-        canDecide={canDecide}
-        deciding={deciding}
-        onApprove={onApprove}
-        onReject={onReject}
-      />
+      {/* Anchor for the "Make Decision" next-action CTA — scrolls here. */}
+      <div id="decision-section">
+        <DecisionSection
+          claim={claim}
+          canDecide={canDecide}
+          deciding={deciding}
+          onApprove={onApprove}
+          onReject={onReject}
+        />
+      </div>
     </div>
   );
 }

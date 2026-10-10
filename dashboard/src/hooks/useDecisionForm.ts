@@ -1,6 +1,25 @@
 import { useState, useEffect } from "react";
 import type { ClaimDecision, DecideClaimPayload, ClaimDetails } from "../types";
-import { calculateLossAssessment, validateDecisionForm } from "../utils/lossAssessment";
+import {
+  calculateLossAssessment,
+  validateDecisionForm,
+  type DecisionValidationErrorKey,
+} from "../utils/lossAssessment";
+import { useTranslation } from "../i18n/context";
+import type { MessageKey } from "../i18n/messages.en";
+
+const DECISION_VALIDATION_MESSAGE_KEYS: Record<
+  DecisionValidationErrorKey,
+  MessageKey
+> = {
+  partsCostRequired: "decision.validation.partsCostRequired",
+  laborCostRequired: "decision.validation.laborCostRequired",
+  deductibleRequired: "decision.validation.deductibleRequired",
+  deductibleOverrideReasonRequired:
+    "decision.validation.deductibleOverrideReasonRequired",
+  rejectionReasonRecommended:
+    "decision.validation.rejectionReasonRecommended",
+};
 
 interface UseDecisionFormProps {
   isOpen: boolean;
@@ -15,6 +34,7 @@ export function useDecisionForm({
   claim,
   onConfirm,
 }: UseDecisionFormProps) {
+  const { t } = useTranslation();
   const isApproval = decision === "APPROVED";
 
   // Form state
@@ -61,7 +81,13 @@ export function useDecisionForm({
       deductibleOverrideReason,
     );
 
-    setErrors(validationErrors);
+    const localizedErrors: Record<string, string> = {};
+    for (const [field, errorKey] of Object.entries(
+      validationErrors,
+    ) as [string, DecisionValidationErrorKey][]) {
+      localizedErrors[field] = t(DECISION_VALIDATION_MESSAGE_KEYS[errorKey]);
+    }
+    setErrors(localizedErrors);
 
     if (Object.keys(validationErrors).length > 0) {
       return;

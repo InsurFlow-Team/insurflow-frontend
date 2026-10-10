@@ -4,14 +4,17 @@ import { Eye, EyeOff, KeyRound } from "lucide-react";
 import FormField from "../ui/FormField";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
+import AlertCard from "../ui/AlertCard";
 import { changePassword } from "../../api/auth.service";
 import { getApiErrorMessage } from "../../api/client";
 import { validatePassword, validateRequired } from "../../utils/validation";
 import { useAuth } from "../../contexts/AuthContext";
+import { useTranslation } from "../../i18n/context";
 
 export default function ChangePasswordCard() {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { t } = useTranslation();
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -24,11 +27,11 @@ export default function ChangePasswordCard() {
   const newPasswordError = validatePassword(newPassword);
   const sameAsCurrentError =
     currentPassword && newPassword && newPassword === currentPassword
-      ? "New password must be different from the current password"
+      ? t("profile.password.differentError")
       : null;
   const matchError =
     confirmPassword && confirmPassword !== newPassword
-      ? "Passwords do not match"
+      ? t("profile.password.matchError")
       : null;
   const isSubmittable =
     !currentError &&
@@ -46,16 +49,10 @@ export default function ChangePasswordCard() {
 
     changePassword(currentPassword, newPassword)
       .then(() => {
-        // The backend keeps the current (stateless) token valid but issues no
-        // new one. Per the backend contract the frontend must force a fresh
-        // sign-in so the new password is used (and the old token dies).
         logout();
         navigate("/login", {
           replace: true,
-          state: {
-            message:
-              "Password changed successfully. Please sign in again with your new password.",
-          },
+          state: { message: t("profile.password.changedMessage") },
         });
       })
       .catch((passwordError) => {
@@ -64,13 +61,7 @@ export default function ChangePasswordCard() {
       .finally(() => {
         setLoading(false);
       });
-  }, [
-    isSubmittable,
-    currentPassword,
-    newPassword,
-    logout,
-    navigate,
-  ]);
+  }, [isSubmittable, currentPassword, newPassword, logout, navigate, t]);
 
   return (
     <section className="rounded-xl border border-border bg-surface p-5 shadow-sm">
@@ -79,41 +70,55 @@ export default function ChangePasswordCard() {
           <KeyRound size={20} />
         </span>
         <div>
-          <h2 className="text-base font-semibold text-text">Password</h2>
+          <h2 className="text-base font-semibold text-text">
+            {t("profile.password.title")}
+          </h2>
           <p className="mt-0.5 text-sm text-text-muted">
-            Change the password used to sign in to your own account.
+            {t("profile.password.subtitle")}
           </p>
         </div>
       </div>
 
       <div className="mt-4 max-w-md space-y-4">
-        <FormField label="Current Password" required error={currentError || undefined}>
+        <FormField
+          label={t("profile.password.current")}
+          required
+          error={currentError || undefined}
+        >
           <Input
             name="currentPassword"
             type={show ? "text" : "password"}
             value={currentPassword}
-            onChange={(event) => setCurrentPassword(event.target.value)}
-            placeholder="Your current password"
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            placeholder={t("profile.password.currentPlaceholder")}
           />
         </FormField>
 
-        <FormField label="New Password" required error={newPasswordError || sameAsCurrentError || undefined}>
+        <FormField
+          label={t("profile.password.new")}
+          required
+          error={newPasswordError || sameAsCurrentError || undefined}
+        >
           <Input
             name="newPassword"
             type={show ? "text" : "password"}
             value={newPassword}
-            onChange={(event) => setNewPassword(event.target.value)}
-            placeholder="At least 8 characters"
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder={t("profile.password.newPlaceholder")}
           />
         </FormField>
 
-        <FormField label="Confirm New Password" required error={matchError || undefined}>
+        <FormField
+          label={t("profile.password.confirm")}
+          required
+          error={matchError || undefined}
+        >
           <Input
             name="confirmPassword"
             type={show ? "text" : "password"}
             value={confirmPassword}
-            onChange={(event) => setConfirmPassword(event.target.value)}
-            placeholder="Re-enter the new password"
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder={t("profile.password.confirmPlaceholder")}
           />
         </FormField>
 
@@ -123,18 +128,22 @@ export default function ChangePasswordCard() {
           className="inline-flex items-center gap-1.5 text-xs font-medium text-text-muted hover:text-text transition-colors"
         >
           {show ? <EyeOff size={14} /> : <Eye size={14} />}
-          {show ? "Hide passwords" : "Show passwords"}
+          {show ? t("profile.password.hide") : t("profile.password.show")}
         </button>
 
         {error && (
-          <div className="flex items-center gap-2 rounded-lg bg-danger/10 px-3 py-2.5 text-sm text-danger">
-            <span>{error}</span>
-          </div>
+          <AlertCard variant="danger" compact>
+            {error}
+          </AlertCard>
         )}
 
         <div className="flex gap-3 pt-1">
-          <Button onClick={handleSubmit} disabled={!isSubmittable || loading}>
-            {loading ? "Saving..." : "Update Password"}
+          <Button
+            onClick={handleSubmit}
+            loading={loading}
+            disabled={!isSubmittable || loading}
+          >
+            {t("profile.password.update")}
           </Button>
         </div>
       </div>

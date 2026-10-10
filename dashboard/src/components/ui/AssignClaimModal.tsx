@@ -1,11 +1,13 @@
 import Modal from "./Modal";
 import AssignClaimForm from "./assign/AssignClaimForm";
+import { useTranslation } from "../../i18n/context";
 import type { ClaimPriority, FieldAdjuster } from "../../types";
 
 interface AssignClaimModalProps {
   isOpen: boolean;
   onClose: () => void;
   claimId: string;
+  claimNumber?: string;
   current?: {
     priority?: ClaimPriority;
     notes?: string;
@@ -23,6 +25,7 @@ export default function AssignClaimModal({
   isOpen,
   onClose,
   claimId,
+  claimNumber,
   current,
   onAssigned,
   adjusters,
@@ -30,13 +33,21 @@ export default function AssignClaimModal({
   initialAdjusterId,
   onRefetchAdjusters,
 }: AssignClaimModalProps) {
+  const { t } = useTranslation();
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Assign Field Adjuster"
+      title={t("map.assignFieldAdjuster")}
       size="md"
     >
+      {claimNumber && (
+        <p className="border-b border-border px-5 py-3 text-sm text-text-muted">
+          {t("assign.claimContext")}:{" "}
+          <span className="font-semibold text-text">{claimNumber}</span>
+        </p>
+      )}
       <AssignClaimForm
         key={claimId}
         claimId={claimId}

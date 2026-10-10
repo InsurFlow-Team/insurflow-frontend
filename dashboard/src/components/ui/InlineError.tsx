@@ -1,17 +1,24 @@
-import { AlertCircle } from "lucide-react";
-
+/**
+ * InlineError — bare validation message line.
+ *
+ * Prefer using the `error` prop on `<FormField>` where possible.
+ * Use this directly only when a standalone error message is needed
+ * outside a form field wrapper (e.g. a form-level error summary).
+ */
 interface InlineErrorProps {
   message: string;
+  id?: string;
 }
 
-export default function InlineError({ message }: InlineErrorProps) {
+export default function InlineError({ message, id }: InlineErrorProps) {
   return (
-    <div
+    <p
+      id={id}
       role="alert"
-      className="flex items-start gap-2 rounded-lg border border-danger/20 bg-danger-bg px-3 py-2.5 text-sm text-danger"
+      className="flex items-center gap-1 text-xs text-danger-text leading-snug"
     >
-      <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
-      <span>{message}</span>
-    </div>
+      <span aria-hidden="true">↳</span>
+      {message}
+    </p>
   );
 }

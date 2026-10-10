@@ -3,17 +3,24 @@ import { describe, expect, it } from "vitest";
 import { getAvailableClaimActions } from "./claimActions";
 
 describe("getAvailableClaimActions", () => {
-  it("offers ASSIGN only for NEW claims and only to CLAIMS_OFFICER", () => {
+  it("offers ASSIGN for NEW claims to both dashboard roles", () => {
     expect(
       getAvailableClaimActions({ status: "NEW", role: "CLAIMS_OFFICER" }),
     ).toEqual(["ASSIGN"]);
 
-    // Other roles never get ASSIGN even when status is NEW.
+    // ADMIN may assign too: the App.tsx guards allow it and the backend
+    // accepts it (verified live — see masar-rbac skill).
     expect(getAvailableClaimActions({ status: "NEW", role: "ADMIN" })).toEqual(
-      [],
+      ["ASSIGN"],
     );
+  });
+
+  it("never offers actions to FIELD_ADJUSTER (blocked from this dashboard)", () => {
     expect(
       getAvailableClaimActions({ status: "NEW", role: "FIELD_ADJUSTER" }),
+    ).toEqual([]);
+    expect(
+      getAvailableClaimActions({ status: "SUBMITTED", role: "FIELD_ADJUSTER" }),
     ).toEqual([]);
   });
 
@@ -36,9 +43,12 @@ describe("getAvailableClaimActions", () => {
     }
   });
 
-  it("offers START_REVIEW for SUBMITTED claims", () => {
+  it("offers START_REVIEW for SUBMITTED claims to dashboard roles", () => {
     expect(
       getAvailableClaimActions({ status: "SUBMITTED", role: "CLAIMS_OFFICER" }),
+    ).toEqual(["START_REVIEW"]);
+    expect(
+      getAvailableClaimActions({ status: "SUBMITTED", role: "ADMIN" }),
     ).toEqual(["START_REVIEW"]);
   });
 
@@ -46,8 +56,8 @@ describe("getAvailableClaimActions", () => {
     expect(
       getAvailableClaimActions({ status: "ASSIGNED", role: "CLAIMS_OFFICER" }),
     ).toEqual([]);
-    expect(getAvailableClaimActions({ status: "NEW", role: "ADMIN" })).toEqual(
-      [],
-    );
+    expect(
+      getAvailableClaimActions({ status: "UNDER_REVIEW", role: "CLAIMS_OFFICER" }),
+    ).toEqual([]);
   });
 });

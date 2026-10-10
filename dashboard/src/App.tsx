@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
+import I18nProvider from "./i18n/I18nProvider";
 import { ToastProvider } from "./contexts/ToastContext";
 import Toaster from "./components/ui/Toaster";
 import DashboardLayout from "./layouts/DashboardLayout";
@@ -25,7 +26,8 @@ const MapPage = lazy(() =>
 
 function App() {
   return (
-    <ToastProvider>
+    <I18nProvider>
+      <ToastProvider>
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
@@ -72,6 +74,7 @@ function App() {
       </Routes>
       <Toaster />
     </ToastProvider>
+    </I18nProvider>
   );
 }
 

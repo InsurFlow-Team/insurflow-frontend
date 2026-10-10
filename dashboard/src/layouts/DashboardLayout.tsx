@@ -2,9 +2,11 @@ import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
+import { useTranslation } from "../i18n/context";
 
 export default function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { t } = useTranslation();
 
   const openSidebar = () => {
     setIsSidebarOpen(true);
@@ -15,12 +17,14 @@ export default function DashboardLayout() {
   };
 
   return (
-    <div className="flex h-screen bg-background" dir="ltr">
+    // Direction (LTR/RTL) is owned by the I18nProvider on <html> — never
+    // hard-code dir here, or Arabic mode can never take effect.
+    <div className="flex h-screen bg-background">
       {/* Mobile sidebar backdrop */}
       {isSidebarOpen && (
         <button
           type="button"
-          aria-label="Close sidebar"
+          aria-label={t("nav.closeSidebar")}
           onClick={closeSidebar}
           className="fixed inset-0 z-30 bg-black/40 lg:hidden"
         />
