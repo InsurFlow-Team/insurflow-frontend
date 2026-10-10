@@ -3,6 +3,7 @@ import { useState } from "react";
 import DetailSection from "../DetailSection";
 import Button from "../../ui/Button";
 import type { ClaimDetails } from "../../../types";
+import { useTranslation } from "../../../i18n/context";
 
 interface TrackingInfoSectionProps {
   claim: ClaimDetails;
@@ -17,6 +18,7 @@ interface TrackingInfoSectionProps {
 export default function TrackingInfoSection({
   claim,
 }: TrackingInfoSectionProps) {
+  const { t } = useTranslation();
   const { trackingToken, trackingUrl } = claim;
   const [copied, setCopied] = useState(false);
 
@@ -39,18 +41,17 @@ export default function TrackingInfoSection({
   };
 
   return (
-    <DetailSection title="رابط تتبع المطالبة">
+    <DetailSection title={t("claimInfo.tracking.title")}>
       <div className="space-y-4">
         {/* Info banner */}
         <div className="flex items-start gap-3 p-4 rounded-lg bg-info-bg border border-info-border">
           <Link2 size={18} className="text-info-text mt-0.5 flex-shrink-0" />
           <div className="text-sm">
             <p className="font-medium text-info-strong mb-1">
-              رابط التتبع للعميل
+              {t("claimInfo.tracking.bannerTitle")}
             </p>
             <p className="text-info-text text-xs">
-              يمكن مشاركة هذا الرابط مع العميل لمتابعة حالة المطالبة بدون
-              الحاجة لتسجيل الدخول.
+              {t("claimInfo.tracking.bannerBody")}
             </p>
           </div>
         </div>
@@ -59,7 +60,7 @@ export default function TrackingInfoSection({
         {trackingToken && (
           <div className="p-3 rounded-lg border border-border bg-surface-soft">
             <p className="text-xs font-medium text-text-muted mb-2">
-              رمز التتبع:
+              {t("claimInfo.tracking.token")}
             </p>
             <code className="text-sm font-mono text-text select-all">
               {trackingToken}
@@ -71,7 +72,7 @@ export default function TrackingInfoSection({
         {trackingUrl && (
           <div className="space-y-2">
             <p className="text-xs font-medium text-text-muted">
-              رابط التتبع:
+              {t("claimInfo.tracking.url")}
             </p>
             <div className="flex gap-2">
               <div className="flex-1 p-3 rounded-lg border border-border bg-surface-soft overflow-hidden">
@@ -88,9 +89,11 @@ export default function TrackingInfoSection({
                 variant="secondary"
                 onClick={handleCopyLink}
                 icon={copied ? <CheckCircle2 size={16} /> : <Copy size={16} />}
-                title="نسخ الرابط"
+                title={t("claimInfo.tracking.copyTitle")}
               >
-                {copied ? "تم النسخ" : "نسخ"}
+                {copied
+                  ? t("claimInfo.tracking.copied")
+                  : t("claimInfo.tracking.copy")}
               </Button>
             </div>
           </div>
@@ -100,8 +103,7 @@ export default function TrackingInfoSection({
         <div className="flex items-start gap-2 pt-2 border-t border-border">
           <Lightbulb size={14} className="mt-0.5 shrink-0 text-warning" />
           <p className="text-xs text-text-subtle">
-            يمكن إرسال هذا الرابط للعميل عبر الرسائل القصيرة أو البريد
-            الإلكتروني لمتابعة حالة المطالبة.
+            {t("claimInfo.tracking.footer")}
           </p>
         </div>
       </div>

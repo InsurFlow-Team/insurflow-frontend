@@ -3,23 +3,30 @@ import { describe, expect, it, afterEach } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
-import NeedsAttentionSection from "./NeedsAttentionSection";
+import I18nProvider from "../../i18n/I18nProvider";
+import NeedsAttentionSection from "../NeedsAttention/NeedsAttentionSection";
 import TeamCapacityCard from "./TeamCapacityCard";
-import type { ClaimStatus, ClaimSummary, FieldAdjuster } from "../../types";
+import type { ClaimStatus, ClaimSummary, FieldAdjuster, Role } from "../../types";
 
 const NOW = Date.now();
 const daysAgo = (days: number) =>
   new Date(NOW - days * 86_400_000).toISOString();
 
-function claim(status: ClaimStatus, id: string, ageDays = 0): ClaimSummary {
+function claim(
+  status: ClaimStatus,
+  id: string,
+  ageDays = 0,
+  overrides: Partial<ClaimSummary> = {},
+): ClaimSummary {
   return {
     id,
-    claimNumber: id.toUpperCase(),
+    claimNumber: `CLM-${id.toUpperCase()}`,
     customerName: "Customer",
     initialPlateNumber: "ABC-123",
     status,
     createdAt: daysAgo(ageDays),
     updatedAt: daysAgo(ageDays),
+    ...overrides,
   } as ClaimSummary;
 }
 
@@ -39,125 +46,204 @@ function adjuster(overrides: Partial<FieldAdjuster> = {}): FieldAdjuster {
   } as FieldAdjuster;
 }
 
-const renderInRouter = (ui: React.ReactElement) =>
-  render(<MemoryRouter>{ui}</MemoryRouter>);
+const renderInRouter = (
+  ui: React.ReactElement,
+  { locale }: { locale?: "en" | "ar" } = {},
+) =>
+  render(
+    <MemoryRouter>
+      {locale ? (
+        <I18nProvider>
+          <div>{ui}</div>
+        </I18nProvider>
+      ) : (
+        ui
+      )}
+    </MemoryRouter>,
+  );
 
-afterEach(cleanup);
+const section = (props: {
+  claims: ClaimSummary[];
+  loading?: boolean;
+  role?: Role | null;
+}) => (
+  <NeedsAttentionSection
+    claims={props.claims}
+    loading={props.loading ?? false}
+    role={props.role ?? null}
+  />
+);
+
+afterEach(() => {
+  cleanup();
+  window.localStorage.clear();
+  document.documentElement.dir = "ltr";
+  document.documentElement.lang = "en";
+});
 
 describe("NeedsAttentionSection", () => {
   it("says nothing is waiting when every claim is moving", () => {
-    renderInRouter(
-      <NeedsAttentionSection
-        claims={[claim("IN_PROGRESS", "a"), claim("APPROVED", "b")]}
-        loading={false}
-      />,
+    const { container } = renderInRouter(
+      section({
+        claims: [claim("IN_PROGRESS", "a"), claim("APPROVED", "b")],
+      }),
     );
 
-    expect(screen.getByText(/Nothing is waiting on anyone/)).toBeTruthy();
+    expect(screen.getByText("No claims need your attention")).toBeTruthy();
+    expect(screen.getByText("You're all caught up.")).toBeTruthy();
+    expect(screen.queryAllByTestId("attention-row")).toHaveLength(0);
+    expect(container.querySelector("#needs-attention")).toBeTruthy();
+  });
+
+  it("lists one row per blocked claim instead of a group summary", () => {
+    renderInRouter(
+      section({
+        claims: [
+          claim("NEW", "a"),
+          claim("UNDER_REVIEW", "b"),
+          claim("IN_PROGRESS", "c"),
+        ],
+      }),
+    );
+
+    const rows = screen.getAllByTestId("attention-row");
+    expect(rows).toHaveLength(2);
+    expect(within(rows[0]).getByText("CLM-A")).toBeTruthy();
+    expect(within(rows[1]).getByText("CLM-B")).toBeTruthy();
+    expect(screen.queryByText("CLM-C")).toBeNull();
+    // Group vocabulary is gone — each row is a concrete claim.
     expect(screen.queryByText("Needs Assignment")).toBeNull();
   });
 
-  it("lists only the statuses that are actually blocked", () => {
+  it("shows who each claim is waiting on", () => {
     renderInRouter(
-      <NeedsAttentionSection
-        claims={[
-          claim("NEW", "a"),
-          claim("NEW", "b"),
-          claim("UNDER_REVIEW", "c"),
-          claim("IN_PROGRESS", "d"),
-          claim("CLOSED", "e"),
-        ]}
-        loading={false}
-      />,
+      section({
+        claims: [
+          claim("NEW", "fresh"),
+          claim("PENDING_ACCEPTANCE", "offered"),
+          claim("UNDER_REVIEW", "review"),
+        ],
+      }),
     );
 
-    expect(screen.getByText("Needs Assignment")).toBeTruthy();
-    expect(screen.getByText("Awaiting Decision")).toBeTruthy();
-    expect(screen.queryByText("Ready for Review")).toBeNull();
-    expect(screen.queryByText("Awaiting Correction")).toBeNull();
+    expect(screen.getByText("Waiting on claims officer")).toBeTruthy();
+    expect(screen.getByText("Waiting on adjuster")).toBeTruthy();
+    expect(screen.getByText("Waiting on administration")).toBeTruthy();
   });
 
-  it("tells the operator who each group is waiting on", () => {
+  it("offers Assign Adjuster for a NEW claim when the role may assign", () => {
     renderInRouter(
-      <NeedsAttentionSection
-        claims={[claim("PENDING_ACCEPTANCE", "a"), claim("NEW", "b")]}
-        loading={false}
-      />,
+      section({ claims: [claim("NEW", "a")], role: "CLAIMS_OFFICER" }),
     );
 
     expect(
-      screen.getByText("Offered, no response from the adjuster yet"),
+      screen.getByRole("link", { name: "Assign Adjuster" }).getAttribute("href"),
+    ).toBe("/map?claim=a");
+    expect(
+      screen.getByRole("link", { name: "View Claim" }).getAttribute("href"),
+    ).toBe("/claims/a");
+  });
+
+  it("offers Start Review for a submitted report", () => {
+    renderInRouter(
+      section({ claims: [claim("SUBMITTED", "s")], role: "CLAIMS_OFFICER" }),
+    );
+
+    expect(
+      screen.getByRole("link", { name: "Start Review" }).getAttribute("href"),
+    ).toBe("/claims/s");
+  });
+
+  it("offers Make Decision only to an ADMIN", () => {
+    const { unmount } = renderInRouter(
+      section({ claims: [claim("UNDER_REVIEW", "u")], role: "ADMIN" }),
+    );
+
+    expect(
+      screen.getByRole("link", { name: "Make Decision" }).getAttribute("href"),
+    ).toBe("/claims/u");
+
+    unmount();
+    renderInRouter(
+      section({ claims: [claim("UNDER_REVIEW", "u")], role: "CLAIMS_OFFICER" }),
+    );
+
+    expect(screen.queryByText("Make Decision")).toBeNull();
+    expect(screen.getByRole("link", { name: "View Claim" })).toBeTruthy();
+  });
+
+  it("falls back to View Claim without a role", () => {
+    renderInRouter(section({ claims: [claim("NEW", "a")], role: null }));
+
+    expect(screen.queryByText("Assign Adjuster")).toBeNull();
+    expect(
+      screen.getByRole("link", { name: "View Claim" }).getAttribute("href"),
+    ).toBe("/claims/a");
+  });
+
+  it("flags the overdue claim and orders it before fresh ones", () => {
+    renderInRouter(
+      section({
+        claims: [
+          claim("NEW", "fresh", 1),
+          claim("NEW", "stale", 7),
+          claim("NEW", "mid", 5),
+        ],
+      }),
+    );
+
+    const rows = screen.getAllByTestId("attention-row");
+    expect(within(rows[0]).getByText("CLM-STALE")).toBeTruthy();
+    expect(within(rows[1]).getByText("CLM-MID")).toBeTruthy();
+    expect(within(rows[2]).getByText("CLM-FRESH")).toBeTruthy();
+
+    expect(
+      within(rows[0]).getByText("7 days old — staleness threshold reached"),
     ).toBeTruthy();
+    expect(within(rows[2]).getByText("2 days to threshold")).toBeTruthy();
     expect(
-      screen.getByText("Waiting to be assigned to an adjuster"),
+      within(rows[2]).getByText("to staleness threshold (3 days)"),
     ).toBeTruthy();
   });
 
-  it("links each group into the matching /claims status filter", () => {
+  it("caps the visible queue and offers the View all escape hatch", () => {
     renderInRouter(
-      <NeedsAttentionSection
-        claims={[claim("NEW", "a"), claim("UNDER_REVIEW", "b")]}
-        loading={false}
-      />,
+      section({
+        claims: Array.from({ length: 7 }, (_, index) =>
+          claim("NEW", `n${index}`),
+        ),
+      }),
     );
 
-    expect(screen.getByRole("link", { name: "Needs Assignment" }).getAttribute("href")).toBe(
-      "/claims?status=NEW",
-    );
-    expect(
-      screen.getByRole("link", { name: "Awaiting Decision" }).getAttribute("href"),
-    ).toBe("/claims?status=UNDER_REVIEW");
-  });
-
-  it("shows the count per group", () => {
-    renderInRouter(
-      <NeedsAttentionSection
-        claims={[claim("NEW", "a"), claim("NEW", "b"), claim("NEW", "c")]}
-        loading={false}
-      />,
-    );
-
-    const item = screen.getByRole("link", { name: "Needs Assignment" }).closest("li");
-    expect(within(item!).getByText("3")).toBeTruthy();
-  });
-
-  it("warns when the oldest claim passed the 3-day threshold", () => {
-    renderInRouter(
-      <NeedsAttentionSection
-        claims={[claim("NEW", "fresh", 0), claim("NEW", "stale", 7)]}
-        loading={false}
-      />,
-    );
-
-    expect(screen.getByText(/Overdue — waiting 7 days \(threshold 3 days\)/)).toBeTruthy();
-    expect(screen.getByText(/oldest 7 days/)).toBeTruthy();
-  });
-
-  it("does not warn about a claim that is still fresh", () => {
-    renderInRouter(
-      <NeedsAttentionSection claims={[claim("NEW", "fresh", 1)]} loading={false} />,
-    );
-
-    expect(screen.queryByText(/Overdue/)).toBeNull();
-    expect(screen.getByText(/oldest 1 day$/)).toBeTruthy();
-  });
-
-  it("reports the age of the oldest claim, not the newest", () => {
-    renderInRouter(
-      <NeedsAttentionSection
-        claims={[claim("NEW", "newest", 0), claim("NEW", "oldest", 6)]}
-        loading={false}
-      />,
-    );
-
-    expect(screen.getByText(/oldest 6 days/)).toBeTruthy();
-    expect(screen.queryByText(/oldest 0 days/)).toBeNull();
+    expect(screen.getAllByTestId("attention-row")).toHaveLength(6);
+    const links = screen.getAllByRole("link", { name: "View all claims" });
+    expect(links.length).toBeGreaterThan(0);
+    expect(links[0].getAttribute("href")).toBe("/claims");
   });
 
   it("shows a loading line before any claim data arrives", () => {
-    renderInRouter(<NeedsAttentionSection claims={[]} loading />);
+    renderInRouter(section({ claims: [], loading: true }));
 
-    expect(screen.getByText(/Checking for blocked claims/)).toBeTruthy();
+    expect(screen.getByText("Checking for blocked claims…")).toBeTruthy();
+  });
+
+  it("renders fully in Arabic with RTL", () => {
+    window.localStorage.setItem("sawn.locale", "ar");
+
+    renderInRouter(
+      section({ claims: [claim("NEW", "stale", 7)], role: null }),
+      { locale: "ar" },
+    );
+
+    expect(document.documentElement.dir).toBe("rtl");
+    expect(screen.getByText("يحتاج انتباهك")).toBeTruthy();
+    const row = screen.getAllByTestId("attention-row")[0];
+    expect(within(row).getByText("جديدة")).toBeTruthy();
+    expect(
+      within(row).getByText("عمرها 7 أيام — تم بلوغ حد التقادم"),
+    ).toBeTruthy();
+    expect(within(row).getByText("بانتظار موظف المطالبات")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "عرض كل المطالبات" })).toBeTruthy();
   });
 });
 

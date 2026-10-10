@@ -179,18 +179,10 @@ export default function NotificationBell() {
             </div>
           </div>
 
-          <div className="max-h-96 overflow-y-auto">
-            {loadingList && (
-              <p className="px-4 py-8 text-center text-sm text-text-muted">
-                Loading notifications&hellip;
-              </p>
-            )}
-
-            {/* An error only replaces the list when there is nothing to show:
-                a failed badge poll must not blank rows that already loaded. */}
-            {!loadingList && items.length === 0 && error && (
-              <div className="px-4 py-6 text-center">
-                <p className="text-sm text-danger-text">{error}</p>
+          {error && (
+            <div className="border-b border-border bg-danger/5 px-4 py-2">
+              <p className="text-sm text-danger-text">{error}</p>
+              {items.length === 0 && (
                 <button
                   type="button"
                   onClick={refresh}
@@ -198,7 +190,15 @@ export default function NotificationBell() {
                 >
                   Try again
                 </button>
-              </div>
+              )}
+            </div>
+          )}
+
+          <div className="max-h-96 overflow-y-auto">
+            {loadingList && (
+              <p className="px-4 py-8 text-center text-sm text-text-muted">
+                Loading notifications&hellip;
+              </p>
             )}
 
             {!loadingList && !error && items.length === 0 && (

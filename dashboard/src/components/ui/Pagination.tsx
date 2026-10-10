@@ -4,6 +4,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
+import { useTranslation } from "../../i18n/context";
 
 interface PaginationProps {
   currentPage: number;
@@ -52,10 +53,12 @@ export default function Pagination({
   onPageChange,
   onRowsPerPageChange,
 }: PaginationProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="flex items-center gap-2 text-sm text-text-muted">
-        <span>Rows per page:</span>
+        <span>{t("pagination.rowsPerPage")}</span>
         <select
           value={rowsPerPage}
           onChange={(event) => onRowsPerPageChange(Number(event.target.value))}
@@ -70,27 +73,27 @@ export default function Pagination({
       </div>
 
       <span className="text-sm text-text-muted">
-        Page {currentPage} of {totalPages}
+        {t("pagination.page", { current: currentPage, total: totalPages })}
       </span>
 
       <div className="flex items-center gap-1">
         <button
           type="button"
-          aria-label="First page"
+          aria-label={t("pagination.firstPage")}
           onClick={() => onPageChange(1)}
           disabled={currentPage === 1}
           className={pageButtonClass(false)}
         >
-          <ChevronsLeft size={16} />
+          <ChevronsLeft size={16} className="rtl:rotate-180" />
         </button>
         <button
           type="button"
-          aria-label="Previous page"
+          aria-label={t("pagination.previousPage")}
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
           className={pageButtonClass(false)}
         >
-          <ChevronLeft size={16} />
+          <ChevronLeft size={16} className="rtl:rotate-180" />
         </button>
 
         {getPageNumbers(currentPage, totalPages).map((item, index) =>
@@ -116,21 +119,21 @@ export default function Pagination({
 
         <button
           type="button"
-          aria-label="Next page"
+          aria-label={t("pagination.nextPage")}
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}
           className={pageButtonClass(false)}
         >
-          <ChevronRight size={16} />
+          <ChevronRight size={16} className="rtl:rotate-180" />
         </button>
         <button
           type="button"
-          aria-label="Last page"
+          aria-label={t("pagination.lastPage")}
           onClick={() => onPageChange(totalPages)}
           disabled={currentPage === totalPages}
           className={pageButtonClass(false)}
         >
-          <ChevronsRight size={16} />
+          <ChevronsRight size={16} className="rtl:rotate-180" />
         </button>
       </div>
     </div>

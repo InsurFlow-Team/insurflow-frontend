@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { MapContainer, TileLayer } from "react-leaflet";
 import { ChevronRight, FlaskConical, RefreshCw, UserCheck } from "lucide-react";
@@ -19,6 +19,8 @@ import type { MapCoordinates } from "../utils/map";
 import AssignClaimModal from "../components/ui/AssignClaimModal";
 import Button from "../components/ui/Button";
 import ErrorState from "../components/ui/ErrorState";
+import { useTranslation } from "../i18n/context";
+import { toast } from "../contexts/ToastContext";
 import AdjusterPin from "./map/AdjusterPin";
 import ClaimPin from "./map/ClaimPin";
 import ClaimsQueuePanel from "./map/ClaimsQueuePanel";
@@ -31,6 +33,7 @@ const DEFAULT_CENTER: [number, number] = [31.9, 35.3];
 
 export default function MapPage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const canAssign = user?.role === "ADMIN" || user?.role === "CLAIMS_OFFICER";
 
   const {
@@ -50,26 +53,32 @@ export default function MapPage() {
     selectClaim,
     openAssignModal,
     closeAssignModal,
-    handleAssigned,
+    handleAssigned: handleAssignmentCreated,
   } = useMapData();
 
   const { demoMode, toggleDemoMode } = useDemoMode();
+  const [claimContextId, setClaimContextId] = useState<string | null>(null);
 
   // Deep link from the Claims list Assign action (/map?claim=<id>)
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const claimIdFromUrl = searchParams.get("claim");
 
   useEffect(() => {
     if (!claimIdFromUrl || claims.length === 0) return;
 
     const target = claims.find((claim) => claim.id === claimIdFromUrl) ?? null;
-    selectClaim(target);
-    setSearchParams({}, { replace: true });
-  }, [claimIdFromUrl, claims, setSearchParams, selectClaim]);
+    if (!target) return;
+
+    setClaimContextId(target.id);
+    if (selectedClaim?.id !== target.id) selectClaim(target);
+  }, [claimIdFromUrl, claims, selectedClaim?.id, selectClaim]);
 
   // Filter to show only NEW claims for dispatch
   const newClaims = claims.filter((claim) => claim.status === "NEW");
-  const claimPins = claimsWithCoordinates(newClaims);
+  const mapClaims = claimContextId
+    ? claims.filter((claim) => claim.id === claimContextId)
+    : newClaims;
+  const claimPins = claimsWithCoordinates(mapClaims);
 
   // Filter adjusters to ACTIVE only
   const activeAdjusters = adjusters.filter((adj) => adj.status === "ACTIVE");
@@ -125,6 +134,11 @@ export default function MapPage() {
     openAssignModal(selectedClaim);
   };
 
+  async function handleAssigned() {
+    await handleAssignmentCreated();
+    toast("success", t("toast.offeredToAdjuster"));
+  }
+
   return (
     <div className="space-y-4">
       {/* Breadcrumb */}
@@ -136,31 +150,30 @@ export default function MapPage() {
           to="/dashboard"
           className="text-primary hover:text-primary-dark transition-colors"
         >
-          Operations
+          {t("map.operations")}
         </Link>
-        <ChevronRight size={14} className="text-text-muted" />
-        <span className="font-medium text-primary">Map Dispatch</span>
+        <ChevronRight size={14} className="text-text-muted rtl:rotate-180" />
+        <span className="font-medium text-primary">{t("map.title")}</span>
       </nav>
 
       {/* Page header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-text">Map Dispatch</h1>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-text">{t("map.title")}</h1>
           <p className="mt-1 text-sm text-text-muted max-w-2xl">
-            Select a NEW claim to locate its incident and assign a field
-            adjuster.
+            {t("map.subtitle")}
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant={demoMode ? "primary" : "secondary"}
             icon={<FlaskConical size={15} />}
             onClick={toggleDemoMode}
             aria-pressed={demoMode}
-            title="Simulated adjuster locations + distances (never sent to the backend)"
+            title={t("map.demoHint")}
           >
-            {demoMode ? "DEMO On" : "DEMO Locations"}
+            {demoMode ? t("map.demoOn") : t("map.demoOff")}
           </Button>
 
           <Button
@@ -169,7 +182,7 @@ export default function MapPage() {
             onClick={() => void load()}
             loading={loading}
           >
-            Refresh
+            {t("map.refresh")}
           </Button>
         </div>
       </div>
@@ -178,10 +191,8 @@ export default function MapPage() {
         <div className="flex items-start gap-2 rounded-lg border border-warning-border-strong bg-warning-bg px-3 py-2 text-xs text-warning-ink">
           <FlaskConical size={14} className="mt-0.5 shrink-0" />
           <p>
-            <span className="font-bold">DEMO mode on</span> — adjuster
-            locations and distances are simulated ({" "}
-            <span className="italic">not real data</span>, never sent to the
-            backend). Real GPS will come from the adjuster mobile app.
+            <span className="font-bold">{t("map.demoTitle")}</span>{" "}
+            {t("map.demoBody")}
           </p>
         </div>
       )}
@@ -192,11 +203,13 @@ export default function MapPage() {
         <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-4">
           {/* Claims & Dispatch sidebar */}
           <div className="flex flex-col gap-4">
-            <ClaimsQueuePanel
-              claims={newClaims}
-              selectedId={selectedClaim?.id}
-              onSelect={selectClaim}
-            />
+            {!claimContextId && (
+              <ClaimsQueuePanel
+                claims={newClaims}
+                selectedId={selectedClaim?.id}
+                onSelect={selectClaim}
+              />
+            )}
 
             {selectedClaim ? (
               <DispatchPanel
@@ -212,15 +225,13 @@ export default function MapPage() {
             ) : (
               <div className="rounded-xl border border-dashed border-border bg-surface-soft p-6 text-center text-text-muted">
                 <UserCheck size={24} className="mx-auto text-text-muted mb-2" />
-                <p className="text-xs font-medium">
-                  Select a claim from the queue above to open dispatch panel
-                </p>
+                <p className="text-xs font-medium">{t("map.selectPrompt")}</p>
               </div>
             )}
           </div>
 
           {/* Map */}
-          <div className="relative z-0 h-[calc(100vh-11rem)] min-h-[480px] overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
+          <div className="relative z-0 h-[calc(100dvh-11rem)] min-h-[480px] overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
             <MapContainer
               center={DEFAULT_CENTER}
               zoom={10}
@@ -280,6 +291,7 @@ export default function MapPage() {
           isOpen
           onClose={closeAssignModal}
           claimId={assignTarget.id}
+          claimNumber={assignTarget.claimNumber}
           initialAdjusterId={selectedAdjusterId ?? undefined}
           adjusters={activeDisplayAdjusters}
           adjustersLoading={claimAdjustersLoading}

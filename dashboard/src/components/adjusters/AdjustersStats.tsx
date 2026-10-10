@@ -6,6 +6,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import StatCard from "../ui/StatCard";
+import { useTranslation } from "../../i18n/context";
 
 export interface AdjustersStatsData {
   total: number;
@@ -19,6 +20,7 @@ interface AdjustersStatsProps {
 }
 
 export default function AdjustersStats({ stats }: AdjustersStatsProps) {
+  const { t } = useTranslation();
   const availablePercent = stats.total
     ? Math.round((stats.available / stats.total) * 100)
     : 0;
@@ -32,31 +34,33 @@ export default function AdjustersStats({ stats }: AdjustersStatsProps) {
     dot?: string;
   }> = [
     {
-      label: "Total Adjusters",
+      label: t("adjusters.stats.total"),
       value: stats.total,
-      secondary: "Field operations roster",
+      secondary: t("adjusters.stats.totalSecondary"),
       icon: UsersIcon,
       iconClass: "text-primary",
     },
     {
-      label: "Available Now",
+      label: t("adjusters.stats.available"),
       value: stats.available,
-      secondary: `${availablePercent}% of fleet · Ready for dispatch`,
+      secondary: t("adjusters.stats.availableSecondary", {
+        percent: availablePercent,
+      }),
       icon: CheckCircle,
       iconClass: "text-success-strong",
       dot: "bg-success-strong",
     },
     {
-      label: "Unavailable / Off-Shift",
+      label: t("adjusters.stats.unavailable"),
       value: stats.unavailableOrOffShift,
-      secondary: "Busy or inactive",
+      secondary: t("adjusters.stats.unavailableSecondary"),
       icon: Briefcase,
       iconClass: "text-warning",
     },
     {
-      label: "Claims Awaiting Assignment",
+      label: t("adjusters.stats.pending"),
       value: stats.pendingClaims,
-      secondary: "Not yet assigned to an adjuster",
+      secondary: t("adjusters.stats.pendingSecondary"),
       icon: ClipboardList,
       iconClass: "text-field",
     },

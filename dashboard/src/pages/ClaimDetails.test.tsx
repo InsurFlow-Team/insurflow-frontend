@@ -41,6 +41,7 @@ import {
   decideClaim,
 } from "../api/claims.service";
 import { getFieldAdjusters } from "../api/users.service";
+import I18nProvider from "../i18n/I18nProvider";
 import ClaimDetails from "./ClaimDetails";
 
 function makeClaimDetails(
@@ -90,18 +91,26 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
+  document.documentElement.dir = "ltr";
+  document.documentElement.lang = "en";
 });
 
-async function renderPage(claim: ClaimDetailsType) {
+async function renderPage(
+  claim: ClaimDetailsType,
+  options: { locale?: "ar" } = {},
+) {
   vi.mocked(getClaimById).mockResolvedValue(claim);
 
-  return render(
+  const ui = (
     <MemoryRouter initialEntries={["/claims/clm-1"]}>
       <Routes>
         <Route path="/claims/:claimId" element={<ClaimDetails />} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
+
+  return render(options.locale ? <I18nProvider>{ui}</I18nProvider> : ui);
 }
 
 describe("ClaimDetails", () => {
@@ -167,7 +176,7 @@ describe("ClaimDetails", () => {
     expect(screen.getByText("White")).toBeTruthy();
   });
 
-  it("renders accident details from backend data.accident with Arabic labels and translated accident type", async () => {
+  it("renders accident details from backend data with localized labels and type", async () => {
     authRole.value = "CLAIMS_OFFICER";
     await renderPage(
       makeClaimDetails({
@@ -183,18 +192,18 @@ describe("ClaimDetails", () => {
     );
 
     await screen.findByRole("heading", { name: "CLM-2026-0001" });
-    expect(screen.getByText("تفاصيل الحادث")).toBeTruthy();
-    expect(screen.getByText("نوع الحادث")).toBeTruthy();
-    expect(screen.getByText("تصادم خلفي")).toBeTruthy();
-    expect(screen.getByText("تاريخ الحادث")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Accident Details" })).toBeTruthy();
+    expect(screen.getByText("Accident Type")).toBeTruthy();
+    expect(screen.getByText("Rear-end collision")).toBeTruthy();
+    expect(screen.getByText("Accident Date")).toBeTruthy();
     expect(screen.getByText("2026-09-08")).toBeTruthy();
-    expect(screen.getByText("وقت الحادث")).toBeTruthy();
+    expect(screen.getByText("Accident Time")).toBeTruthy();
     expect(screen.getByText("14:30")).toBeTruthy();
-    expect(screen.getByText("وصف الحادث")).toBeTruthy();
+    expect(screen.getByText("Accident Description")).toBeTruthy();
     expect(
       screen.getByText("Vehicle rear-ended at a red light by a third party."),
     ).toBeTruthy();
-    expect(screen.getByText("وصف الأضرار")).toBeTruthy();
+    expect(screen.getByText("Damage Description")).toBeTruthy();
     expect(
       screen.getByText("Cracked rear bumper and shattered tail light."),
     ).toBeTruthy();
@@ -205,8 +214,10 @@ describe("ClaimDetails", () => {
     await renderPage(makeClaimDetails({ status: "NEW", accident: null }));
 
     await screen.findByRole("heading", { name: "CLM-2026-0001" });
-    expect(screen.getByText(/لم يتم إدخال تفاصيل الحادث بعد/)).toBeTruthy();
-    expect(screen.queryByText("نوع الحادث")).toBeNull();
+    expect(
+      screen.getByText("Accident details have not been entered yet."),
+    ).toBeTruthy();
+    expect(screen.queryByText("Accident Type")).toBeNull();
     expect(screen.queryByText(/undefined|null/)).toBeNull();
   });
 
@@ -226,8 +237,10 @@ describe("ClaimDetails", () => {
     );
 
     await screen.findByRole("heading", { name: "CLM-2026-0001" });
-    expect(screen.getByText(/لم يتم إدخال تفاصيل الحادث بعد/)).toBeTruthy();
-    expect(screen.queryByText("نوع الحادث")).toBeNull();
+    expect(
+      screen.getByText("Accident details have not been entered yet."),
+    ).toBeTruthy();
+    expect(screen.queryByText("Accident Type")).toBeNull();
   });
 
   it("renders a partial accident without crashing and fills missing fields with —", async () => {
@@ -247,7 +260,7 @@ describe("ClaimDetails", () => {
 
     await screen.findByRole("heading", { name: "CLM-2026-0001" });
     expect(screen.getByText("Body panel damage")).toBeTruthy();
-    expect(screen.getByText("نوع الحادث")).toBeTruthy();
+    expect(screen.getByText("Accident Type")).toBeTruthy();
   });
 
   it("renders the assignment section and shows the not-assigned state when assignedTo is null", async () => {
@@ -255,7 +268,7 @@ describe("ClaimDetails", () => {
     await renderPage(makeClaimDetails({ status: "NEW" }));
 
     await screen.findByRole("heading", { name: "CLM-2026-0001" });
-    expect(screen.getByText("لم يتم تعيين معاين بعد")).toBeTruthy();
+    expect(screen.getByText("No field adjuster assigned yet.")).toBeTruthy();
   });
 
   it("renders assigned adjuster details when assignedTo is present", async () => {
@@ -306,7 +319,9 @@ describe("ClaimDetails", () => {
     await screen.findByRole("heading", { name: "CLM-2026-0001" });
 
     // Reported incident location and its coordinates.
-    expect(screen.getByText("موقع الحادث المُبلغ عنه")).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Reported Incident Location" }),
+    ).toBeTruthy();
     expect(screen.getByText("Jeddah - Al-Hamra")).toBeTruthy();
     expect(screen.getByText("31.905, 35.204")).toBeTruthy();
   });
@@ -317,7 +332,9 @@ describe("ClaimDetails", () => {
 
     await screen.findByRole("heading", { name: "CLM-2026-0001" });
     expect(
-      screen.getByText("بانتظار وصول المعاين وتحديد موقع المعاينة"),
+      screen.getByText(
+        "Waiting for the adjuster to arrive and record the inspection location.",
+      ),
     ).toBeTruthy();
   });
 
@@ -336,7 +353,9 @@ describe("ClaimDetails", () => {
     );
 
     await screen.findByRole("heading", { name: "CLM-2026-0001" });
-    expect(screen.getByText("موقع المعاينة الميدانية الفعلي")).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Field Inspection Location" }),
+    ).toBeTruthy();
     expect(screen.getByText("Jeddah Corniche")).toBeTruthy();
     expect(screen.getByText("21.4858, 39.1925")).toBeTruthy();
   });
@@ -346,7 +365,11 @@ describe("ClaimDetails", () => {
     await renderPage(makeClaimDetails({ status: "NEW", evidence: [] }));
 
     await screen.findByRole("heading", { name: "CLM-2026-0001" });
-    expect(screen.getByText(/لا توجد صور للمعاينة بعد/)).toBeTruthy();
+    expect(
+      screen.getByText(
+        "No inspection photos have been uploaded yet. The field adjuster will upload them from the mobile app.",
+      ),
+    ).toBeTruthy();
   });
 
   it("renders evidence items with a missing uploader without crashing", async () => {
@@ -375,7 +398,7 @@ describe("ClaimDetails", () => {
     await renderPage(makeClaimDetails({ status: "SUBMITTED", signature: null }));
 
     await screen.findByRole("heading", { name: "CLM-2026-0001" });
-    expect(screen.getByText(/لا توجد توقيع بعد/)).toBeTruthy();
+    expect(screen.getByText("No signature has been captured yet.")).toBeTruthy();
   });
 
   it("renders the decision/closing section when the claim is closed", async () => {
@@ -403,9 +426,9 @@ describe("ClaimDetails", () => {
     );
 
     await screen.findByRole("heading", { name: "CLM-2026-0001" });
-    expect(screen.getByText("تم قبول المطالبة.")).toBeTruthy();
+    expect(screen.getByText("Claim approved.")).toBeTruthy();
     expect(
-      screen.queryByText("لم يتم اتخاذ قرار أو إغلاق المطالبة بعد."),
+      screen.queryByText("No decision or closure has been recorded yet."),
     ).toBeNull();
   });
 
@@ -419,7 +442,7 @@ describe("ClaimDetails", () => {
     );
 
     await screen.findByRole("heading", { name: "CLM-2026-0001" });
-    expect(screen.getByText("تم رفض المطالبة.")).toBeTruthy();
+    expect(screen.getByText("Claim rejected.")).toBeTruthy();
     expect(screen.getByText("Missing required documents")).toBeTruthy();
   });
 
@@ -444,7 +467,7 @@ describe("ClaimDetails", () => {
 
     await screen.findByRole("heading", { name: "CLM-2026-0001" });
     expect(screen.getByText("Claim created")).toBeTruthy();
-    expect(screen.getByText(/Performed by: —/)).toBeTruthy();
+    expect(screen.getByText(/System ·/)).toBeTruthy();
   });
 
   it("preserves and renders the REJECTED status", async () => {
@@ -452,7 +475,7 @@ describe("ClaimDetails", () => {
     await renderPage(makeClaimDetails({ status: "REJECTED" }));
 
     await screen.findByRole("heading", { name: "CLM-2026-0001" });
-    expect(screen.getByText("Rejected")).toBeTruthy();
+    expect(screen.getAllByText("Rejected").length).toBeGreaterThan(0);
   });
 
   it("displays UNDER_REVIEW exactly as the backend status", async () => {
@@ -600,10 +623,10 @@ describe("ClaimDetails", () => {
 
     await screen.findByRole("heading", { name: "CLM-2026-0001" });
     expect(
-      screen.getByText("لم يتم اتخاذ قرار أو إغلاق المطالبة بعد."),
+      screen.getByText("No decision or closure has been recorded yet."),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Approve" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Reject" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Approve Claim" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Reject Claim" })).toBeTruthy();
   });
 
   it("hides Approve and Reject from a CLAIMS_OFFICER even while the claim is UNDER_REVIEW", async () => {
@@ -611,8 +634,8 @@ describe("ClaimDetails", () => {
     await renderPage(makeClaimDetails({ status: "UNDER_REVIEW" }));
 
     await screen.findByRole("heading", { name: "CLM-2026-0001" });
-    expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Reject" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Approve Claim" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Reject Claim" })).toBeNull();
   });
 
   it("hides the decision buttons from an ADMIN for any status other than UNDER_REVIEW", async () => {
@@ -620,8 +643,8 @@ describe("ClaimDetails", () => {
     await renderPage(makeClaimDetails({ status: "APPROVED" }));
 
     await screen.findByRole("heading", { name: "CLM-2026-0001" });
-    expect(screen.queryByRole("button", { name: "Approve" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Reject" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Approve Claim" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Reject Claim" })).toBeNull();
   });
 
   it("approves an UNDER_REVIEW claim via POST /claims/:id/decision and reloads", async () => {
@@ -634,17 +657,36 @@ describe("ClaimDetails", () => {
     await renderPage(makeClaimDetails({ status: "UNDER_REVIEW" }));
 
     await user.click(
-      await screen.findByRole("button", { name: "Approve" }),
+      await screen.findByRole("button", { name: "Approve Claim" }),
     );
 
     const dialog = screen.getByRole("dialog");
-    expect(screen.getByText("Approve claim?")).toBeTruthy();
+    await user.type(
+      within(dialog).getByLabelText(/Estimated parts cost/),
+      "5000",
+    );
+    await user.type(within(dialog).getByLabelText(/Labor cost/), "1200");
+    await user.type(within(dialog).getByLabelText(/Deductible/), "0");
+    expect(
+      within(dialog).getByRole("heading", { name: "Approve Claim" }),
+    ).toBeTruthy();
 
     await user.click(
-      within(dialog).getByRole("button", { name: "Approve" }),
+      within(dialog).getByRole("button", { name: "Approve Claim" }),
     );
 
-    expect(decideClaim).toHaveBeenCalledWith("clm-1", "APPROVED");
+    expect(decideClaim).toHaveBeenCalledWith(
+      "clm-1",
+      expect.objectContaining({
+        decision: "APPROVED",
+        lossAssessment: {
+          estimatedPartsCost: 5000,
+          laborCost: 1200,
+          deductibleApplied: 0,
+          deductibleOverrideReason: undefined,
+        },
+      }),
+    );
     expect(getClaimById).toHaveBeenCalledTimes(2);
   });
 
@@ -657,14 +699,25 @@ describe("ClaimDetails", () => {
 
     await renderPage(makeClaimDetails({ status: "UNDER_REVIEW" }));
 
-    await user.click(await screen.findByRole("button", { name: "Reject" }));
+    await user.click(await screen.findByRole("button", { name: "Reject Claim" }));
 
     const dialog = screen.getByRole("dialog");
-    expect(screen.getByText("Reject claim?")).toBeTruthy();
+    expect(
+      within(dialog).getByRole("heading", { name: "Reject Claim" }),
+    ).toBeTruthy();
 
-    await user.click(within(dialog).getByRole("button", { name: "Reject" }));
+    await user.type(
+      within(dialog).getByLabelText("Decision notes (recommended)"),
+      "The submitted report does not meet the policy requirements.",
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Reject Claim" }),
+    );
 
-    expect(decideClaim).toHaveBeenCalledWith("clm-1", "REJECTED");
+    expect(decideClaim).toHaveBeenCalledWith("clm-1", {
+      decision: "REJECTED",
+      notes: "The submitted report does not meet the policy requirements.",
+    });
     expect(getClaimById).toHaveBeenCalledTimes(2);
   });
 
@@ -709,20 +762,193 @@ describe("ClaimDetails", () => {
 
     await screen.findByRole("heading", { name: "CLM-2026-0001" });
 
-    // The decline is visually flagged (Declined chip) and its reason is shown.
+    // The decline is visually flagged; its audit details are expanded on demand.
     expect(
       screen.getByText("Claim assignment declined by the field adjuster"),
     ).toBeTruthy();
     expect(screen.getByText("Declined")).toBeTruthy();
+    const declineEvent = screen
+      .getByText("Claim assignment declined by the field adjuster")
+      .closest("li");
+    expect(declineEvent).toBeTruthy();
+    await setupUserEvent().click(
+      within(declineEvent as HTMLElement).getByRole("button", {
+        name: "Show details",
+      }),
+    );
     expect(
       screen.getByText(/Adjuster too far from the incident location/),
     ).toBeTruthy();
-    expect(screen.getByText(/Performed by: Sara Al-Harbi/)).toBeTruthy();
+    expect(screen.getByText(/by Sara Al-Harbi ·/)).toBeTruthy();
 
-    // Status transition from the backend data is rendered.
-    expect(screen.getByText(/PENDING_ACCEPTANCE → NEW/)).toBeTruthy();
+    // Status transition from the backend data is rendered as separate badges.
+    expect(
+      within(declineEvent as HTMLElement).getByRole("status", {
+        name: "Awaiting Reply",
+      }),
+    ).toBeTruthy();
+    expect(
+      within(declineEvent as HTMLElement).getByRole("status", { name: "New" }),
+    ).toBeTruthy();
 
     // Ordinary events stay unstyled — the "Declined" chip is decline-only.
     expect(screen.getByText("Assignment pending acceptance")).toBeTruthy();
+  });
+
+  // ─── Step timeline + next-action panel ─────────────────────────────────────
+
+  it("renders the stage timeline with only backend-available stages and the current stage marked", async () => {
+    authRole.value = "CLAIMS_OFFICER";
+    await renderPage(makeClaimDetails({ status: "UNDER_REVIEW" }));
+
+    await screen.findByRole("heading", { name: "CLM-2026-0001" });
+
+    const steps = screen.getAllByTestId("stage-step");
+    expect(steps).toHaveLength(10); // proposed stages are never rendered
+
+    const current = document.querySelector(
+      '[data-testid="stage-step"][data-state="current"]',
+    );
+    expect(current).toBeTruthy();
+    expect(current?.textContent).toContain("Under Decision");
+    expect(current?.getAttribute("aria-current")).toBe("step");
+
+    // Steps before the current one are done; later ones are upcoming.
+    expect(
+      document.querySelectorAll('[data-testid="stage-step"][data-state="done"]')
+        .length,
+    ).toBeGreaterThan(0);
+    expect(
+      document.querySelectorAll(
+        '[data-testid="stage-step"][data-state="upcoming"]',
+      )
+        .length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("shows owner, SLA, waiting-on and the single Start Review action for a SUBMITTED claim", async () => {
+    authRole.value = "CLAIMS_OFFICER";
+    await renderPage(
+      makeClaimDetails({
+        status: "SUBMITTED",
+        assignment: {
+          assignedTo: {
+            id: "fa-1",
+            name: "Sara Al-Harbi",
+            employeeCode: "FA-001",
+            role: "FIELD_ADJUSTER",
+          },
+          assignedBy: null,
+          assignedAt: "2026-09-02T08:00:00.000Z",
+          priority: "MEDIUM",
+          assignmentNotes: null,
+        },
+      }),
+    );
+
+    await screen.findByRole("heading", { name: "CLM-2026-0001" });
+
+    expect(screen.getByText("Owner: Sara Al-Harbi")).toBeTruthy();
+    expect(
+      screen.getByText(/^Age-based staleness: .+$/),
+    ).toBeTruthy();
+    expect(screen.getByText("Waiting on: Claims Officer")).toBeTruthy();
+
+    // Exactly one Start Review button — the panel's, not a duplicate.
+    expect(
+      screen.getAllByRole("button", { name: "Start Review" }),
+    ).toHaveLength(1);
+
+    const user = setupUserEvent();
+    await user.click(screen.getByRole("button", { name: "Start Review" }));
+    expect(await screen.findByText("Start claim review?")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "This will change the claim status from SUBMITTED to UNDER_REVIEW.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("offers Make Decision from the next-action panel to an ADMIN only", async () => {
+    authRole.value = "ADMIN";
+    await renderPage(makeClaimDetails({ status: "UNDER_REVIEW" }));
+
+    await screen.findByRole("heading", { name: "CLM-2026-0001" });
+    expect(
+      screen.getAllByRole("button", { name: "Make Decision" }),
+    ).toHaveLength(1);
+
+    cleanup();
+    authRole.value = "CLAIMS_OFFICER";
+    await renderPage(makeClaimDetails({ status: "UNDER_REVIEW" }));
+
+    await screen.findByRole("heading", { name: "CLM-2026-0001" });
+    expect(
+      screen.queryByRole("button", { name: "Make Decision" }),
+    ).toBeNull();
+    expect(screen.getByText("No action needed from you")).toBeTruthy();
+  });
+
+  it("opens the assign modal from the next-action panel for a NEW claim", async () => {
+    authRole.value = "CLAIMS_OFFICER";
+    const user = setupUserEvent();
+    await renderPage(makeClaimDetails({ status: "NEW" }));
+
+    await screen.findByRole("heading", { name: "CLM-2026-0001" });
+
+    await user.click(screen.getByRole("button", { name: "Assign Adjuster" }));
+
+    expect(
+      screen.getByRole("heading", { name: "Assign Field Adjuster" }),
+    ).toBeTruthy();
+  });
+
+  it("shows the unassigned owner state in the next-action panel", async () => {
+    authRole.value = "CLAIMS_OFFICER";
+    await renderPage(makeClaimDetails({ status: "NEW" }));
+
+    await screen.findByRole("heading", { name: "CLM-2026-0001" });
+
+    expect(
+      screen.getByText("Owner: No adjuster assigned yet"),
+    ).toBeTruthy();
+  });
+
+  it("renders the timeline, owner and primary action in Arabic with RTL", async () => {
+    authRole.value = "CLAIMS_OFFICER";
+    window.localStorage.setItem("sawn.locale", "ar");
+
+    await renderPage(makeClaimDetails({ status: "SUBMITTED" }), {
+      locale: "ar",
+    });
+
+    await screen.findByRole("heading", { name: "CLM-2026-0001" });
+
+    expect(document.documentElement.dir).toBe("rtl");
+    expect(
+      screen.getByRole("heading", { name: "جاهزية المطالبة" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "الأدلة والصور" }),
+    ).toBeTruthy();
+    expect(screen.getByText("لم تُرفع صور المعاينة بعد. سيرفعها المعاين الميداني من تطبيق الجوال.")).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "التوقيع" }),
+    ).toBeTruthy();
+
+    const current = document.querySelector(
+      '[data-testid="stage-step"][data-state="current"]',
+    );
+    expect(current?.textContent).toContain("التقرير مُرسل");
+
+    expect(
+      screen.getByText("المسؤول الحالي: غير مُسند إلى معاين"),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/قاعدة تقادم حسب عمر المطالبة:/),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "بدء المراجعة" }),
+    ).toBeTruthy();
   });
 });

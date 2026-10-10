@@ -4,7 +4,9 @@ import { getClaims } from "../api/claims.service";
 import { getApiErrorMessage } from "../api/client";
 import type { ClaimStatus, ClaimSummary } from "../types";
 import { useAuth } from "../contexts/AuthContext";
+import { useTranslation } from "../i18n/context";
 import { useClaimIntake } from "../hooks/useClaimIntake";
+import { ATTENTION_STATUSES, isOverdue } from "../utils/attention";
 import LoadingState from "../components/ui/LoadingState";
 import ErrorState from "../components/ui/ErrorState";
 import DataTable from "../components/ui/DataTable";
@@ -37,8 +39,7 @@ function readStatusParam(value: string | null): "" | ClaimStatus {
 
 export default function ClaimsList() {
   const { user } = useAuth();
-  const canAssign =
-    user?.role === "ADMIN" || user?.role === "CLAIMS_OFFICER";
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -53,6 +54,11 @@ export default function ClaimsList() {
     readStatusParam(searchParams.get("status")),
   );
   const [dateRange, setDateRange] = useState<DateRangeFilter>("all");
+
+  // The Overview "Overdue" metric deep-links here: ?sla=overdue narrows the
+  // list to attention claims past the 3-day stale threshold. Any other value
+  // is ignored rather than rendering an empty table.
+  const overdueOnly = searchParams.get("sla") === "overdue";
 
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(25);
@@ -112,6 +118,21 @@ export default function ClaimsList() {
     [searchParams, setSearchParams],
   );
 
+  const applyOverdueFilter = useCallback(
+    (active: boolean) => {
+      setPage(1);
+
+      const next = new URLSearchParams(searchParams);
+      if (active) {
+        next.set("sla", "overdue");
+      } else {
+        next.delete("sla");
+      }
+      setSearchParams(next, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
+
   // Assigning happens on the Dispatch Map (same-backed dataset, nearest adjuster
   // + distances there) — deep-link the claim so it is selected and the assign
   // modal opens immediately.
@@ -119,7 +140,11 @@ export default function ClaimsList() {
     navigate(`/map?claim=${encodeURIComponent(claim.id)}`);
   }
 
-  const columns = buildClaimColumns({ canAssign, onAssign: openAssign });
+  const columns = buildClaimColumns({
+    role: user?.role ?? null,
+    onAssign: openAssign,
+    t,
+  });
 
   const filteredClaims = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -136,9 +161,16 @@ export default function ClaimsList() {
       const matchesDate =
         !dateCutoff || new Date(claim.createdAt) >= dateCutoff;
 
-      return matchesSearch && matchesStatus && matchesDate;
+      // Same definition as the Overview overdue metric: an attention claim
+      // past the stale threshold. Final/calm statuses never count.
+      const matchesSla =
+        !overdueOnly ||
+        (ATTENTION_STATUSES.includes(claim.status) &&
+          isOverdue(claim.createdAt));
+
+      return matchesSearch && matchesStatus && matchesDate && matchesSla;
     });
-  }, [claims, search, statusFilter, dateRange]);
+  }, [claims, search, statusFilter, dateRange, overdueOnly]);
 
   const totalPages = Math.max(1, Math.ceil(filteredClaims.length / rowsPerPage));
   const currentPage = Math.min(page, totalPages);
@@ -153,6 +185,7 @@ export default function ClaimsList() {
     setDateRange("all");
     setPage(1);
     applyStatusFilter("");
+    applyOverdueFilter(false);
   };
 
   const tableFooter = (
@@ -170,7 +203,7 @@ export default function ClaimsList() {
   );
 
   if (loading && claims.length === 0) {
-    return <LoadingState message="Loading claims..." />;
+    return <LoadingState message={t("claims.loading")} />;
   }
 
   if (error && claims.length === 0) {
@@ -195,6 +228,7 @@ export default function ClaimsList() {
         search={search}
         statusFilter={statusFilter}
         dateRange={dateRange}
+        overdueOnly={overdueOnly}
         totalFiltered={filteredClaims.length}
         totalClaims={claims.length}
         onSearchChange={(value) => {
@@ -208,13 +242,14 @@ export default function ClaimsList() {
           setDateRange(value);
           setPage(1);
         }}
+        onOverdueToggle={applyOverdueFilter}
         onReset={handleResetFilters}
       />
 
       <DataTable
         columns={columns}
         data={pagedClaims}
-        emptyMessage="No claims found."
+        emptyMessage={t("claims.empty")}
         keyExtractor={(claim) => claim.id}
         footer={tableFooter}
       />

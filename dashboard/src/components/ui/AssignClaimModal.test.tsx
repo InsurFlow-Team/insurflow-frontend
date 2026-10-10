@@ -92,7 +92,7 @@ describe("AssignClaimModal capacity override", () => {
     });
 
     await selectAdjuster(user);
-    await user.click(screen.getByRole("button", { name: "Save Assignment" }));
+    await user.click(screen.getByRole("button", { name: "Confirm assignment" }));
 
     expect(assignClaim).toHaveBeenCalledWith("clm-1", {
       adjusterId: ADJUSTER.id,
@@ -126,19 +126,21 @@ describe("AssignClaimModal capacity override", () => {
       });
 
     await selectAdjuster(user);
-    await user.click(screen.getByRole("button", { name: "Save Assignment" }));
+    await user.click(screen.getByRole("button", { name: "Confirm assignment" }));
 
-    // Capacity override confirmation replaces the inline error.
+    // Unavailable-adjuster confirmation replaces the inline error.
     expect(
-      await screen.findByRole("heading", { name: "Capacity Override" }),
+      await screen.findByRole("heading", {
+        name: "Confirm emergency assignment",
+      }),
     ).toBeTruthy();
 
-    // The dialog states the real load so the answer is never a surprise.
+    // The dialog explains why an override is being requested.
     expect(
-      screen.getByText(/المعاين لديه أكثر من الحد المسموح/),
+      screen.getByText(/currently unavailable/i),
     ).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: "Override Capacity" }));
+    await user.click(screen.getByRole("button", { name: "Confirm override" }));
 
     expect(assignClaim).toHaveBeenNthCalledWith(1, "clm-1", {
       adjusterId: ADJUSTER.id,
@@ -164,10 +166,14 @@ describe("AssignClaimModal capacity override", () => {
     );
 
     await selectAdjuster(user);
-    await user.click(screen.getByRole("button", { name: "Save Assignment" }));
+    await user.click(screen.getByRole("button", { name: "Confirm assignment" }));
 
-    await screen.findByRole("heading", { name: "Capacity Override" });
-    await user.click(screen.getByRole("button", { name: "Pick Another" }));
+    await screen.findByRole("heading", {
+      name: "Confirm emergency assignment",
+    });
+    await user.click(
+      screen.getByRole("button", { name: "Choose another adjuster" }),
+    );
 
     expect(assignClaim).toHaveBeenCalledTimes(1);
     expect(onAssigned).not.toHaveBeenCalled();
@@ -175,7 +181,7 @@ describe("AssignClaimModal capacity override", () => {
 
     // The inline error returns with clear guidance after declining.
     expect(
-      await screen.findByText(/Please pick another adjuster/i),
+      await screen.findByText(/Choose another field adjuster/i),
     ).toBeTruthy();
   });
 
@@ -192,13 +198,13 @@ describe("AssignClaimModal capacity override", () => {
     );
 
     await selectAdjuster(user);
-    await user.click(screen.getByRole("button", { name: "Save Assignment" }));
+    await user.click(screen.getByRole("button", { name: "Confirm assignment" }));
 
     expect(
       await screen.findByText(/no longer assignable/i),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("heading", { name: "Capacity Override" }),
+      screen.queryByRole("heading", { name: /Confirm (capacity|emergency) assignment/i }),
     ).toBeNull();
     expect(onAssigned).not.toHaveBeenCalled();
   });
@@ -216,7 +222,7 @@ describe("AssignClaimModal capacity override", () => {
     );
 
     await selectAdjuster(user);
-    await user.click(screen.getByRole("button", { name: "Save Assignment" }));
+    await user.click(screen.getByRole("button", { name: "Confirm assignment" }));
 
     // Contract: not-found means the adjuster is deactivated (backend assigns
     // ACTIVE only), not capacity — the override dialog must never appear.
@@ -224,7 +230,7 @@ describe("AssignClaimModal capacity override", () => {
       await screen.findByText(/field adjuster is no longer active/i),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("heading", { name: "Capacity Override" }),
+      screen.queryByRole("heading", { name: /Confirm (capacity|emergency) assignment/i }),
     ).toBeNull();
     expect(onAssigned).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
@@ -278,7 +284,7 @@ describe("AssignClaimModal capacity override", () => {
     // Single dataset: the map already fetched this claim's adjusters.
     expect(getFieldAdjusters).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: "Save Assignment" }));
+    await user.click(screen.getByRole("button", { name: "Confirm assignment" }));
 
     expect(assignClaim).toHaveBeenCalledWith("clm-1", {
       adjusterId: ADJUSTER.id,

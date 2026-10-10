@@ -2,6 +2,7 @@ import { FileImage, User, Calendar } from "lucide-react";
 import DetailSection from "../DetailSection";
 import { formatDateTime } from "../../../utils/claims";
 import type { ClaimDetails } from "../../../types";
+import { useTranslation } from "../../../i18n/context";
 
 interface EvidenceSectionProps {
   claim: ClaimDetails;
@@ -17,15 +18,16 @@ interface EvidenceSectionProps {
  * - Clearer organization
  */
 export default function EvidenceSection({ claim }: EvidenceSectionProps) {
+  const { t } = useTranslation();
   const { evidence } = claim;
 
   if (evidence.length === 0) {
     return (
-      <DetailSection title="الأدلة والصور">
+      <DetailSection title={t("claimInfo.evidence.title")}>
         <div className="flex items-center gap-3 p-4 rounded-lg bg-surface-soft border border-border">
           <FileImage size={20} className="text-text-subtle" />
           <p className="text-sm text-text-muted">
-            لم يتم رفع صور المعاينة بعد. سيقوم المعاين الميداني برفع الصور من تطبيق الجوال.
+            {t("claimInfo.evidence.empty")}
           </p>
         </div>
       </DetailSection>
@@ -35,7 +37,7 @@ export default function EvidenceSection({ claim }: EvidenceSectionProps) {
   // Group evidence by type for summary
   const evidenceByType = evidence.reduce(
     (acc, item) => {
-      const type = item.imageType || "غير محدد";
+      const type = item.imageType || t("claimInfo.evidence.unknownType");
       acc[type] = (acc[type] || 0) + 1;
       return acc;
     },
@@ -43,14 +45,14 @@ export default function EvidenceSection({ claim }: EvidenceSectionProps) {
   );
 
   return (
-    <DetailSection title="الأدلة والصور">
+    <DetailSection title={t("claimInfo.evidence.title")}>
       <div className="space-y-4">
         {/* Evidence Summary */}
         <div className="flex items-center justify-between p-3 rounded-lg bg-info-bg border border-info-border">
           <div className="flex items-center gap-2">
             <FileImage size={18} className="text-info-text" />
             <span className="text-sm font-medium text-info-strong">
-              إجمالي الصور: {evidence.length}
+              {t("claimInfo.evidence.total", { count: evidence.length })}
             </span>
           </div>
           <div className="flex gap-3 text-xs text-info-strong">
@@ -78,7 +80,7 @@ export default function EvidenceSection({ claim }: EvidenceSectionProps) {
                 >
                   <img
                     src={item.url}
-                    alt={item.imageType || "صورة دليل"}
+                    alt={item.imageType || t("claimInfo.evidence.alt")}
                     className="h-40 w-full object-cover group-hover:opacity-90 transition-opacity"
                     loading="lazy"
                   />
@@ -91,7 +93,7 @@ export default function EvidenceSection({ claim }: EvidenceSectionProps) {
 
               <div className="p-3 space-y-2">
                 <p className="text-sm font-medium text-text truncate">
-                  {item.imageType || "غير محدد"}
+                  {item.imageType || t("claimInfo.evidence.unknownType")}
                 </p>
                 
                 {item.uploadedBy && (
@@ -114,7 +116,7 @@ export default function EvidenceSection({ claim }: EvidenceSectionProps) {
 
         {/* Footer note */}
         <p className="text-xs text-text-subtle pt-2 border-t border-border">
-          جميع الصور تم رفعها من قبل المعاين الميداني أثناء المعاينة.
+          {t("claimInfo.evidence.footer")}
         </p>
       </div>
     </DetailSection>

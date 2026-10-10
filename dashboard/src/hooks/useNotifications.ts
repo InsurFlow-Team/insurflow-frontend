@@ -154,6 +154,15 @@ export function useNotifications(): UseNotificationsResult {
     if (open) void loadList();
   }, [loadCount, loadList, open]);
 
+  const currentUnreadCountAfterFailure = useCallback(
+    (failedIds: string[], originalUnreadItems: AppNotification[]) => {
+      if (failedIds.length === 0) return 0;
+      const failedSet = new Set(failedIds);
+      return originalUnreadItems.filter((item) => failedSet.has(item.id)).length;
+    },
+    [],
+  );
+
   const clearAll = useCallback(() => {
     const unreadItems = items.filter((item) => item.readAt === null);
     
@@ -175,7 +184,6 @@ export function useNotifications(): UseNotificationsResult {
       try {
         const result = await markMultipleNotificationsRead(unreadIds);
 
-        // If any failed, roll them back
         if (result.failed.length > 0) {
           setItems((current) =>
             current.map((item) => {
@@ -186,7 +194,9 @@ export function useNotifications(): UseNotificationsResult {
               return item;
             }),
           );
-          setCount(result.failed.length);
+
+          const remainingUnread = currentUnreadCountAfterFailure(result.failed, unreadItems);
+          setCount(remainingUnread);
           setError(`Failed to mark ${result.failed.length} notification(s) as read.`);
         }
       } catch (requestError) {

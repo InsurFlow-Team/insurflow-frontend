@@ -2,6 +2,7 @@ import FormField from "../FormField";
 import Select from "../Select";
 import type { ClaimPriority } from "../../../types";
 import type { ChangeEvent } from "react";
+import { useTranslation } from "../../../i18n/context";
 
 interface PriorityFieldProps {
   value: ClaimPriority;
@@ -10,12 +11,6 @@ interface PriorityFieldProps {
   ) => void;
   disabled?: boolean;
 }
-
-const PRIORITY_OPTIONS: Array<{ value: ClaimPriority; label: string }> = [
-  { value: "LOW", label: "Low" },
-  { value: "MEDIUM", label: "Medium" },
-  { value: "HIGH", label: "High" },
-];
 
 // The backend treats priority as optional and defaults it to MEDIUM. Preselect
 // MEDIUM so the form always reflects the backend default instead of sending an
@@ -27,17 +22,24 @@ export default function PriorityField({
   onChange,
   disabled = false,
 }: PriorityFieldProps) {
+  const { t } = useTranslation();
+  const priorityOptions: Array<{ value: ClaimPriority; label: string }> = [
+    { value: "LOW", label: t("assign.priority.low") },
+    { value: "MEDIUM", label: t("assign.priority.medium") },
+    { value: "HIGH", label: t("assign.priority.high") },
+  ];
+
   return (
-    <FormField label="Priority">
+    <FormField label={t("assign.priority.label")}>
       <Select
         name="priority"
         value={value}
         onChange={onChange}
         disabled={disabled}
-        options={PRIORITY_OPTIONS}
+        options={priorityOptions}
       />
       <p className="mt-1.5 text-xs text-text-muted">
-        Optional in the backend; defaults to Medium.
+        {t("assign.priority.hint")}
       </p>
     </FormField>
   );

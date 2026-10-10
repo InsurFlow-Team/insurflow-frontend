@@ -23,7 +23,7 @@ export function useMapData() {
     null,
   );
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<ClaimSummary[] | null> => {
     setLoading(true);
     setError("");
 
@@ -34,8 +34,10 @@ export function useMapData() {
       ]);
       setClaims(claimsData);
       setAdjusters(adjustersData);
+      return claimsData;
     } catch (requestError) {
       setError(getApiErrorMessage(requestError));
+      return null;
     } finally {
       setLoading(false);
     }
@@ -72,16 +74,19 @@ export function useMapData() {
     }
   }, []);
 
-  function selectClaim(claim: ClaimSummary | null) {
-    setSelectedClaim(claim);
-    if (claim) {
-      void loadClaimDetails(claim.id);
-      void loadClaimAdjusters(claim.id);
-    } else {
-      setSelectedClaimDetails(null);
-      setClaimAdjusters([]);
-    }
-  }
+  const selectClaim = useCallback(
+    (claim: ClaimSummary | null) => {
+      setSelectedClaim(claim);
+      if (claim) {
+        void loadClaimDetails(claim.id);
+        void loadClaimAdjusters(claim.id);
+      } else {
+        setSelectedClaimDetails(null);
+        setClaimAdjusters([]);
+      }
+    },
+    [loadClaimAdjusters, loadClaimDetails],
+  );
 
   function openAssignModal(claim: ClaimSummary) {
     setAssignTarget(claim);
@@ -92,12 +97,19 @@ export function useMapData() {
     setSelectedAdjusterId(null);
   }
 
-  function handleAssigned() {
+  async function handleAssigned() {
+    const assignedClaimId = assignTarget?.id ?? selectedClaim?.id;
     closeAssignModal();
-    void load();
-    // Clear selection if the assigned claim was selected
-    if (selectedClaim?.id === assignTarget?.id) {
-      selectClaim(null);
+
+    if (!assignedClaimId) return;
+
+    const refreshedClaims = await load();
+    const refreshedClaim = refreshedClaims?.find(
+      (claim) => claim.id === assignedClaimId,
+    );
+    if (refreshedClaim) {
+      setSelectedClaim(refreshedClaim);
+      void loadClaimDetails(refreshedClaim.id);
     }
   }
 

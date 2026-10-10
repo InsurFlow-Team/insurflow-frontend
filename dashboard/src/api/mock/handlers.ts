@@ -36,8 +36,6 @@ export interface MockResponse {
   data: unknown;
 }
 
-const FINAL_CLAIM_STATUSES = new Set(["APPROVED", "REJECTED", "CLOSED"]);
-
 function asString(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
@@ -74,10 +72,12 @@ function toSummary(claim: MockClaim) {
   };
 }
 
-function activeTasksFor(db: MockDb, adjusterId: string): number {
+const ACTIVE_CLAIM_STATUSES = new Set(["ASSIGNED", "IN_PROGRESS"]);
+
+export function activeTasksFor(db: MockDb, adjusterId: string): number {
   return db.claims.filter(
     (claim) =>
-      claim.assignedTo?._id === adjusterId && !FINAL_CLAIM_STATUSES.has(claim.status),
+      claim.assignedTo?._id === adjusterId && ACTIVE_CLAIM_STATUSES.has(claim.status),
   ).length;
 }
 
@@ -314,7 +314,7 @@ function handleAssignClaim(
     ]);
   }
 
-  claim.status = "ASSIGNED";
+  claim.status = "PENDING_ACCEPTANCE";
   claim.updatedAt = now;
   claim.assignedTo = {
     _id: adjuster._id,
@@ -330,9 +330,9 @@ function handleAssignClaim(
     assignmentNotes: asString(body.notes) || null,
   };
   claim.timeline.push({
-    action: "ASSIGNED",
+    action: "Assignment Pending Acceptance",
     previousStatus: "NEW",
-    newStatus: "ASSIGNED",
+    newStatus: "PENDING_ACCEPTANCE",
     notes: claim.assignment.assignmentNotes,
     performedBy: { _id: actor._id, name: actor.name },
     role: actor.role,

@@ -4,6 +4,7 @@ import InfoGrid from "../InfoGrid";
 import InfoRow from "../InfoRow";
 import { formatDateTime } from "../../../utils/claims";
 import type { ClaimDetails } from "../../../types";
+import { useTranslation } from "../../../i18n/context";
 
 interface InspectionLocationSectionProps {
   claim: ClaimDetails;
@@ -19,6 +20,7 @@ interface InspectionLocationSectionProps {
 export default function InspectionLocationSection({
   claim,
 }: InspectionLocationSectionProps) {
+  const { t } = useTranslation();
   const location = claim.location;
 
   const hasCoordinates =
@@ -28,23 +30,29 @@ export default function InspectionLocationSection({
 
   if (!hasCoordinates) {
     return (
-      <DetailSection title="موقع المعاينة الميدانية الفعلي">
+      <DetailSection title={t("claimInfo.inspectionLocation.title")}>
         <p className="text-sm text-text-muted">
-          بانتظار وصول المعاين وتحديد موقع المعاينة
+          {t("claimInfo.inspectionLocation.waiting")}
         </p>
       </DetailSection>
     );
   }
 
   return (
-    <DetailSection title="موقع المعاينة الميدانية الفعلي">
+    <DetailSection title={t("claimInfo.inspectionLocation.title")}>
       <InfoGrid columns="3">
-        <InfoRow label="Address" value={location.address} />
         <InfoRow
-          label="Coordinates"
+          label={t("claimInfo.inspectionLocation.address")}
+          value={location.address}
+        />
+        <InfoRow
+          label={t("claimInfo.inspectionLocation.coordinates")}
           value={`${location.latitude}, ${location.longitude}`}
         />
-        <InfoRow label="Captured At" value={formatDateTime(location.capturedAt)} />
+        <InfoRow
+          label={t("claimInfo.inspectionLocation.capturedAt")}
+          value={formatDateTime(location.capturedAt)}
+        />
       </InfoGrid>
 
       <a
@@ -54,7 +62,7 @@ export default function InspectionLocationSection({
         className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary-dark"
       >
         <ExternalLink size={16} />
-        View Inspection Location on Map
+        {t("claimInfo.inspectionLocation.mapAction")}
       </a>
     </DetailSection>
   );

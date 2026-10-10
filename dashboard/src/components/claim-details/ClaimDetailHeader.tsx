@@ -1,15 +1,13 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, FileDown, PlayCircle } from "lucide-react";
+import { ArrowLeft, FileDown } from "lucide-react";
 import StatusBadge from "../ui/StatusBadge";
 import Button from "../ui/Button";
 import { formatDateTime } from "../../utils/claims";
+import { useTranslation } from "../../i18n/context";
 import type { ClaimDetails as ClaimDetailsType } from "../../types";
 
 interface ClaimDetailHeaderProps {
   claim: ClaimDetailsType;
-  canStartReview: boolean;
-  reviewing: boolean;
-  onStartReview: () => void;
   canExportReport: boolean;
   exportDisabledReason: string | null;
   exporting: boolean;
@@ -18,27 +16,26 @@ interface ClaimDetailHeaderProps {
 
 export default function ClaimDetailHeader({
   claim,
-  canStartReview,
-  reviewing,
-  onStartReview,
   canExportReport,
   exportDisabledReason,
   exporting,
   onExportReport,
 }: ClaimDetailHeaderProps) {
+  const { t } = useTranslation();
+
   return (
     <>
       <Link
         to="/claims"
         className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-dark"
       >
-        <ArrowLeft size={16} />
-        Back to claims
+        <ArrowLeft size={16} className="rtl:rotate-180" />
+        {t("claim.backToClaims")}
       </Link>
 
       <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm text-text-muted">Claim number</p>
+          <p className="text-sm text-text-muted">{t("claim.claimNumber")}</p>
 
           <h1 className="mt-1 text-2xl font-bold text-text">
             {claim.claimNumber}
@@ -52,33 +49,21 @@ export default function ClaimDetailHeader({
           </div>
 
           <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-xs text-text-muted">
-            <span>Created: {formatDateTime(claim.createdAt)}</span>
-            <span>Updated: {formatDateTime(claim.updatedAt)}</span>
+            <span>{`${t("claim.created")}: ${formatDateTime(claim.createdAt)}`}</span>
+            <span>{`${t("claim.updated")}: ${formatDateTime(claim.updatedAt)}`}</span>
           </div>
         </div>
 
         <div className="flex flex-col items-start gap-2">
-          <div className="flex flex-wrap gap-3">
-            <Button
-              onClick={onExportReport}
-              disabled={!canExportReport}
-              loading={exporting}
-              variant="secondary"
-              icon={<FileDown size={17} />}
-            >
-              Export Claim PDF
-            </Button>
-
-            {canStartReview && (
-              <Button
-                onClick={onStartReview}
-                disabled={reviewing}
-                icon={<PlayCircle size={17} />}
-              >
-                Start Review
-              </Button>
-            )}
-          </div>
+          <Button
+            onClick={onExportReport}
+            disabled={!canExportReport}
+            loading={exporting}
+            variant="secondary"
+            icon={<FileDown size={17} />}
+          >
+            {t("claim.exportPdf")}
+          </Button>
 
           {exportDisabledReason && (
             <p className="max-w-sm text-xs text-text-muted">

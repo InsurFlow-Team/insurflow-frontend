@@ -79,6 +79,7 @@ describe("getFieldAdjusters", () => {
         capacityLimit: null,
         location: null,
         distanceKm: null,
+        locationStale: null,
       },
     ]);
   });

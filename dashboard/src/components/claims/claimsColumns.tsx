@@ -1,44 +1,71 @@
 import { Link } from "react-router-dom";
-import { UserCheck, AlertTriangle } from "lucide-react";
+import { UserCheck, AlertTriangle, PlayCircle, Gavel } from "lucide-react";
 import type { Column } from "../ui/DataTable";
 import StatusBadge from "../ui/StatusBadge";
 import { formatDate } from "../../utils/claims";
-import type { ClaimSummary } from "../../types";
+import { webActionsFor, CLAIM_ACTIONS } from "../../domain/actions";
+import type { MessageKey } from "../../i18n/messages.en";
+import type { ClaimSummary, Role } from "../../types";
 
 interface ClaimColumnsOptions {
-  // Role gate (ADMIN + CLAIMS_OFFICER) computed by the page. The per-row status
-  // check (assign only from NEW) stays here so the matrix is enforced in one
-  // place.
-  canAssign?: boolean;
+  // Role gate computed by the page; the per-row offer itself comes from
+  // domain/actions.ts so the table can never show a button the backend would
+  // reject (assign only from NEW, start review only from SUBMITTED, decide
+  // only for ADMIN from UNDER_REVIEW).
+  role?: Role | null;
   onAssign?: (claim: ClaimSummary) => void;
+  /** Translator — keeps every header and label on the page bilingual. */
+  t: (key: MessageKey, vars?: Record<string, string | number>) => string;
 }
 
+/** Row priority: the single next action, then the always-on View Claim link. */
+function primaryOffer(
+  claim: ClaimSummary,
+  role: Role | null,
+): { key: keyof typeof CLAIM_ACTIONS; href?: string; assign?: boolean } | null {
+  const actions = webActionsFor({ status: claim.status, role });
+
+  if (actions.includes("ASSIGN_ADJUSTER")) {
+    return { key: "ASSIGN_ADJUSTER", assign: true };
+  }
+  if (actions.includes("START_REVIEW")) {
+    return { key: "START_REVIEW", href: `/claims/${claim.id}` };
+  }
+  if (actions.includes("APPROVE_CLAIM")) {
+    return { key: "APPROVE_CLAIM", href: `/claims/${claim.id}` };
+  }
+  return null;
+}
+
+const BUTTON_CLASSES =
+  "inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-semibold text-text hover:bg-background transition-colors";
+
 export function buildClaimColumns(
-  options: ClaimColumnsOptions = {},
+  options: ClaimColumnsOptions,
 ): Column<ClaimSummary>[] {
-  const { canAssign, onAssign } = options;
+  const { role = null, onAssign, t } = options;
 
   return [
     {
       key: "claimNumber",
-      header: "Claim Number",
+      header: t("claims.col.claimNumber"),
       render: (claim) => (
         <span className="font-semibold text-text">{claim.claimNumber}</span>
       ),
     },
     {
       key: "customer",
-      header: "Customer & Policy ID",
+      header: t("claims.col.customer"),
       render: (claim) => (
         <div className="min-w-0">
           <p className="text-sm text-text">{claim.customerName}</p>
-          <p className="text-xs text-text-muted">Policy: —</p>
+          <p className="text-xs text-text-muted">{t("claims.policy")}: —</p>
         </div>
       ),
     },
     {
       key: "vehicle",
-      header: "Vehicle Information",
+      header: t("claims.col.vehicle"),
       render: (claim) => (
         <div className="min-w-0">
           <p className="text-sm text-text">
@@ -50,14 +77,17 @@ export function buildClaimColumns(
     },
     {
       key: "status",
-      header: "Status",
+      header: t("claims.col.status"),
       render: (claim) => (
         <div className="flex flex-col gap-1 items-start">
-          <StatusBadge status={claim.status} />
+          <StatusBadge
+            status={claim.status}
+            label={t(`claimStatus.${claim.status}` as MessageKey)}
+          />
           {claim.status === "NEW" && claim.lastDecline && (
             <span className="inline-flex items-center gap-1 rounded border border-warning-border-strong bg-warning-bg px-1.5 py-0.5 text-[10px] font-semibold text-warning-deep">
               <AlertTriangle size={10} />
-              Re-dispatch Needed
+              {t("claims.redispatch")}
             </span>
           )}
         </div>
@@ -65,14 +95,14 @@ export function buildClaimColumns(
     },
     {
       key: "createdAt",
-      header: "Created Date",
+      header: t("claims.col.created"),
       render: (claim) => (
         <span className="text-sm text-text">{formatDate(claim.createdAt)}</span>
       ),
     },
     {
       key: "updatedAt",
-      header: "Updated Date",
+      header: t("claims.col.updated"),
       render: (claim) => (
         <span className="text-sm text-text">
           {formatDate(claim.updatedAt || claim.createdAt)}
@@ -81,27 +111,43 @@ export function buildClaimColumns(
     },
     {
       key: "actions",
-      header: "Actions",
-      render: (claim) => (
-        <div className="flex items-center gap-3">
-          {canAssign && claim.status === "NEW" && (
-            <button
-              type="button"
-              onClick={() => onAssign?.(claim)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-text hover:bg-background transition-colors"
+      header: t("claims.col.actions"),
+      render: (claim) => {
+        const offer = primaryOffer(claim, role);
+
+        return (
+          <div className="flex items-center gap-3">
+            {offer?.assign && (
+              <button
+                type="button"
+                onClick={() => onAssign?.(claim)}
+                className={BUTTON_CLASSES}
+              >
+                <UserCheck size={13} />
+                {t(CLAIM_ACTIONS[offer.key].labelKey as MessageKey)}
+              </button>
+            )}
+            {offer?.href && (
+              <Link to={offer.href} className={BUTTON_CLASSES}>
+                {offer.key === "START_REVIEW" ? (
+                  <PlayCircle size={13} />
+                ) : (
+                  <Gavel size={13} />
+                )}
+                {offer.key === "APPROVE_CLAIM"
+                  ? t("action.MAKE_DECISION")
+                  : t(CLAIM_ACTIONS[offer.key].labelKey as MessageKey)}
+              </Link>
+            )}
+            <Link
+              to={`/claims/${claim.id}`}
+              className="text-sm font-semibold text-primary hover:text-primary-dark transition-colors"
             >
-              <UserCheck size={13} />
-              Assign
-            </button>
-          )}
-          <Link
-            to={`/claims/${claim.id}`}
-            className="text-sm font-semibold text-primary hover:text-primary-dark transition-colors"
-          >
-            View Details
-          </Link>
-        </div>
-      ),
+              {t("action.VIEW_CLAIM")}
+            </Link>
+          </div>
+        );
+      },
     },
   ];
 }

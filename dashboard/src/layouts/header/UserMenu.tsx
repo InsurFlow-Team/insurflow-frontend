@@ -7,10 +7,13 @@ import {
 import { useNavigate } from "react-router-dom";
 import { ChevronDown, LogOut, UserRound } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
+import { useTranslation } from "../../i18n/context";
+import { roleLabelKey } from "../../i18n/roleLabels";
 
 export default function UserMenu() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -19,13 +22,11 @@ export default function UserMenu() {
 
   useEffect(() => {
     if (!open) return;
-
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     }
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open]);
@@ -37,7 +38,6 @@ export default function UserMenu() {
       return;
     }
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
-
     e.preventDefault();
     const panel = menuRef.current;
     if (!panel) return;
@@ -45,7 +45,6 @@ export default function UserMenu() {
       panel.querySelectorAll<HTMLElement>('[role="menuitem"]'),
     );
     if (items.length === 0) return;
-
     const currentIndex = items.indexOf(document.activeElement as HTMLElement);
     const nextIndex =
       e.key === "ArrowDown"
@@ -59,6 +58,8 @@ export default function UserMenu() {
     logout();
     navigate("/login", { replace: true });
   }
+
+  const roleDisplay = user ? t(roleLabelKey(user.role)) : "";
 
   return (
     <div ref={menuRef} className="relative">
@@ -79,9 +80,7 @@ export default function UserMenu() {
             {user?.name ?? "User"}
           </span>
           <div className="flex items-center gap-1.5 text-xs leading-tight">
-            <span className="text-accent font-medium">
-              {user?.role.replace(/_/g, " ")}
-            </span>
+            <span className="text-accent font-medium">{roleDisplay}</span>
             <span className="text-text-muted">•</span>
             <span className="text-text-muted max-w-36 truncate">
               {user?.organizationName}
@@ -105,10 +104,10 @@ export default function UserMenu() {
         <div
           role="menu"
           onKeyDown={handleMenuKeyDown}
-          className="absolute right-0 top-full mt-2 w-64 bg-surface border border-border rounded-xl shadow-lg p-4 z-50"
+          className="absolute end-0 top-full mt-2 w-64 bg-surface border border-border rounded-xl shadow-lg p-4 z-50"
         >
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-semibold text-sm">
+            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-semibold text-sm shrink-0">
               {userInitial}
             </div>
             <div className="min-w-0">
@@ -121,12 +120,10 @@ export default function UserMenu() {
 
           <div className="text-xs text-text-muted mb-3 space-y-1">
             <p>
-              Role:{" "}
-              <span className="text-accent font-medium">
-                {user?.role.replace(/_/g, " ")}
-              </span>
+              {t("userMenu.roleLabel")}:{" "}
+              <span className="text-accent font-medium">{roleDisplay}</span>
             </p>
-            <p>Org: {user?.organizationName}</p>
+            <p>{t("userMenu.orgLabel")}: {user?.organizationName}</p>
           </div>
 
           <div className="border-t border-border pt-3">
@@ -140,7 +137,7 @@ export default function UserMenu() {
               className="flex items-center gap-2 w-full text-sm text-text hover:text-primary hover:bg-background rounded-lg px-3 py-2 transition-colors"
             >
               <UserRound size={15} />
-              Profile
+              {t("userMenu.profile")}
             </button>
           </div>
 
@@ -152,7 +149,7 @@ export default function UserMenu() {
               className="flex items-center gap-2 w-full text-sm text-text hover:text-danger hover:bg-background rounded-lg px-3 py-2 transition-colors"
             >
               <LogOut size={15} />
-              Sign Out
+              {t("userMenu.signOut")}
             </button>
           </div>
         </div>

@@ -3,6 +3,7 @@ import {
   getWorkloadTier,
   WORKLOAD_TIER_META,
 } from "../../utils/adjusters";
+import { useTranslation } from "../../i18n/context";
 
 export default function ActiveTasksCell({
   activeTasksCount,
@@ -11,6 +12,8 @@ export default function ActiveTasksCell({
   activeTasksCount: number;
   capacityLimit: number | null | undefined;
 }) {
+  const { t } = useTranslation();
+
   if (capacityLimit === null || capacityLimit === undefined) {
     return (
       <span className="text-sm font-medium text-text">{activeTasksCount}</span>
@@ -19,6 +22,13 @@ export default function ActiveTasksCell({
 
   const tier = getWorkloadTier(activeTasksCount, capacityLimit);
   const meta = WORKLOAD_TIER_META[tier];
+  const workloadLabel = t(
+    tier === "OK"
+      ? "adjusters.workload.healthy"
+      : tier === "HIGH"
+        ? "adjusters.workload.nearCapacity"
+        : "adjusters.workload.full",
+  );
   const percent = getWorkloadPercent(activeTasksCount, capacityLimit);
 
   return (
@@ -32,7 +42,7 @@ export default function ActiveTasksCell({
           <span
             className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${meta.chipClass}`}
           >
-            {meta.label}
+            {workloadLabel}
           </span>
         )}
       </div>
@@ -42,7 +52,7 @@ export default function ActiveTasksCell({
         aria-valuenow={percent}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label="Active workload"
+        aria-label={t("adjusters.workload.ariaLabel")}
       >
         <div
           className={`h-full rounded-full ${meta.barClass}`}

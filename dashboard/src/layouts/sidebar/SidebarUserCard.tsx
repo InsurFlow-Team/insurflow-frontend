@@ -1,9 +1,12 @@
 import { LogOut } from "lucide-react";
+import { useTranslation } from "../../i18n/context";
+import { roleLabelKey } from "../../i18n/roleLabels";
 import { userInitials } from "../../utils/user";
+import type { Role } from "../../types";
 
 interface SidebarUserCardProps {
   userName: string;
-  userRole: string;
+  userRole: Role | null;
   onLogout: () => void;
 }
 
@@ -12,6 +15,8 @@ export default function SidebarUserCard({
   userRole,
   onLogout,
 }: SidebarUserCardProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="px-3 py-3 border-t border-border">
       <div className="rounded-xl bg-primary px-3 py-3 flex items-center gap-3">
@@ -24,7 +29,9 @@ export default function SidebarUserCard({
           </p>
           <p className="text-xs text-white/60 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-success shrink-0" />
-            <span className="truncate">{userRole.replace(/_/g, " ")}</span>
+            <span className="truncate">
+              {userRole ? t(roleLabelKey(userRole)) : "—"}
+            </span>
           </p>
         </div>
       </div>
@@ -35,7 +42,7 @@ export default function SidebarUserCard({
         className="mt-3 flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-text-muted hover:bg-danger-bg hover:text-danger transition-colors duration-150 w-full"
       >
         <LogOut size={18} />
-        <span>Logout</span>
+        <span>{t("nav.logout")}</span>
       </button>
     </div>
   );

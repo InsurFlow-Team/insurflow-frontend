@@ -14,6 +14,7 @@ import {
 } from "../claim-form/claimFormConstants";
 import type { ClaimSummary, PolicyVerificationResponse } from "../../types";
 import type { NewClaimData } from "../claim-form/claimFormConstants";
+import { useTranslation } from "../../i18n/context";
 
 export type { NewClaimData };
 
@@ -34,6 +35,7 @@ export default function AddClaimModal({
   onSubmit,
   verifiedPolicy,
 }: AddClaimModalProps) {
+  const { t } = useTranslation();
   const { values, errors, handleChange, isValid, reset } = useForm(
     INITIAL_FORM_STATE,
     FORM_VALIDATORS,
@@ -62,9 +64,7 @@ export default function AddClaimModal({
     // Hard gate: creation is impossible without a verified policy id. Never
     // falls back to an empty policyId on the wire.
     if (!verifiedPolicy?.policy.id) {
-      setSubmitError(
-        "لم يتم التحقق من بوليصة التأمين. أعد التحقق قبل إنشاء المطالبة.",
-      );
+      setSubmitError(t("claimInfo.policyVerificationError"));
       return;
     }
 

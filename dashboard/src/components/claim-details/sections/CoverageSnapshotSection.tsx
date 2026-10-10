@@ -1,6 +1,7 @@
 import { Shield, Clock, CheckCircle2 } from "lucide-react";
 import DetailSection from "../DetailSection";
 import type { ClaimDetails } from "../../../types";
+import { useTranslation } from "../../../i18n/context";
 
 interface CoverageSnapshotSectionProps {
   claim: ClaimDetails;
@@ -18,6 +19,7 @@ interface CoverageSnapshotSectionProps {
 export default function CoverageSnapshotSection({
   claim,
 }: CoverageSnapshotSectionProps) {
+  const { locale, t } = useTranslation();
   const { coverageSnapshot } = claim;
 
   // Don't render if no coverage snapshot available
@@ -33,18 +35,17 @@ export default function CoverageSnapshotSection({
   } = coverageSnapshot;
 
   return (
-    <DetailSection title="لقطة التغطية وقت الحادث">
+    <DetailSection title={t("claimInfo.coverage.title")}>
       <div className="space-y-4">
         {/* Info banner */}
         <div className="flex items-start gap-3 p-4 rounded-lg bg-info-bg border border-info-border">
           <Clock size={18} className="text-info-text mt-0.5 flex-shrink-0" />
           <div className="text-sm">
             <p className="font-medium text-info-strong mb-1">
-              لقطة ثابتة من شروط التغطية
+              {t("claimInfo.coverage.snapshotTitle")}
             </p>
             <p className="text-info-text text-xs">
-              هذه نسخة محفوظة من شروط التغطية بتاريخ إنشاء المطالبة. لا تتأثر
-              بأي تعديلات لاحقة على الوثيقة.
+              {t("claimInfo.coverage.snapshotDescription")}
             </p>
           </div>
         </div>
@@ -55,13 +56,15 @@ export default function CoverageSnapshotSection({
           <div className="p-4 rounded-lg border border-border bg-surface-soft">
             <div className="flex items-center gap-2 mb-2">
               <Shield size={16} className="text-text-muted" />
-              <p className="text-xs font-medium text-text-muted">نوع التأمين</p>
+              <p className="text-xs font-medium text-text-muted">
+                {t("claimInfo.coverage.policyType")}
+              </p>
             </div>
             <p className="text-sm font-semibold text-text">
               {policyType === "COMPREHENSIVE"
-                ? "شامل"
+                ? t("claimInfo.coverage.comprehensive")
                 : policyType === "THIRD_PARTY"
-                  ? "ضد الغير"
+                  ? t("claimInfo.coverage.thirdParty")
                   : policyType}
             </p>
           </div>
@@ -70,7 +73,9 @@ export default function CoverageSnapshotSection({
           <div className="p-4 rounded-lg border border-border bg-surface-soft">
             <div className="flex items-center gap-2 mb-2">
               <Shield size={16} className="text-text-muted" />
-              <p className="text-xs font-medium text-text-muted">مبلغ التحمل</p>
+              <p className="text-xs font-medium text-text-muted">
+                {t("claimInfo.coverage.deductible")}
+              </p>
             </div>
             <p className="text-sm font-semibold text-text">
               {deductibleAmount} ₪
@@ -82,7 +87,7 @@ export default function CoverageSnapshotSection({
         {coveredPerils && coveredPerils.length > 0 && (
           <div className="p-4 rounded-lg border border-border bg-surface">
             <p className="text-sm font-medium text-text mb-3">
-              الأخطار المشمولة:
+              {t("claimInfo.coverage.coveredPerils")}
             </p>
             <div className="grid gap-2 sm:grid-cols-2">
               {coveredPerils.map((peril) => (
@@ -104,11 +109,14 @@ export default function CoverageSnapshotSection({
         {/* Timestamp */}
         <div className="pt-2 border-t border-border">
           <p className="text-xs text-text-subtle">
-            تم حفظ اللقطة بتاريخ:{" "}
-            {new Date(capturedAt).toLocaleString("ar-SA", {
+            {t("claimInfo.coverage.capturedAt")}{" "}
+            {new Date(capturedAt).toLocaleString(
+              locale === "ar" ? "ar-SA" : "en-US",
+              {
               dateStyle: "medium",
               timeStyle: "short",
-            })}
+              },
+            )}
           </p>
         </div>
       </div>

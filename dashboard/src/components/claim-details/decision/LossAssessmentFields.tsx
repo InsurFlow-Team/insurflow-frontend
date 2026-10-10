@@ -1,6 +1,7 @@
 import { Wrench, DollarSign, MinusCircle, AlertTriangle } from "lucide-react";
 import Input from "../../ui/Input";
 import Textarea from "../../ui/Textarea";
+import { useTranslation } from "../../../i18n/context";
 
 interface LossAssessmentFieldsProps {
   estimatedPartsCost: string;
@@ -29,22 +30,28 @@ export default function LossAssessmentFields({
   isDeductibleOverridden,
   errors,
 }: LossAssessmentFieldsProps) {
+  const { t } = useTranslation();
   return (
     <>
       {/* Parts Cost */}
       <div>
-        <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-text">
-          <Wrench size={16} className="text-text-muted" />
-          تكلفة القطع المقدّرة (₪)
-          <span className="text-danger">*</span>
+        <label
+          htmlFor="estimatedPartsCost"
+          className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-text"
+        >
+          <Wrench size={16} className="text-text-muted" aria-hidden="true" />
+          {t("decision.partsCost")} (₪)
+          <span className="text-danger" aria-hidden="true">*</span>
         </label>
         <Input
+          id="estimatedPartsCost"
           type="number"
           min="0"
           step="0.01"
+          aria-required="true"
           value={estimatedPartsCost}
           onChange={(e) => onEstimatedPartsCostChange(e.target.value)}
-          placeholder="مثال: 5000.00"
+          placeholder={t("decision.partsCostPlaceholder")}
           error={errors.estimatedPartsCost}
         />
         {errors.estimatedPartsCost && (
@@ -56,18 +63,23 @@ export default function LossAssessmentFields({
 
       {/* Labor Cost */}
       <div>
-        <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-text">
-          <DollarSign size={16} className="text-text-muted" />
-          تكلفة العمالة (₪)
-          <span className="text-danger">*</span>
+        <label
+          htmlFor="laborCost"
+          className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-text"
+        >
+          <DollarSign size={16} className="text-text-muted" aria-hidden="true" />
+          {t("decision.laborCost")} (₪)
+          <span className="text-danger" aria-hidden="true">*</span>
         </label>
         <Input
+          id="laborCost"
           type="number"
           min="0"
           step="0.01"
+          aria-required="true"
           value={laborCost}
           onChange={(e) => onLaborCostChange(e.target.value)}
-          placeholder="مثال: 2000.00"
+          placeholder={t("decision.laborCostPlaceholder")}
           error={errors.laborCost}
         />
         {errors.laborCost && (
@@ -77,18 +89,25 @@ export default function LossAssessmentFields({
 
       {/* Deductible */}
       <div>
-        <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-text">
-          <MinusCircle size={16} className="text-text-muted" />
-          التحمّل المطبّق (₪)
-          <span className="text-danger">*</span>
+        <label
+          htmlFor="deductibleApplied"
+          className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-text"
+        >
+          <MinusCircle size={16} className="text-text-muted" aria-hidden="true" />
+          {t("decision.deductible")} (₪)
+          <span className="text-danger" aria-hidden="true">*</span>
         </label>
         <Input
+          id="deductibleApplied"
           type="number"
           min="0"
           step="0.01"
+          aria-required="true"
           value={deductibleApplied}
           onChange={(e) => onDeductibleAppliedChange(e.target.value)}
-          placeholder={`مثال: ${defaultDeductible.toFixed(2)}`}
+          placeholder={t("decision.deductiblePlaceholder", {
+            amount: defaultDeductible.toFixed(2),
+          })}
           error={errors.deductibleApplied}
         />
         {errors.deductibleApplied && (
@@ -98,7 +117,9 @@ export default function LossAssessmentFields({
         )}
         {defaultDeductible > 0 && (
           <p className="mt-1 text-xs text-text-muted">
-            التحمل الافتراضي من البوليصة: {defaultDeductible.toFixed(2)} ₪
+            {t("decision.policyDeductible", {
+              amount: defaultDeductible.toFixed(2),
+            })}
           </p>
         )}
       </div>
@@ -106,15 +127,23 @@ export default function LossAssessmentFields({
       {/* Deductible Override Reason (conditional) */}
       {isDeductibleOverridden && (
         <div>
-          <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-text">
-            <AlertTriangle size={16} className="text-warning" />
-            سبب تغيير التحمل
-            <span className="text-danger">*</span>
+          <label
+            htmlFor="deductibleOverrideReason"
+            className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-text"
+          >
+            <AlertTriangle
+              size={16}
+              className="text-warning"
+              aria-hidden="true"
+            />
+            {t("decision.overrideReason")}
+            <span className="text-danger" aria-hidden="true">*</span>
           </label>
           <Textarea
+            id="deductibleOverrideReason"
             value={deductibleOverrideReason}
             onChange={(e) => onDeductibleOverrideReasonChange(e.target.value)}
-            placeholder="مثال: تخفيض التحمل لعميل VIP حسب سياسة الشركة"
+            placeholder={t("decision.overrideReasonPlaceholder")}
             rows={2}
             error={errors.deductibleOverrideReason}
           />

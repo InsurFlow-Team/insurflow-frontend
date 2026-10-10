@@ -1,6 +1,7 @@
 import { CheckCircle2, Circle, Loader2 } from "lucide-react";
 import DetailSection from "../DetailSection";
 import type { ClaimDetails } from "../../../types";
+import { useTranslation } from "../../../i18n/context";
 
 interface ReadinessItem {
   id: string;
@@ -27,59 +28,60 @@ interface ClaimReadinessSectionProps {
 export default function ClaimReadinessSection({
   claim,
 }: ClaimReadinessSectionProps) {
+  const { t } = useTranslation();
   const items: ReadinessItem[] = [
     {
       id: "policy",
-      label: "التحقق من الوثيقة",
+      label: t("claimInfo.readiness.policy"),
       completed: Boolean(claim.policy?.id),
     },
     {
       id: "vehicle",
-      label: "بيانات المركبة",
+      label: t("claimInfo.readiness.vehicle"),
       completed: Boolean(claim.vehicle.plateNumber),
     },
     {
       id: "customer",
-      label: "بيانات العميل",
+      label: t("claimInfo.readiness.customer"),
       completed: Boolean(claim.customer.name),
     },
     {
       id: "incident",
-      label: "بيانات الحادث",
+      label: t("claimInfo.readiness.accident"),
       completed: Boolean(claim.incidentType && claim.incidentLocation),
     },
     {
       id: "incidentLocation",
-      label: "موقع الحادث المُبلَّغ عنه",
+      label: t("claimInfo.readiness.incidentLocation"),
       completed: Boolean(claim.incidentCoordinates),
     },
     {
       id: "assignment",
-      label: "تعيين المعاين",
+      label: t("claimInfo.readiness.assignment"),
       completed: Boolean(claim.assignment.assignedTo),
       pending: claim.status === "PENDING_ACCEPTANCE",
     },
     {
       id: "inspectionLocation",
-      label: "موقع المعاينة الميدانية",
+      label: t("claimInfo.readiness.inspectionLocation"),
       completed: Boolean(claim.location?.latitude && claim.location?.longitude),
       pending: ["ASSIGNED", "IN_PROGRESS"].includes(claim.status),
     },
     {
       id: "evidence",
-      label: "الأدلة والصور",
+      label: t("claimInfo.readiness.evidence"),
       completed: claim.evidence.length > 0,
       pending: ["IN_PROGRESS", "CORRECTION_REQUIRED"].includes(claim.status),
     },
     {
       id: "signature",
-      label: "التوقيع",
+      label: t("claimInfo.readiness.signature"),
       completed: Boolean(claim.signature?.url),
       pending: claim.status === "IN_PROGRESS",
     },
     {
       id: "review",
-      label: "المراجعة",
+      label: t("claimInfo.readiness.review"),
       completed: ["UNDER_REVIEW", "APPROVED", "REJECTED", "CLOSED"].includes(
         claim.status,
       ),
@@ -87,7 +89,7 @@ export default function ClaimReadinessSection({
     },
     {
       id: "decision",
-      label: "القرار النهائي",
+      label: t("claimInfo.readiness.decision"),
       completed: ["APPROVED", "REJECTED", "CLOSED"].includes(claim.status),
       pending: claim.status === "UNDER_REVIEW",
     },
@@ -98,12 +100,15 @@ export default function ClaimReadinessSection({
   const completionRatio = (completedCount / totalCount) * 100;
 
   return (
-    <DetailSection title="جاهزية المطالبة">
+    <DetailSection title={t("claimInfo.readiness.title")}>
       <div className="space-y-4">
         {/* Progress summary */}
         <div className="flex items-center justify-between">
           <p className="text-sm text-text-muted">
-            العناصر المكتملة: {completedCount} من {totalCount}
+            {t("claimInfo.readiness.completedItems", {
+              completed: completedCount,
+              total: totalCount,
+            })}
           </p>
           <div className="flex items-center gap-2">
             <div className="w-32 h-2 bg-surface-soft rounded-full overflow-hidden">
@@ -130,19 +135,19 @@ export default function ClaimReadinessSection({
                 <CheckCircle2
                   size={18}
                   className="text-success-strong flex-shrink-0"
-                  aria-label="مكتمل"
+                  aria-label={t("claimInfo.readiness.completed")}
                 />
               ) : item.pending ? (
                 <Loader2
                   size={18}
                   className="text-warning animate-spin flex-shrink-0"
-                  aria-label="قيد التنفيذ"
+                  aria-label={t("claimInfo.readiness.inProgress")}
                 />
               ) : (
                 <Circle
                   size={18}
                   className="text-text-subtle flex-shrink-0"
-                  aria-label="غير مكتمل"
+                  aria-label={t("claimInfo.readiness.incomplete")}
                 />
               )}
               <span
@@ -162,7 +167,7 @@ export default function ClaimReadinessSection({
 
         {/* Footer note */}
         <p className="text-xs text-text-subtle pt-2 border-t border-border">
-          تُحدّث حالة العناصر تلقائياً بناءً على البيانات المتوفرة في المطالبة.
+          {t("claimInfo.readiness.footer")}
         </p>
       </div>
     </DetailSection>

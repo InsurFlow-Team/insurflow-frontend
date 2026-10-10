@@ -41,6 +41,7 @@ vi.mock("../api/notifications", async (importOriginal) => {
 });
 
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import I18nProvider from "../i18n/I18nProvider";
 import Header from "./Header";
 
 function renderHeader() {
@@ -61,6 +62,9 @@ function renderHeader() {
 
 afterEach(() => {
   cleanup();
+  window.localStorage.clear();
+  document.documentElement.dir = "ltr";
+  document.documentElement.lang = "en";
 });
 
 describe("Header", () => {
@@ -69,7 +73,7 @@ describe("Header", () => {
 
     expect(screen.getByRole("heading", { name: "Claims Queue" })).toBeTruthy();
     expect(screen.getByText("Sara")).toBeTruthy();
-    expect(screen.getByText("ADMIN")).toBeTruthy();
+    expect(screen.getByText("Administrator")).toBeTruthy();
     expect(screen.getByText("InsurFlow")).toBeTruthy();
     expect(screen.getByText("AD-001")).toBeTruthy();
   });
@@ -132,5 +136,25 @@ describe("Header", () => {
     await user.click(screen.getByRole("menuitem", { name: /Sign Out/ }));
 
     expect(auth.logout).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders the page title in Arabic with RTL when the locale is ar", () => {
+    window.localStorage.setItem("sawn.locale", "ar");
+
+    render(
+      <I18nProvider>
+        <MemoryRouter initialEntries={["/claims"]}>
+          <Routes>
+            <Route path="/claims" element={<Header />} />
+          </Routes>
+        </MemoryRouter>
+      </I18nProvider>,
+    );
+
+    expect(screen.getByRole("heading", { name: "طابور المطالبات" })).toBeTruthy();
+    expect(document.documentElement.dir).toBe("rtl");
+    expect(
+      screen.getByRole("button", { name: "فتح القائمة الجانبية" }),
+    ).toBeTruthy();
   });
 });

@@ -15,6 +15,7 @@ import AdjusterDetails from "./AdjusterDetails";
 import { getFieldAdjusterById } from "../api/users.service";
 import { getAdjusterWorkHistory } from "../api/claims.service";
 import type { AdjusterWorkHistory, FieldAdjuster } from "../types";
+import I18nProvider from "../i18n/I18nProvider";
 
 const mockedAdjuster = vi.mocked(getFieldAdjusterById);
 const mockedHistory = vi.mocked(getAdjusterWorkHistory);
@@ -63,15 +64,16 @@ const history: AdjusterWorkHistory = {
   truncated: false,
 };
 
-function renderPage() {
-  return render(
+function renderPage(locale?: "ar") {
+  const page = (
     <MemoryRouter initialEntries={[`/adjusters/${ADJUSTER_ID}`]}>
       <Routes>
         <Route path="/adjusters/:adjusterId" element={<AdjusterDetails />} />
         <Route path="/claims/:claimId" element={<div>claim details page</div>} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
+  return render(locale ? <I18nProvider>{page}</I18nProvider> : page);
 }
 
 describe("AdjusterDetails work history", () => {
@@ -84,6 +86,9 @@ describe("AdjusterDetails work history", () => {
 
   afterEach(() => {
     cleanup();
+    window.localStorage.clear();
+    document.documentElement.dir = "ltr";
+    document.documentElement.lang = "en";
   });
 
   it("asks the history for the adjuster currently in the route", async () => {
@@ -152,6 +157,29 @@ describe("AdjusterDetails work history", () => {
     renderPage();
 
     expect(await screen.findByText(/Showing the 2 most recent/)).toBeTruthy();
+  });
+
+  it("translates the adjuster work-history description and summary in Arabic", async () => {
+    window.localStorage.setItem("sawn.locale", "ar");
+    mockedHistory.mockResolvedValue({
+      ...history,
+      totalCompleted: 30,
+      truncated: true,
+    });
+
+    renderPage("ar");
+
+    expect(
+      await screen.findByText(
+        "المطالبات التي أتمها هذا المعاين مع عدد المعاينات والمدة الزمنية لكل منها.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("عرض 2 من أحدث المطالبات المكتملة من أصل 30."),
+    ).toBeTruthy();
+    expect(screen.getByText("إجمالي المعاينات")).toBeTruthy();
+    expect(screen.queryByText(/Claims this adjuster finished/)).toBeNull();
+    expect(document.documentElement.dir).toBe("rtl");
   });
 
   it("keeps the profile usable when the history request fails", async () => {

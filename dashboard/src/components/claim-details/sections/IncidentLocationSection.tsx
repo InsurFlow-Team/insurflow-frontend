@@ -4,6 +4,7 @@ import InfoGrid from "../InfoGrid";
 import InfoRow from "../InfoRow";
 import { formatDateTime } from "../../../utils/claims";
 import type { ClaimDetails } from "../../../types";
+import { useTranslation } from "../../../i18n/context";
 
 interface IncidentLocationSectionProps {
   claim: ClaimDetails;
@@ -18,14 +19,18 @@ interface IncidentLocationSectionProps {
 export default function IncidentLocationSection({
   claim,
 }: IncidentLocationSectionProps) {
+  const { t } = useTranslation();
   const { incidentLocation, incidentCoordinates } = claim;
 
   return (
-    <DetailSection title="موقع الحادث المُبلغ عنه">
+    <DetailSection title={t("claimInfo.incidentLocation.title")}>
       <InfoGrid columns="3">
-        <InfoRow label="Incident Location" value={incidentLocation} />
         <InfoRow
-          label="Reported Coordinates"
+          label={t("claimInfo.incidentLocation.location")}
+          value={incidentLocation}
+        />
+        <InfoRow
+          label={t("claimInfo.incidentLocation.coordinates")}
           value={
             incidentCoordinates
               ? `${incidentCoordinates.latitude}, ${incidentCoordinates.longitude}`
@@ -33,7 +38,7 @@ export default function IncidentLocationSection({
           }
         />
         <InfoRow
-          label="Reported At"
+          label={t("claimInfo.incidentLocation.reportedAt")}
           value={incidentCoordinates ? formatDateTime(incidentCoordinates.capturedAt) : null}
         />
       </InfoGrid>
@@ -46,7 +51,7 @@ export default function IncidentLocationSection({
           className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primary-dark"
         >
           <ExternalLink size={16} />
-          View Reported Location on Map
+          {t("claimInfo.incidentLocation.mapAction")}
         </a>
       )}
     </DetailSection>
